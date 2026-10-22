@@ -1,0 +1,442 @@
+{
+ "DR-0-02.problem": {
+  "default": "Customers wait too long and do not know what is happening, and our staff spend hours answering the same question.",
+  "software_internal": "Dealers phone the service desk to ask where a warranty claim stands, each call takes about ten minutes, and staff re-type the same details into two sheets.",
+  "software_sold": "Small shop owners lose hours every week matching supplier bills to stock by hand, and the mistakes cost them money.",
+  "hardware": "Homeowners with older ceiling fans cannot change the speed without getting up, and cheap remote controls stop working within a year.",
+  "service": "Customers wait three days for a repair visit and are not told when the engineer will come, so they stay at home all day."
+ },
+ "DR-0-02.purpose": {
+  "default": "The problem costs money every week and a competitor could solve it first.",
+  "software_internal": "Claims are taking 19 days on average and the dealers who wait longest are the ones who switch to a rival brand.",
+  "software_sold": "Shop owners are asking for this every month, and two rival tools launch this year.",
+  "hardware": "The next hot season is in six months; a late product misses the whole selling season.",
+  "service": "Repeat bookings are falling and customers name the missed visit as the reason."
+ },
+ "DR-0-02.outcome": {
+  "default": "A measurable improvement within a year, for example half the waiting time.",
+  "software_internal": "Claims settled in 5 days instead of 19, and dealers stop phoning for status.",
+  "software_sold": "Shop owners save five hours a week and stop paying late fees.",
+  "hardware": "10,000 units sold in the first season with fewer than 2% returned.",
+  "service": "90% of visits happen in the slot the customer chose."
+ },
+ "DR-0-02.requester": {
+  "default": "Anjali Rao"
+ },
+ "DR-0-03.juris": {
+  "default": "India"
+ },
+ "DR-0-04.sponsor": {
+  "default": "Rajesh Mehta"
+ },
+ "DR-0-04.role": {
+  "default": "Managing Director"
+ },
+ "DR-0-05.people.name": {
+  "default": "Priya Nair"
+ },
+ "DR-0-05.people.role": {
+  "default": "Head of Service",
+  "software_sold": "Head of Sales",
+  "hardware": "Production manager",
+  "service": "Operations manager"
+ },
+ "DR-0-05.people.needs": {
+  "default": "Wants a clear view of status without chasing people.",
+  "software_internal": "Wants to see every open claim on one screen.",
+  "software_sold": "Needs it to work alongside the billing tool the shop already has.",
+  "hardware": "Needs the device to be installable in under 30 minutes.",
+  "service": "Needs visit slots she can promise customers."
+ },
+ "DR-0-06.rows.statement": {
+  "default": "Spend no more than 12 lakh in the first year.",
+  "software_internal": "Spend no more than 12 lakh on the portal in the first year.",
+  "software_sold": "Keep the first-year build cost under 40 lakh.",
+  "hardware": "Tooling and prototypes must stay within 60 lakh.",
+  "service": "First-year launch budget is 25 lakh."
+ },
+ "DR-0-06.rows.amount": {
+  "default": "12"
+ },
+ "DR-0-06.rows.unit": {
+  "default": "INR lakh"
+ },
+ "DR-0-06.rows.owner": {
+  "default": "CFO"
+ },
+ "DR-0-07.rows.statement": {
+  "default": "Customer records must stay in India.",
+  "software_internal": "Dealer and customer records must stay in India.",
+  "software_sold": "Customer data must be stored in India.",
+  "hardware": "The device must pass safety certification before it can be sold.",
+  "service": "Engineers must hold a valid licence for electrical work."
+ },
+ "DR-0-07.rows.owner": {
+  "default": "Legal"
+ },
+ "DR-0-08.rows.statement": {
+  "default": "Customers will use the new way instead of the old one within three months.",
+  "software_internal": "Dealers will register claims on the portal instead of phoning us.",
+  "software_sold": "Shop owners will pay a monthly subscription.",
+  "hardware": "Retailers will stock the device at the planned price.",
+  "service": "Customers will accept a two-hour visit window."
+ },
+ "DR-0-08.rows.owner": {
+  "default": "Head of Service"
+ },
+ "DR-0-09.rows.question": {
+  "default": "Which customers or regions are in version 1?",
+  "software_internal": "Which dealers go live first?",
+  "software_sold": "Which countries are in version 1?",
+  "hardware": "Which retail chains will stock it first?",
+  "service": "Which cities do we start in?"
+ },
+ "DR-0-09.rows.asked_of": {
+  "default": "Anjali Rao"
+ },
+ "DR-0-11.rows.subject": {
+  "default": "The core thing the product does for its main user.",
+  "software_internal": "Registering a warranty claim",
+  "software_sold": "Taking orders online",
+  "hardware": "The device itself, in one colour",
+  "service": "Booking a repair visit"
+ },
+ "DR-0-11.rows.rationale": {
+  "default": "This is the heart of the product."
+ },
+ "DR-0-12.effort": {
+  "default": "20"
+ },
+ "DR-0-12.cost": {
+  "default": "8000000"
+ },
+ "DR-0-12.approver": {
+  "default": "Rajesh Mehta"
+ },
+ "DR-0-13.rows.risk": {
+  "default": "The people who must use it keep using the old way.",
+  "software_internal": "Dealers keep phoning instead of using the portal.",
+  "software_sold": "A bigger rival copies the main feature.",
+  "hardware": "A parts supplier delivers late and delays the launch.",
+  "service": "Engineers leave and visits are missed."
+ },
+ "DR-0-13.rows.owner": {
+  "default": "Head of Operations"
+ },
+ "DR-0-16.title": {
+  "default": "Strategy note from the sales head"
+ },
+ "DR-0-17.title": {
+  "default": "Call with the Pune dealer, 3 October"
+ },
+ "DR-0-18.rows.name": {
+  "default": "A similar product or company",
+  "software_internal": "A rival brand's warranty tracking tool",
+  "software_sold": "A well-known billing app for small shops",
+  "hardware": "A competing smart ceiling fan",
+  "service": "A competing home repair booking app"
+ },
+ "DR-0-18.rows.where": {
+  "default": "https://www.example.com/product or a brochure name"
+ },
+ "DR-0-18.rows.what": {
+  "default": "Lets customers track claims online."
+ },
+ "DR-0-19.rows.risk": {
+  "default": "The people who must use it keep using the old way.",
+  "software_internal": "Dealers keep phoning instead of using the portal.",
+  "software_sold": "A bigger rival copies the main feature.",
+  "hardware": "A parts supplier delivers late and delays the launch.",
+  "service": "Engineers leave and visits are missed."
+ },
+ "DR-1-01.segments.name": {
+  "default": "Our main customer group",
+  "software_internal": "Authorised dealers",
+  "software_sold": "Small shop owners",
+  "hardware": "Urban homeowners",
+  "service": "Households in metro cities"
+ },
+ "DR-1-01.segments.definition": {
+  "default": "Who they are, in one line.",
+  "software_internal": "Dealers who sell and register our products.",
+  "software_sold": "Owners of shops with fewer than ten staff.",
+  "hardware": "Homeowners with air conditioning in at least one room.",
+  "service": "Families who book home repairs a few times a year."
+ },
+ "DR-1-01.personas.name": {
+  "default": "The main person we design for",
+  "software_internal": "Dealer counter staff",
+  "software_sold": "Shop owner",
+  "hardware": "Homeowner",
+  "service": "Household decision maker"
+ },
+ "DR-1-02.jobs.statement": {
+  "default": "When ..., I want to ..., so I can ...",
+  "software_internal": "When a customer brings a faulty product, I want to register the claim in one minute, so I can serve the next customer.",
+  "software_sold": "When the month ends, I want to see what I owe suppliers, so I can pay on time.",
+  "hardware": "When it gets hot, I want to change the fan speed from the sofa, so I can stay comfortable.",
+  "service": "When something breaks, I want a repair visit at a time I choose, so I do not lose a day at work."
+ },
+ "DR-1-03.rows.name": {
+  "default": "A competitor or alternative",
+  "software_internal": "Phone calls to the service desk",
+  "software_sold": "Spreadsheet and WhatsApp messages",
+  "hardware": "A competing smart fan",
+  "service": "Local repair shops"
+ },
+ "DR-1-03.rows.positioning": {
+  "default": "How they describe themselves"
+ },
+ "DR-1-04.why": {
+  "default": "We want to win on service, not on price."
+ },
+ "DR-1-04.owner": {
+  "default": "Rajesh Mehta"
+ },
+ "DR-1-05.rows.hypothesis": {
+  "default": "At least 8 of 10 dealers will register claims online within a month.",
+  "software_internal": "At least 8 of 10 dealers will register claims online within a month.",
+  "software_sold": "Shop owners will pay 500 rupees a month after a free trial.",
+  "hardware": "Retailers will agree to the planned price in a first meeting.",
+  "service": "Customers will accept a two-hour visit window in a phone test."
+ },
+ "DR-1-05.rows.owner": {
+  "default": "Head of Service"
+ },
+ "DR-1-05.rows.threshold": {
+  "default": "At least 8 of 10 say yes."
+ },
+ "DR-1-06.rows.risk": {
+  "default": "A rival cuts its price by a third."
+ },
+ "DR-1-06.rows.owner": {
+  "default": "Head of Sales"
+ },
+ "DR-1-08.rows.opportunity": {
+  "default": "A clear advantage over the main rival",
+  "software_internal": "Claim status that dealers can see without phoning us",
+  "software_sold": "Month-end summary that rivals do not offer",
+  "hardware": "Quiet motor and a simple remote that rivals lack",
+  "service": "Fixed visit slots that rivals do not promise"
+ },
+ "DR-1-08.rows.value": {
+  "default": "Why this matters to customers."
+ },
+ "DR-1-13.rows.name": {
+  "default": "A competitor or alternative",
+  "software_internal": "Phone calls to the service desk",
+  "software_sold": "Spreadsheet and WhatsApp messages",
+  "hardware": "A competing smart fan",
+  "service": "Local repair shops"
+ },
+ "DR-1-13.rows.positioning": {
+  "default": "How they describe themselves"
+ },
+ "DR-1-13.rows.website": {
+  "default": "https://www.example.com"
+ },
+ "DR-1-17.rows.name": {
+  "default": "Consumer Protection Act, 2019",
+  "hardware": "Bureau of Indian Standards safety certification",
+  "service": "Contract Labour (Regulation and Abolition) Act, 1970"
+ },
+ "DR-1-17.rows.jurisdiction": {
+  "default": "India"
+ },
+ "DR-1-17.rows.what": {
+  "default": "Sets the rules for warranty promises and refunds.",
+  "hardware": "The device must pass electrical safety tests before sale.",
+  "service": "Sets the rules for contract engineers."
+ },
+ "DR-1-17.signed_by": {
+  "default": "Farhan Qureshi"
+ },
+ "DR-1-18.rows.who": {
+  "default": "Dealer on a call, 12 October"
+ },
+ "DR-1-18.rows.quote": {
+  "default": "I waste an hour a day chasing claim status by phone.",
+  "software_internal": "I waste an hour a day chasing claim status by phone.",
+  "software_sold": "I spend every Sunday on supplier bills.",
+  "hardware": "The remote that came with it stopped working in a month.",
+  "service": "I took a whole day off and nobody came."
+ },
+ "DR-1-18.rows.where": {
+  "default": "A web address, a report or \"phone call on 12 October\"."
+ },
+ "DR-2-01.rows.statement": {
+  "default": "Describe the goal in one sentence.",
+  "software_internal": "Every dealer sees the state of every warranty claim without calling us.",
+  "software_sold": "Shop owners close their month in one afternoon.",
+  "hardware": "The most loved ceiling fan in its price range.",
+  "service": "Every repair visit happens in the slot the customer chose."
+ },
+ "DR-2-01.rows.horizon": {
+  "default": "within 12 months"
+ },
+ "DR-2-02.rows.name": {
+  "default": "Time to settle a claim",
+  "software_internal": "Time to settle a warranty claim",
+  "software_sold": "Time to close the month",
+  "hardware": "Units returned within 90 days",
+  "service": "Visits on time"
+ },
+ "DR-2-02.rows.unit": {
+  "default": "days",
+  "software_internal": "days",
+  "software_sold": "hours",
+  "hardware": "%",
+  "service": "%"
+ },
+ "DR-2-02.rows.baseline": {
+  "default": "19"
+ },
+ "DR-2-02.rows.target": {
+  "default": "5"
+ },
+ "DR-2-02.rows.owner": {
+  "default": "Head of Service"
+ },
+ "DR-2-02.rows.method": {
+  "default": "Average over the month from the system."
+ },
+ "DR-2-03.modules.name": {
+  "default": "Claims",
+  "software_internal": "Claims",
+  "software_sold": "Orders",
+  "hardware": "Hardware",
+  "service": "Bookings"
+ },
+ "DR-2-03.modules.covers": {
+  "default": "Everything about one area of the product."
+ },
+ "DR-2-03.features.feature": {
+  "default": "Register a warranty claim",
+  "software_internal": "Register a warranty claim",
+  "software_sold": "Place an order",
+  "hardware": "Speed control from the remote",
+  "service": "Book a repair visit"
+ },
+ "DR-2-03.features.effort": {
+  "default": "3"
+ },
+ "DR-2-05.name": {
+  "default": "Contract engineering (2 vendors)"
+ },
+ "DR-2-05.pm": {
+  "default": "20"
+ },
+ "DR-2-05.avail": {
+  "default": "90"
+ },
+ "DR-2-07.rows.subject": {
+  "default": "Spare parts ordering",
+  "software_internal": "Spare parts ordering",
+  "software_sold": "Multi-currency invoices",
+  "hardware": "A companion phone app",
+  "service": "Same-day visits"
+ },
+ "DR-2-07.rows.reason": {
+  "default": "Not needed for the first version."
+ },
+ "DR-2-07.rows.impact": {
+  "default": "Dealers keep ordering parts by phone for now.",
+  "software_internal": "Dealers keep ordering parts by phone for now.",
+  "software_sold": "Foreign shops wait for version 2.",
+  "hardware": "Customers use the physical remote only.",
+  "service": "Customers wait for the next available slot."
+ },
+ "DR-2-07.rows.decider": {
+  "default": "Rajesh Mehta"
+ },
+ "DR-2-09.chosen": {
+  "default": "Scope baseline: the features of the first release."
+ },
+ "DR-2-09.decider": {
+  "default": "Rajesh Mehta"
+ },
+ "DR-3-02.rows.statement": {
+  "default": "Warranty starts on the invoice date, not the delivery date.",
+  "software_internal": "Warranty starts on the invoice date, not the delivery date.",
+  "software_sold": "Subscriptions renew monthly unless cancelled.",
+  "hardware": "The warranty is 24 months from purchase.",
+  "service": "A visit is free if booked within the warranty period."
+ },
+ "DR-3-02.rows.owner": {
+  "default": "Legal"
+ },
+ "DR-3-03.rows.title": {
+  "default": "Page load time",
+  "software_internal": "Claim registration speed",
+  "software_sold": "Page load time",
+  "hardware": "Start-up time",
+  "service": "Time to confirm a visit"
+ },
+ "DR-3-03.rows.metric": {
+  "default": "time until the screen is usable",
+  "software_internal": "time to save a new claim",
+  "software_sold": "time until the page is usable",
+  "hardware": "time from switch-on to ready",
+  "service": "time from request to confirmed slot"
+ },
+ "DR-3-03.rows.target": {
+  "default": "2"
+ },
+ "DR-3-03.rows.unit": {
+  "default": "seconds"
+ },
+ "DR-4-01.rows.flow": {
+  "default": "Register a warranty claim",
+  "software_internal": "Register a warranty claim",
+  "software_sold": "Place an order",
+  "hardware": "Fit and set up the device",
+  "service": "Book a repair visit"
+ },
+ "DR-4-01.rows.trigger": {
+  "default": "Dealer clicks New claim",
+  "software_internal": "Dealer clicks New claim",
+  "software_sold": "Customer clicks Buy",
+  "hardware": "Customer opens the box",
+  "service": "Customer calls or clicks Book"
+ },
+ "DR-4-01.rows.actor": {
+  "default": "Dealer counter staff",
+  "software_internal": "Dealer counter staff",
+  "software_sold": "Shop owner",
+  "hardware": "Homeowner",
+  "service": "Household decision maker"
+ },
+ "DR-4-01.rows.ending": {
+  "default": "The claim is registered and the dealer can see its status.",
+  "software_internal": "The claim is registered and the dealer can see its status.",
+  "software_sold": "The order is confirmed and paid.",
+  "hardware": "The device works and the remote is paired.",
+  "service": "The visit is confirmed with a slot."
+ },
+ "DR-4-02.rows.outcome": {
+  "default": "Show a clear message, keep what was typed, and let the user try again."
+ },
+ "DR-4-02.rows.condition": {
+  "default": "The outside system does not answer."
+ },
+ "DR-4-03.entity": {
+  "default": "Warranty claim",
+  "software_internal": "Warranty claim",
+  "software_sold": "Order",
+  "hardware": "Device order",
+  "service": "Repair visit"
+ },
+ "DR-4-03.states.state": {
+  "default": "Registered",
+  "software_internal": "Registered",
+  "software_sold": "Placed",
+  "hardware": "Ordered",
+  "service": "Booked"
+ },
+ "DR-3-10.title": {
+  "default": "Service agreement with the main vendor"
+ },
+ "DR-4-08.title": {
+  "default": "How claims are handled today"
+ }
+}

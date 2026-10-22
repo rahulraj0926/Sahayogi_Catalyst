@@ -1,0 +1,518 @@
+@import "tailwindcss";
+@import "./reference-table.css";
+@import "tw-animate-css";
+/* Tailwind scans apps/web only, not packages/. These dark: classes are used
+   solely by the shared table primitives in packages/common/ui (filters,
+   pagination), so they are listed here to be generated. Deliberately not a
+   whole-package @source: that would also start generating light classes the
+   package uses that have never been built, changing light mode. */
+@source inline("dark:bg-[var(--surface-muted)]/70 dark:hover:text-[var(--text-secondary)] dark:placeholder:text-[var(--text-muted)]");
+/* Class-based dark mode, Setu's form: also matches the element that carries the
+   class itself (`.dark` on <html>), not only its descendants. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Responsive breakpoints (ported verbatim from Setu) — real viewport media
+   queries in rem, so the layout reflows on window resize AND browser zoom.
+   `screen-sm` is where the shell flips from bottom tab bar to side rail. */
+@custom-variant screen-420 (@media (min-width: 26.25rem));
+@custom-variant screen-sm (@media (min-width: 36rem));
+@custom-variant screen-lg (@media (min-width: 56rem));
+@custom-variant screen-xl (@media (min-width: 72rem));
+@custom-variant screen-1366 (@media (min-width: 85.375rem));
+@custom-variant screen-1440 (@media (min-width: 90rem));
+@custom-variant screen-2xl (@media (min-width: 96rem));
+/* The POS terminal's locked layout (screen-xl) on a short screen — a 1366×768
+   laptop included, with room to spare for an error line: its right-hand column
+   compacts so the payment buttons stay on screen without scrolling. */
+@custom-variant screen-short (@media (min-width: 72rem) and (max-height: 51.25rem));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Brand navy (reference aesthetic): #001E4B button, #03255B ring. */
+  --primary: #001e4b;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: #03255b;
+
+  /* Setup Center Variables */
+  --line: #E0E6F0;
+  --text: #111827;
+  --muted-text: #6B7280; /* Renamed to avoid collision with shadcn --muted */
+  --navy: #03255B;
+  --brand-rgb: 3, 37, 91;
+}
+
+/* Dark theme for the shadcn tokens (components/ui and everything that reads
+   bg-background / bg-card / border-border / text-muted-foreground …), aligned to
+   the neutral black palette shared by the shell, tables, and dialogs.
+
+   SCOPE: plain `.dark`. That is deliberately not narrowed to .workspace-root:
+   Radix portals (dialogs, popovers, selects, dropdowns) and sonner's toaster
+   render under <body>, outside .workspace-root, and still must be dark.
+   `.dark` only ever exists on <html> while the workspace shell is mounted —
+   ThemeProvider removes it on unmount and ThemeInitScript never sets it on
+   /login, /platform or /onboarding — so those surfaces keep the :root values.
+   The :root (light) values above are untouched. */
+.dark {
+  /* Native controls: scrollbars, <select> lists, date/time pickers, autofill. */
+  color-scheme: dark;
+
+  --background: #0A0A0A;
+  --foreground: #F4F4F5;
+  --card: #171717;
+  --card-foreground: #F4F4F5;
+  --popover: #171717;
+  --popover-foreground: #F4F4F5;
+  /* Neutral primary controls remain legible on the black surfaces. */
+  --primary: #414141;
+  --primary-foreground: #F4F4F5;
+  --secondary: #262626;
+  --secondary-foreground: #F4F4F5;
+  --muted: #262626;
+  --muted-foreground: #A1A1AA;
+  --accent: #262626;
+  --accent-foreground: #F4F4F5;
+  /* Destructive is used mostly as TEXT (text-destructive), so it is the light
+     red that reads on --surface; its foreground is dark for the filled button. */
+  --destructive: #F87171;
+  --destructive-foreground: #0A0A0A;
+  --border: #333333;
+  --input: #404040;
+  --ring: #D4D4D8;
+}
+
+/* Sonner's toaster lives in the root layout, outside ThemeProvider, so it cannot
+   be handed a `theme` prop. It is themed through its own CSS variables instead,
+   keyed on the same `.dark` class. The doubled attribute selector out-ranks
+   sonner's injected [data-sonner-theme="light"] defaults. */
+.dark [data-sonner-toaster][data-sonner-toaster] {
+  --normal-bg: var(--popover);
+  --normal-text: var(--popover-foreground);
+  --normal-border: var(--border);
+  --success-bg: #14301F;
+  --success-text: #4ADE80;
+  --success-border: #1F4A2F;
+  --error-bg: #3A1414;
+  --error-text: #F87171;
+  --error-border: #5A2020;
+  --warning-bg: #3A2A0A;
+  --warning-text: #FBBF24;
+  --warning-border: #5A4210;
+  --info-bg: #1E2A55;
+  --info-text: #93A9FF;
+  --info-border: #2C3C78;
+}
+/* sonner hard-codes the description colour (#3f3f3f) for the light theme. */
+.dark [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-description] {
+  color: var(--text-secondary);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Setu design tokens (ported from the Setu dashboard's globals.css, values
+   verbatim). They sit NEXT TO Boss's shadcn tokens above and never replace
+   them: Setu's own --background/--foreground are deliberately not ported
+   (Boss's win), so People & Payroll / Setup / login / platform keep their
+   colours. Setu's --chart-* are taken as-is — Boss had none.
+   Used by the workspace shell + dashboard via var(--…) arbitrary values.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --chevron: #1F1F1F;
+  --avatar-bg: #DBEAFE;
+  --avatar-text: #0058CE;
+  --text-secondary: #383838;
+  --role-text: #6B7280;
+  --workspace-pill-border: #E5E7EB;
+  --search-bg: #F3F4F6;
+  --search-placeholder: #9CA3AF;
+  --kbd-border: #E5E7EB;
+  --icon-btn-bg: #F3F4F6;
+  --icon-btn-navy: #0B1B3B;
+  /* Solid accent that white text sits on (buttons, active pills, today marker,
+     greeting card). Kept separate from --icon-btn-navy, which is also used as a
+     foreground accent color and goes light in dark mode. */
+  --accent-solid: #0B1B3B;
+  --notification-dot: #8FB4FF;
+  --divider: #E5E7EB;
+  --surface: #FFFFFF;
+  --sidebar-active: #0B1B3B;
+  --assistant-action-from: #7C3AED;
+  --assistant-action-to: #2563EB;
+  --assistant-glow: rgba(124,58,237,0.18);
+  --assistant-border: #C7CAFF;
+  --assistant-hover: #F1F3FF;
+  --assistant-sidebar-bg: #F7F8FC;
+  --assistant-panel-from: #EEF1FF;
+  --assistant-panel-via: #F1F6FF;
+  --assistant-panel-to: #FFFFFF;
+  --assistant-button-from: #F5F9FF;
+  --assistant-button-to: #CCE1FF;
+
+  --shell-bg: #FFFFFF;
+  --page-bg: #FFFFFF;
+  --surface-muted: #F3F4F6;
+
+  --status-healthy-fg: #17603A;
+  --status-healthy-bg: #E3F4EA;
+  --status-warning-fg: #7A4B00;
+  --status-warning-bg: #FDF3DC;
+  --status-critical-fg: #9B1C1C;
+  --status-critical-bg: #FDECEA;
+  --status-info-fg: #2A36A0;
+  --status-info-bg: #E8EBFB;
+  --status-neutral-fg: #4B5563;
+  --status-neutral-bg: #F3F4F6;
+
+  /* Cleaner, brighter tones for big KPI value numbers on the card surface —
+     kept separate from the darker --status-*-fg badge text. */
+  --kpi-good: #15A34A;
+  --kpi-warn: #D97706;
+  --kpi-bad: #DC2626;
+
+  --chart-1: #2563EB;
+  --chart-2: #059669;
+  --chart-3: #D97706;
+  --chart-4: #DC2626;
+  --chart-5: #7C3AED;
+  --chart-6: #0891B2;
+  --card-border: transparent;
+
+  --card-radius: 0.75rem;
+  --card-shadow: 0 0 0.3rem rgba(0, 0, 0, 0.1);
+  --card-shadow-hover: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.1);
+
+  --sidebar-w: 4.25rem;
+  --header-h: 3.75rem;
+  --text-heading: #0F172A;
+  --text-muted: #64748B;
+
+  --icon-chip-bg: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+  --icon-chip-fg: #003FC9;
+
+  --trend-up-bg: #F0FDF4;
+  --trend-up-fg: #008236;
+  --trend-down-bg: #FEF2F2;
+  --trend-down-fg: #C10007;
+
+  /* Compact spacing/type scale, in rem — these ride on the fluid html
+     font-size (scoped to the workspace below), so they scale continuously
+     with viewport/zoom without needing their own clamp(). */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.375rem;
+  --space-sm: 0.5rem;
+  --space-md: clamp(0.75rem, 0.45rem + 0.65vw, 1rem);
+  --space-lg: 0.75rem;
+
+  --card-pad: clamp(0.625rem, 0.4rem + 0.65vw, 1rem);
+  --page-pad-x: 0.75rem;
+  --page-pad-y: 0.5rem;
+
+  --font-page-title: 1.3125rem;
+  --font-card-title: 1rem;
+  --font-body: 0.9375rem;
+  --font-caption: 0.8125rem;
+  --font-value-lg: 2.25rem;
+  --font-value-md: 1.125rem;
+}
+
+.dark {
+  --chevron: #D4D4D8;
+  --avatar-bg: #262626;
+  --avatar-text: #8FB4FF;
+  --text-secondary: #D4D4D8;
+  --role-text: #A1A1AA;
+  --workspace-pill-border: #333333;
+  --search-bg: #262626;
+  --search-placeholder: #71717A;
+  --kbd-border: #333333;
+  --icon-btn-bg: #262626;
+  --icon-btn-navy: #D4D4D8;
+  --accent-solid: #414141;
+  --notification-dot: #8FB4FF;
+  --divider: #333333;
+
+  --shell-bg: #0A0A0A;
+  --page-bg: #0A0A0A;
+  --surface: #171717;
+  --surface-muted: #262626;
+
+  --status-healthy-fg: #4ADE80;
+  --status-healthy-bg: #14301F;
+  --status-warning-fg: #FBBF24;
+  --status-warning-bg: #3A2A0A;
+  --status-critical-fg: #F87171;
+  --status-critical-bg: #3A1414;
+  --status-info-fg: #93A9FF;
+  --status-info-bg: #1E2A55;
+  --status-neutral-fg: #A1A1AA;
+  --status-neutral-bg: #262626;
+
+  --kpi-good: #4ADE80;
+  --kpi-warn: #FBBF24;
+  --kpi-bad: #FB7185;
+
+  --chart-1: #60A5FA;
+  --chart-2: #34D399;
+  --chart-3: #FBBF24;
+  --chart-4: #F87171;
+  --chart-5: #A78BFA;
+  --chart-6: #22D3EE;
+  --card-border: #333333;
+
+  --card-shadow: 0 0 0.3rem rgba(0, 0, 0, 0.4);
+  --card-shadow-hover: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.55);
+
+  --text-heading: #F4F4F5;
+  --text-muted: #A1A1AA;
+
+  --icon-chip-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.16) 0%, rgba(96, 165, 250, 0.06) 100%);
+  --icon-chip-fg: #8FB4FF;
+
+  --trend-up-bg: #14301F;
+  --trend-up-fg: #4ADE80;
+  --trend-down-bg: #3A1414;
+  --trend-down-fg: #F87171;
+
+  --sidebar-active: #D4D4D8;
+  --assistant-action-from: #525252;
+  --assistant-action-to: #404040;
+  --assistant-glow: rgba(255,255,255,0.08);
+  --assistant-border: #404040;
+  --assistant-hover: #262626;
+  --assistant-sidebar-bg: #171717;
+  --assistant-panel-from: #171717;
+  --assistant-panel-via: #171717;
+  --assistant-panel-to: #0A0A0A;
+  --assistant-button-from: #262626;
+  --assistant-button-to: #404040;
+
+  /* Boss's own Setup-Centre variables (see :root above) get dark values too,
+     so the Setup pages that read them stay legible once the workspace is
+     dark. Light values are untouched. */
+  --line: #333333;
+  --text: #F4F4F5;
+  --muted-text: #A1A1AA;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in oklch, var(--color-ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family:
+      var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Workspace shell + dashboard — rules ported from Setu's globals.css, scoped
+   so nothing outside the authenticated workspace (login, platform console)
+   changes. `.workspace-root` is the shell's root element.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Root font size — fluid on viewport width (Setu). Every rem-based utility
+   scales off this. Applied only while a workspace shell is mounted: `:has()`
+   lets the <html> element opt in without a script, and the rule disappears
+   again on login/platform. */
+html:has(.workspace-root) {
+  font-size: clamp(15px, min(calc(11px + 0.45vw), calc(6.5px + 1.3vh)), 19px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.workspace-root) body,
+  .workspace-root header,
+  .workspace-root aside,
+  .workspace-root section,
+  .workspace-root table,
+  .workspace-root input,
+  .workspace-root button {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+}
+
+.workspace-root button:not(:disabled),
+.workspace-root [role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+.workspace-root button:disabled,
+.workspace-root [aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Setu hides scrollbars everywhere. Here that is opt-in: shell chrome (rail,
+   drawer) carries `.no-scrollbar`, and the dashboard hides the page scroller
+   it sits in. Data pages keep their visible scrollbars. */
+.no-scrollbar,
+main:has(.dashboard-root),
+.dashboard-root * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+main:has(.dashboard-root)::-webkit-scrollbar,
+.dashboard-root *::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: page-fade-in 0.25s ease-out;
+}
+
+@keyframes tap-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tap-pop:active {
+  animation: tap-pop 0.18s ease-out;
+}
+
+/* Assistant: pending-reply dots (LoadingDots) and the hover/focus name tooltip
+   on icon-only history rows (AIChatSidebar). Ported from Setu's globals.css. */
+@keyframes assistant-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-0.25rem);
+    opacity: 1;
+  }
+}
+
+.chat-icon-tooltip {
+  animation: page-fade-in 0.15s ease-out;
+}
+
+.card-interactive {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.card-interactive:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Shared record tables: keep the scroll inside the table, with readable compact
+   rows and anchored headers. Structural colors follow the shell theme. */
+.record-table > div:has(> table) { max-height: min(65dvh, 42rem); overflow: auto; }
+.record-table th { position: sticky; top: 0; z-index: 1; background: var(--search-bg); white-space: nowrap; }
+.record-table td { padding: 0.625rem 0.75rem; }
+.record-table[data-density="compact"] td { padding: 0.375rem 0.75rem; }
+.record-table td { min-width: 5rem; }
+.record-table td:last-child { min-width: 8rem; }
+.record-table label:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* Bind the ported reference-table presentation to this application's theme. */
+:root {
+  --ui-surface: var(--surface); --ui-surface-muted: var(--surface-muted);
+  --ui-surface-sunken: var(--search-bg); --ui-fg: var(--text-heading);
+  --ui-fg-subtle: var(--text-muted); --ui-line: var(--divider);
+  --ui-line-control: var(--workspace-pill-border); --ui-line-subtle: var(--divider);
+  --ui-focus: var(--ring); --ui-action: var(--primary);
+  --ui-action-hover: var(--accent-solid); --ui-on-action: var(--primary-foreground);
+  --input-border: var(--input);
+}
+
+.record-table-search { display:flex; align-items:center; gap:0.5rem; width:min(20rem,100%); }
+.record-table-search input { width:100%; min-width:0; }
+.record-table[data-density="Compact"] td { padding:0.375rem 0.75rem; }
+.record-table table { table-layout:fixed; min-width:40rem; }
+.record-table th:first-child,.record-table td:first-child { width:2.5rem; min-width:2.5rem; }
+.record-table td:not(:first-child) { overflow-wrap:anywhere; }
+.record-table td:last-child { min-width:8rem; }
+.record-table { height:auto; min-height:0; max-height:calc(100dvh - 14rem); }
+.record-table > div:has(> table) { flex:1; min-height:0; }
+.record-table .approved-pagination { flex-shrink:0; }
+
+/* A pinned action column must not cover the record fields on narrow screens. */
+@media (max-width: 600px) {
+  .record-table th:last-child { right: auto; }
+  .record-table td:last-child { position: static; }
+}
+
+/* Text links need a separate foreground from filled primary controls. */
+.dark .text-primary { color: var(--foreground); }
+
+.workspace-context-menu { max-height:calc(100dvh - var(--header-h) - 1rem); overflow-y:auto; }
+
+/* Approved shared-shell assistant palette, scoped to its region. */
+.dark [data-assistant-mode] {
+  --surface: #1c1c1c;
+  --divider: #3f3f3f;
+  --card-border: #3f3f3f;
+  --input-border: #3f3f3f;
+  --accent-solid: #414141;
+}

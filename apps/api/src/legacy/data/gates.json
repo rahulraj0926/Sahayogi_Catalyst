@@ -1,0 +1,2680 @@
+{
+ "_comment": "Gate criteria as DATA (spec 4.1). type: AUTO | ATTEST | HYBRID. severity: must (blocking) | should (advisory). depth_level: L1 minimum viable, L2 standard, L3 full; a gate evaluates only criteria at or below the product depth. query: JSON DSL, see README 'Gate DSL' and engine/gates.js. Parameters may be depth-keyed {L1,L2,L3}.",
+ "params": {
+  "min_assumptions": 3,
+  "min_evidence_g0": {
+   "L1": 3,
+   "L2": 3,
+   "L3": 5
+  },
+  "required_categories": {
+   "L1": [
+    "Sponsor",
+    "Delivery",
+    "Customer"
+   ],
+   "L2": [
+    "Sponsor",
+    "Delivery",
+    "Customer",
+    "End-user"
+   ],
+   "L3": [
+    "Sponsor",
+    "Delivery",
+    "Customer",
+    "End-user",
+    "Regulator/Legal"
+   ]
+  },
+  "min_competitors": {
+   "L1": 2,
+   "L2": 3,
+   "L3": 3
+  },
+  "min_distinct_sources": {
+   "L1": 1,
+   "L2": 2,
+   "L3": 2
+  },
+  "min_segment_sources": {
+   "L1": 1,
+   "L2": 2,
+   "L3": 2
+  },
+  "min_job_sources": {
+   "L1": 0,
+   "L2": 0,
+   "L3": 2
+  },
+  "top_n_jobs": 3,
+  "top_n_assumptions": {
+   "L1": 3,
+   "L2": 5,
+   "L3": 5
+  },
+  "capacity_util_max": 0.9,
+  "lint_medium_max": 5
+ },
+ "criteria": [
+  {
+   "id": "GC-02",
+   "gate": "C",
+   "text": "All Conditions due by this gate are closed",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "GC-02",
+    "4.5"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "Condition",
+     "where": {
+      "status": "Open",
+      "must_close_by_gate": {
+       "lte": "$gate"
+      }
+     }
+    },
+    "noun": "open Condition(s) due by this gate"
+   }
+  },
+  {
+   "id": "GC-03",
+   "gate": "C",
+   "text": "No Waiver is past its expiry",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "GC-03",
+    "4.7"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "Waiver",
+     "includeTerminal": true,
+     "where": {
+      "status": "Active",
+      "$or": [
+       {
+        "expiry_on": {
+         "before": "$today"
+        }
+       },
+       {
+        "expiry_gate": {
+         "lt": "$gate"
+        }
+       }
+      ]
+     }
+    },
+    "noun": "active Waiver(s) past expiry"
+   }
+  },
+  {
+   "id": "GC-04",
+   "gate": "C",
+   "text": "No unresolved suspect flags on Approved Must items or on decisions, obligations and metrics",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "GC-04",
+    "3.11"
+   ],
+   "query": {
+    "op": "suspect_free",
+    "gate": "$gate"
+   }
+  },
+  {
+   "id": "GC-05",
+   "gate": "C",
+   "text": "No Must item rests on assumed or invented numbers or on invented Evidence",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L3",
+   "v2Ref": [
+    "GC-05",
+    "3.13"
+   ],
+   "query": {
+    "op": "weak_basis",
+    "sel": {
+     "types": [
+      "Requirement",
+      "Feature",
+      "Story"
+     ],
+     "where": {
+      "priority": "Must",
+      "$or": [
+       {
+        "phase": {
+         "lte": "$gate"
+        }
+       },
+       {
+        "phase": "X"
+       }
+      ]
+     }
+    },
+    "noun": "Must item(s) resting on assumed or invented basis"
+   }
+  },
+  {
+   "id": "G0-01",
+   "gate": 0,
+   "text": "An approved IntakeBrief and Product Intake Document exist",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G0-01"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "IntakeBrief",
+       "where": {
+        "status": "Approved"
+       }
+      },
+      "min": 1,
+      "noun": "approved IntakeBrief"
+     },
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Artifact",
+       "where": {
+        "kind": "intake_document",
+        "status": "Approved"
+       }
+      },
+      "min": 1,
+      "noun": "approved intake_document Artifact"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G0-02",
+   "gate": 0,
+   "text": "The problem is stated without a solution",
+   "type": "HYBRID",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G0-02"
+   ],
+   "query": {
+    "op": "lint",
+    "sel": {
+     "types": [
+      "IntakeBrief",
+      "Problem"
+     ],
+     "where": {
+      "status": [
+       "Approved",
+       "In review"
+      ]
+     }
+    },
+    "rules": [
+     "solution_language"
+    ],
+    "severity": "High",
+    "noun": "problem statement(s) with solution language"
+   },
+   "attest": {
+    "role": "Product Owner",
+    "mode": "override",
+    "statement": "I confirm the problem statement describes the pain, not a solution."
+   }
+  },
+  {
+   "id": "G0-03",
+   "gate": 0,
+   "text": "A sponsor is named",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G0-03"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "Stakeholder",
+     "where": {
+      "is_sponsor": true,
+      "status": "Active"
+     }
+    },
+    "min": 1,
+    "noun": "active sponsor(s)"
+   }
+  },
+  {
+   "id": "G0-04",
+   "gate": 0,
+   "text": "Every required stakeholder category has an active Stakeholder",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G0-04"
+   ],
+   "query": {
+    "op": "categories_covered",
+    "sel": {
+     "type": "Stakeholder",
+     "where": {
+      "status": "Active"
+     }
+    },
+    "field": "category",
+    "required": "$required_categories",
+    "noun": "stakeholder categories"
+   }
+  },
+  {
+   "id": "G0-05",
+   "gate": 0,
+   "text": "Top assumptions are logged with owners and validation gates",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G0-05"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Assumption",
+       "where": {
+        "status": "Open"
+       }
+      },
+      "min": "$min_assumptions",
+      "noun": "open assumption(s)"
+     },
+     {
+      "op": "each_has_fields",
+      "sel": {
+       "type": "Assumption",
+       "where": {
+        "status": "Open",
+        "impact": {
+         "gte": 4
+        }
+       }
+      },
+      "fields": [
+       "owner",
+       "validate_by_gate"
+      ],
+      "noun": "high-impact assumption"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G0-06",
+   "gate": 0,
+   "text": "Constraints are recorded with owner and flexibility; a budget and a date constraint exist",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G0-06"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Constraint",
+       "where": {
+        "kind": "budget",
+        "status": [
+         "Proposed",
+         "Confirmed"
+        ]
+       }
+      },
+      "min": 1,
+      "noun": "budget constraint(s)"
+     },
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Constraint",
+       "where": {
+        "kind": "date",
+        "status": [
+         "Proposed",
+         "Confirmed"
+        ]
+       }
+      },
+      "min": 1,
+      "noun": "date constraint(s)"
+     },
+     {
+      "op": "each_has_fields",
+      "sel": {
+       "type": "Constraint",
+       "where": {
+        "status": [
+         "Proposed",
+         "Confirmed"
+        ]
+       }
+      },
+      "fields": [
+       "owner",
+       "flexibility"
+      ],
+      "noun": "constraint"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G0-07",
+   "gate": 0,
+   "text": "Effort and cost for the next phase are agreed (approved Phase 1 budget)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G0-07"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "PhaseBudget",
+     "where": {
+      "for_phase": 1,
+      "status": "Approved",
+      "planned_effort": {
+       "gt": 0
+      },
+      "approver": {
+       "exists": true
+      }
+     }
+    },
+    "min": 1,
+    "noun": "approved Phase 1 budget(s)"
+   }
+  },
+  {
+   "id": "G0-08",
+   "gate": 0,
+   "text": "No open Must Question is needed by this gate",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G0-08",
+    "4.8"
+   ],
+   "query": {
+    "op": "must_questions",
+    "gate": 0
+   }
+  },
+  {
+   "id": "G0-09",
+   "gate": 0,
+   "text": "Initial scope boundary exists and every unknown line is tied to a Question",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G0-09"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "ScopeEntry",
+       "where": {
+        "kind": "initial_boundary",
+        "disposition": "in"
+       }
+      },
+      "min": 1,
+      "noun": "in-scope boundary line(s)"
+     },
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "ScopeEntry",
+       "where": {
+        "kind": "initial_boundary",
+        "disposition": "out"
+       }
+      },
+      "min": 1,
+      "noun": "out-of-scope boundary line(s)"
+     },
+     {
+      "op": "exists_link",
+      "sel": {
+       "type": "ScopeEntry",
+       "where": {
+        "kind": "initial_boundary",
+        "disposition": "unknown"
+       }
+      },
+      "requirement": {
+       "label": "is tied to a Question",
+       "anyOf": [
+        {
+         "link": "clarifies",
+         "dir": "in",
+         "toType": "Question"
+        },
+        {
+         "link": "blocks",
+         "dir": "in",
+         "toType": "Question"
+        }
+       ]
+      },
+      "noun": "unknown boundary line",
+      "emptyIs": "pass"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G0-12",
+   "gate": 0,
+   "text": "The Evidence register has enough verified, captured evidence",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G0-12"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "Evidence",
+     "counted": true
+    },
+    "min": "$min_evidence_g0",
+    "noun": "verified captured Evidence record(s)"
+   }
+  },
+  {
+   "id": "G1-02",
+   "gate": 1,
+   "text": "Main customer group is defined and backed by verified customer quotes",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G1-02"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Segment",
+       "where": {
+        "primary": true
+       }
+      },
+      "min": 1,
+      "noun": "primary segment(s)"
+     },
+     {
+      "op": "exists_link",
+      "sel": {
+       "type": "Segment",
+       "where": {
+        "primary": true
+       }
+      },
+      "requirement": {
+       "label": "has enough verified evidence",
+       "link": "supported_by",
+       "dir": "out",
+       "counted": true,
+       "min": "$min_segment_sources"
+      },
+      "noun": "primary segment"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-02b",
+   "gate": 1,
+   "text": "Each top job is backed by verified customer evidence",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L3",
+   "v2Ref": [
+    "G1-02"
+   ],
+   "query": {
+    "op": "exists_link",
+    "sel": {
+     "type": "Job",
+     "where": {
+      "rank": {
+       "lte": "$top_n_jobs"
+      },
+      "parked": false
+     }
+    },
+    "requirement": {
+     "label": "has enough verified evidence",
+     "link": "supported_by",
+     "dir": "out",
+     "counted": true,
+     "min": "$min_job_sources"
+    },
+    "noun": "top job"
+   }
+  },
+  {
+   "id": "G1-04",
+   "gate": 1,
+   "text": "At least N competitors are analysed with a reviewed capability grid and prices (or a reason for none)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G1-04",
+    "COMP-6/G1-04"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Competitor",
+       "where": {
+        "status": "Reviewed"
+       }
+      },
+      "min": "$min_competitors",
+      "noun": "reviewed competitor(s)"
+     },
+     {
+      "op": "exists_link",
+      "sel": {
+       "type": "Competitor",
+       "where": {
+        "status": [
+         "Reviewed",
+         "Draft"
+        ],
+        "tier": [
+         "T1",
+         "T2",
+         "S"
+        ]
+       }
+      },
+      "requirement": {
+       "all": [
+        {
+         "label": "has verified capability cells",
+         "link": "contains",
+         "dir": "out",
+         "toType": "CompetitorCapability",
+         "counted": true
+        },
+        {
+         "label": "has a verified price (or a no-price reason)",
+         "anyOf": [
+          {
+           "link": "contains",
+           "dir": "out",
+           "toType": "PricePoint",
+           "counted": true
+          },
+          {
+           "field": {
+            "pricing_na_reason": {
+             "exists": true
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      "noun": "tier 1/2 competitor"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G1-04b",
+   "gate": 1,
+   "text": "Competitor capability cells and prices are within their maximum age",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G1-04",
+    "F-012",
+    "COMP-6/DimensionSpec"
+   ],
+   "query": {
+    "op": "freshness",
+    "sel": {
+     "types": [
+      "CompetitorCapability",
+      "PricePoint"
+     ],
+     "where": {
+      "status": "Reviewed"
+     }
+    },
+    "mode": "cadence",
+    "noun": "competitor value"
+   }
+  },
+  {
+   "id": "G1-06",
+   "gate": 1,
+   "text": "The riskiest assumptions are ranked and have a test plan",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G1-06"
+   ],
+   "query": {
+    "op": "top_n_requirement",
+    "sel": {
+     "type": "Assumption",
+     "where": {
+      "status": "Open",
+      "validate_by_gate": {
+       "notIn": [
+        3,
+        4
+       ]
+      }
+     }
+    },
+    "orderBy": "risk_score",
+    "n": "$top_n_assumptions",
+    "requirement": {
+     "label": "has an owned, dated Experiment",
+     "anyOf": [
+      {
+       "link": "tests",
+       "dir": "in",
+       "toType": "Experiment",
+       "toWhere": {
+        "owner": {
+         "exists": true
+        },
+        "due_on": {
+         "exists": true
+        }
+       }
+      }
+     ]
+    },
+    "noun": "top-risk assumption"
+   }
+  },
+  {
+   "id": "G1-07",
+   "gate": 1,
+   "text": "Legal and regulatory scan is done and signed by Legal",
+   "type": "HYBRID",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G1-07"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "Obligation"
+      },
+      "min": 1,
+      "noun": "obligation(s) recorded"
+     },
+     {
+      "op": "none_open",
+      "sel": {
+       "type": "Obligation",
+       "where": {
+        "applicability": "unscanned"
+       }
+      },
+      "noun": "obligation(s) not yet scanned for applicability"
+     }
+    ]
+   },
+   "attest": {
+    "role": "Legal",
+    "mode": "and",
+    "statement": "Legal has reviewed the obligation register and the applicability decisions."
+   }
+  },
+  {
+   "id": "G1-08",
+   "gate": 1,
+   "text": "Market risks are recorded with owners",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G1-08"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "Risk",
+     "where": {
+      "category": "market",
+      "owner": {
+       "exists": true
+      }
+     }
+    },
+    "min": 1,
+    "noun": "owned market risk(s)"
+   }
+  },
+  {
+   "id": "G1-09",
+   "gate": 1,
+   "text": "No open Must Question is needed by this gate",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G1-09"
+   ],
+   "query": {
+    "op": "must_questions",
+    "gate": 1
+   }
+  },
+  {
+   "id": "G1-10",
+   "gate": 1,
+   "text": "Evidence behind Phase 1 items is not invented or missing",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L3",
+   "v2Ref": [
+    "G1-10",
+    "COMP-6/G1-10"
+   ],
+   "query": {
+    "op": "weak_basis",
+    "sel": {
+     "types": [
+      "Persona",
+      "Job",
+      "Competitor",
+      "Opportunity",
+      "Segment"
+     ],
+     "where": {
+      "status": {
+       "notIn": [
+        "Draft",
+        "Candidate"
+       ]
+      }
+     }
+    },
+    "requireEvidence": true,
+    "noun": "Phase 1 item(s) with invented or no evidence"
+   }
+  },
+  {
+   "id": "G1-14",
+   "gate": 1,
+   "text": "Differentiation is evidenced: an Opportunity exploits a verified competitor gap",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G1-14"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "Opportunity",
+     "where": {
+      "$hasOut": {
+       "link": "exploits",
+       "counted": true
+      },
+      "$and": [
+       {
+        "$hasOut": "supported_by"
+       }
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "Opportunity(ies) exploiting a verified gap"
+   }
+  },
+  {
+   "id": "G1-20",
+   "gate": 1,
+   "text": "Every Reviewed competitor value is verified by a different human, with a source",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G1-20",
+    "COMP-6/CR-49"
+   ],
+   "query": {
+    "op": "values_verified",
+    "sel": {
+     "types": [
+      "CompetitorCapability",
+      "PricePoint"
+     ],
+     "where": {
+      "status": "Reviewed"
+     }
+    }
+   }
+  },
+  {
+   "id": "G2-02",
+   "gate": 2,
+   "text": "Scope is explicit: at least one out-of-scope line, and every later/out line has rationale, impact and a justification",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G2-02",
+    "CR-08"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "count_min",
+      "sel": {
+       "type": "ScopeEntry",
+       "where": {
+        "kind": "scope",
+        "disposition": "out"
+       }
+      },
+      "min": 1,
+      "noun": "out-of-scope line(s)"
+     },
+     {
+      "op": "coverage",
+      "rules": [
+       "CR-08"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "G2-04",
+   "gate": 2,
+   "text": "Each in-scope Feature traces to a goal or need",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G2-04",
+    "CR-07"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-07"
+    ]
+   }
+  },
+  {
+   "id": "G2-05",
+   "gate": 2,
+   "text": "Success metrics are measurable with unit, owner, cadence, target and baseline",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G2-05",
+    "3.4.3"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "Metric",
+     "where": {
+      "use": [
+       "success_metric",
+       "key_result"
+      ]
+     }
+    },
+    "fields": [
+     "definition",
+     "unit",
+     "owner",
+     "cadence",
+     "target_value",
+     "comparator",
+     "baseline_type",
+     "measurement_method"
+    ],
+    "noun": "success metric"
+   }
+  },
+  {
+   "id": "G2-06",
+   "gate": 2,
+   "text": "Effort is estimated for every Must Feature and each is planned in a Release",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G2-06"
+   ],
+   "query": {
+    "op": "exists_link",
+    "sel": {
+     "type": "Feature",
+     "where": {
+      "priority": "Must"
+     }
+    },
+    "requirement": {
+     "all": [
+      {
+       "label": "has an effort estimate",
+       "field": {
+        "effort_pm": {
+         "exists": true
+        }
+       }
+      },
+      {
+       "label": "is planned in a Release",
+       "link": "planned_in",
+       "dir": "out"
+      }
+     ]
+    },
+    "noun": "Must feature"
+   }
+  },
+  {
+   "id": "G2-07",
+   "gate": 2,
+   "text": "The Must set fits capacity (Must effort <= capacity x utilisation)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G2-07",
+    "3.12"
+   ],
+   "query": {
+    "op": "numeric_compare",
+    "group": {
+     "type": "Release"
+    },
+    "left": {
+     "agg": "sum",
+     "walk": [
+      {
+       "link": "planned_in",
+       "dir": "in"
+      }
+     ],
+     "type": "Feature",
+     "where": {
+      "priority": "Must"
+     },
+     "field": "effort_pm",
+     "label": "Must effort"
+    },
+    "cmp": "<=",
+    "right": {
+     "agg": "sum",
+     "walk": [
+      {
+       "link": "staffed_by",
+       "dir": "out"
+      }
+     ],
+     "type": "Capacity",
+     "field": "person_months",
+     "counted": true,
+     "mul": "$capacity_util_max",
+     "label": "capacity x utilisation"
+    },
+    "unit": "person-months",
+    "noun": "Release"
+   }
+  },
+  {
+   "id": "G2-10",
+   "gate": 2,
+   "text": "Confirmed constraints are reviewed and every high-impact assumption is tested or tied to a later gate",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G2-10",
+    "CR-23",
+    "CR-24"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "each_has_fields",
+      "sel": {
+       "type": "Constraint",
+       "where": {
+        "status": "Confirmed"
+       }
+      },
+      "fields": [
+       "reviewed_at"
+      ],
+      "noun": "confirmed constraint"
+     },
+     {
+      "op": "exists_link",
+      "sel": {
+       "type": "Assumption",
+       "where": {
+        "status": "Open",
+        "impact": {
+         "gte": 4
+        }
+       }
+      },
+      "requirement": {
+       "label": "has an Experiment or is validated at a later gate",
+       "anyOf": [
+        {
+         "field": {
+          "validate_by_gate": {
+           "gt": 2
+          }
+         }
+        },
+        {
+         "link": "tests",
+         "dir": "in"
+        }
+       ]
+      },
+      "noun": "high-impact assumption"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G2-13",
+   "gate": 2,
+   "text": "The scope baseline Decision is recorded and approved",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G2-13"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "Decision",
+     "where": {
+      "kind": "product",
+      "title": {
+       "contains": "scope baseline"
+      },
+      "status": "Approved"
+     }
+    },
+    "min": 1,
+    "noun": "approved scope baseline Decision(s)"
+   }
+  },
+  {
+   "id": "G2-14",
+   "gate": 2,
+   "text": "No open Must Question is needed by this gate",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G2-14"
+   ],
+   "query": {
+    "op": "must_questions",
+    "gate": 2
+   }
+  },
+  {
+   "id": "G3-02",
+   "gate": 3,
+   "text": "Every Must requirement and story passes the quality lint (no vague words, no TBD)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G3-02",
+    "3.9.1"
+   ],
+   "query": {
+    "op": "lint",
+    "sel": {
+     "types": [
+      "Requirement",
+      "Story"
+     ],
+     "where": {
+      "priority": "Must"
+     }
+    },
+    "rules": [
+     "vague_word",
+     "tbd"
+    ],
+    "severity": "High",
+    "noun": "Must item(s) failing lint"
+   }
+  },
+  {
+   "id": "G3-04",
+   "gate": 3,
+   "text": "Must NFRs are quantified (complete measurement block)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G3-04",
+    "3.4.2"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "Requirement",
+     "subtype": "non_functional",
+     "where": {
+      "priority": "Must"
+     }
+    },
+    "fields": [
+     "category",
+     "metric",
+     "comparator",
+     "target_value",
+     "unit",
+     "condition",
+     "environment",
+     "measurement_point",
+     "measurement_tool"
+    ],
+    "noun": "Must NFR"
+   }
+  },
+  {
+   "id": "G3-05",
+   "gate": 3,
+   "text": "NFR basis is stated; assumed numbers link to an Assumption; invented numbers are not accepted",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G3-05"
+   ],
+   "query": {
+    "op": "exists_link",
+    "sel": {
+     "type": "Requirement",
+     "subtype": "non_functional",
+     "where": {
+      "priority": "Must"
+     }
+    },
+    "requirement": {
+     "label": "has a measured/benchmarked basis or an assumed basis linked to an Assumption",
+     "anyOf": [
+      {
+       "field": {
+        "basis": [
+         "measured",
+         "benchmarked"
+        ]
+       }
+      },
+      {
+       "all": [
+        {
+         "field": {
+          "basis": "assumed"
+         }
+        },
+        {
+         "link": "assumes",
+         "dir": "out"
+        }
+       ]
+      }
+     ]
+    },
+    "noun": "Must NFR"
+   }
+  },
+  {
+   "id": "G3-08",
+   "gate": 3,
+   "text": "No orphan requirements: every requirement derives from a feature, insight, obligation or constraint",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G3-08",
+    "CR-11"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-11"
+    ]
+   }
+  },
+  {
+   "id": "G3-08b",
+   "gate": 3,
+   "text": "Behaviour is specified: every functional/interface/data requirement has a reviewed acceptance criterion",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G3-08",
+    "CR-12"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-12"
+    ]
+   }
+  },
+  {
+   "id": "G3-09",
+   "gate": 3,
+   "text": "Every functional Must has a happy-path AC and a negative, boundary or edge AC",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G3-09",
+    "3.4.5"
+   ],
+   "query": {
+    "op": "exists_link",
+    "sel": {
+     "type": "Requirement",
+     "subtype": "functional",
+     "where": {
+      "priority": "Must"
+     }
+    },
+    "requirement": {
+     "all": [
+      {
+       "label": "has a happy-path AC",
+       "link": "specifies",
+       "dir": "in",
+       "toType": "AcceptanceCriterion",
+       "counted": true,
+       "toWhere": {
+        "scenario_type": "happy"
+       }
+      },
+      {
+       "label": "has a negative/boundary/edge AC",
+       "link": "specifies",
+       "dir": "in",
+       "toType": "AcceptanceCriterion",
+       "counted": true,
+       "toWhere": {
+        "scenario_type": [
+         "negative",
+         "boundary",
+         "edge"
+        ]
+       }
+      }
+     ]
+    },
+    "noun": "functional Must"
+   }
+  },
+  {
+   "id": "G3-10",
+   "gate": 3,
+   "text": "Every Must NFR is scoped (global or applies_to) and verifiable by a threshold AC",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G3-10",
+    "CR-14"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-14"
+    ]
+   }
+  },
+  {
+   "id": "G3-12",
+   "gate": 3,
+   "text": "Every primary Persona has a Story and every Story is complete",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G3-12",
+    "CR-19",
+    "CR-20"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-19",
+     "CR-20"
+    ]
+   }
+  },
+  {
+   "id": "G3-19",
+   "gate": 3,
+   "text": "No open Must Question is needed by this gate",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G3-19"
+   ],
+   "query": {
+    "op": "must_questions",
+    "gate": 3
+   }
+  },
+  {
+   "id": "G3-21",
+   "gate": 3,
+   "text": "Flow applicability is set for every Must requirement; every NFR is scoped (global or applies_to)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G3-21",
+    "4.15"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "exists_link",
+      "sel": {
+       "type": "Requirement",
+       "where": {
+        "priority": "Must"
+       }
+      },
+      "requirement": {
+       "label": "has flow_applicability",
+       "field": {
+        "flow_applicability": {
+         "exists": true
+        }
+       }
+      },
+      "noun": "Must requirement"
+     },
+     {
+      "op": "coverage",
+      "rules": [
+       "CR-14S"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "G4-02",
+   "gate": 4,
+   "text": "Every flow-applicable Must functional/interface requirement appears in a flow step",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G4-02",
+    "CR-28"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-28"
+    ]
+   }
+  },
+  {
+   "id": "G4-03",
+   "gate": 4,
+   "text": "Every NFR is covered by scope (global or applies_to), not by flow steps",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G4-03",
+    "4.15"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-14S"
+    ]
+   }
+  },
+  {
+   "id": "G4-05",
+   "gate": 4,
+   "text": "Data requirements anchor an Entity and every lifecycle Entity has a complete state model",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G4-05",
+    "CR-16",
+    "CR-30"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "coverage",
+      "rules": [
+       "CR-16"
+      ],
+      "emptyIs": "pass"
+     },
+     {
+      "op": "entities_complete"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G4-06",
+   "gate": 4,
+   "text": "Must flows are structurally complete (start/end, no dead end, guarded decisions, failure edges)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "G4-06",
+    "3.9"
+   ],
+   "query": {
+    "op": "flows_complete",
+    "sel": {
+     "type": "Flow",
+     "where": {
+      "priority": "Must"
+     }
+    }
+   }
+  },
+  {
+   "id": "G4-08",
+   "gate": 4,
+   "text": "Failure edges and forbidden transitions have a negative acceptance criterion",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G4-08",
+    "CR-31",
+    "CR-32"
+   ],
+   "query": {
+    "op": "failure_edges_tested"
+   }
+  },
+  {
+   "id": "G4-12",
+   "gate": 4,
+   "text": "Every Must flow has been walked through with a non-author",
+   "type": "ATTEST",
+   "severity": "must",
+   "depth_level": "L3",
+   "v2Ref": [
+    "G4-12",
+    "CR-47"
+   ],
+   "attest": {
+    "role": "Product Owner",
+    "mode": "and",
+    "statement": "A walkthrough of each Must flow was held with at least two attendees including one non-author."
+   }
+  },
+  {
+   "id": "G4-14",
+   "gate": 4,
+   "text": "Handoff readiness: every Approved Story has a complete, valid handoff closure",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "G4-14",
+    "G4-15",
+    "8.3"
+   ],
+   "query": {
+    "op": "handoff_ready"
+   }
+  },
+  {
+   "id": "G4-17",
+   "gate": 4,
+   "text": "No open Must Question is needed by this gate",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "waivable": false,
+   "v2Ref": [
+    "G4-17"
+   ],
+   "query": {
+    "op": "must_questions",
+    "gate": 4
+   }
+  },
+  {
+   "id": "G5-01",
+   "gate": 5,
+   "text": "Every Must story has a screen designed for it",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P5"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P5-01"
+    ]
+   }
+  },
+  {
+   "id": "G5-02",
+   "gate": 5,
+   "text": "Every screen defines its loading, empty, error and permission-denied states",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P5"
+   ],
+   "query": {
+    "op": "children_cover",
+    "sel": {
+     "type": "Screen"
+    },
+    "link": "state_of",
+    "dir": "in",
+    "toType": "ScreenState",
+    "field": "state_kind",
+    "required": [
+     "loading",
+     "empty",
+     "error",
+     "permission_denied"
+    ],
+    "noun": "screen"
+   }
+  },
+  {
+   "id": "G5-03",
+   "gate": 5,
+   "text": "Every screen links to its design (Figma or Penpot), never a copy",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P5"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "Screen"
+    },
+    "fields": [
+     "design_link"
+    ],
+    "noun": "screen"
+   }
+  },
+  {
+   "id": "G5-04",
+   "gate": 5,
+   "text": "A design review is approved",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P5"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "DesignReview",
+     "where": {
+      "status": "Approved"
+     }
+    },
+    "min": 1,
+    "noun": "approved design review"
+   }
+  },
+  {
+   "id": "G5-05",
+   "gate": 5,
+   "text": "No design review is waiting on changes",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P5"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "DesignReview",
+     "where": {
+      "status": [
+       "Changes requested",
+       "Rejected"
+      ]
+     }
+    },
+    "noun": "design review(s) with open changes"
+   }
+  },
+  {
+   "id": "G5-06",
+   "gate": 5,
+   "text": "Responsive behaviour and accessibility were checked against the screens",
+   "type": "ATTEST",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P5"
+   ],
+   "attest": {
+    "role": "UX designer",
+    "mode": "and",
+    "statement": "Each screen was checked on a narrow window and with keyboard and screen-reader basics."
+   }
+  },
+  {
+   "id": "G6-01",
+   "gate": 6,
+   "text": "Every Must or Should quality target (NFR) has an architecture answer",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P6"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P6-01"
+    ]
+   }
+  },
+  {
+   "id": "G6-02",
+   "gate": 6,
+   "text": "Architecture decisions record context, decision and consequences",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P6"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "ArchDecision"
+    },
+    "fields": [
+     "context",
+     "decision",
+     "consequences"
+    ],
+    "noun": "architecture decision"
+   }
+  },
+  {
+   "id": "G6-03",
+   "gate": 6,
+   "text": "Frontend, backend and database components are defined",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P6"
+   ],
+   "query": {
+    "op": "categories_covered",
+    "sel": {
+     "type": "ArchComponent",
+     "where": {
+      "status": [
+       "In review",
+       "Approved"
+      ]
+     }
+    },
+    "field": "kind",
+    "required": [
+     "frontend",
+     "backend",
+     "database"
+    ],
+    "noun": "component kinds"
+   }
+  },
+  {
+   "id": "G6-04",
+   "gate": 6,
+   "text": "Every API contract links to its specification and has a version and owner",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P6"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "ApiContract"
+    },
+    "fields": [
+     "spec_link",
+     "version",
+     "owner"
+    ],
+    "noun": "API contract"
+   }
+  },
+  {
+   "id": "G6-05",
+   "gate": 6,
+   "text": "No architecture decision is still only proposed",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P6"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "ArchDecision",
+     "where": {
+      "status": "Proposed"
+     }
+    },
+    "noun": "proposed architecture decision(s)"
+   }
+  },
+  {
+   "id": "G6-06",
+   "gate": 6,
+   "text": "Security architecture was reviewed (authentication, authorization, data protection)",
+   "type": "ATTEST",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P6"
+   ],
+   "attest": {
+    "role": "Security lead",
+    "mode": "and",
+    "statement": "The security architecture covers authentication, authorization, secrets and data protection and was reviewed."
+   }
+  },
+  {
+   "id": "G7-01",
+   "gate": 7,
+   "text": "Every Must story has a feature specification",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P7"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P7-01"
+    ]
+   }
+  },
+  {
+   "id": "G7-02",
+   "gate": 7,
+   "text": "Feature specifications are complete (flow, edge cases, testing needs, definition of done)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P7"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "FeatureSpec"
+    },
+    "fields": [
+     "preconditions",
+     "trigger_input",
+     "pre_checks",
+     "main_flow",
+     "output",
+     "edge_cases",
+     "testing_requirements",
+     "definition_of_done"
+    ],
+    "noun": "feature specification"
+   }
+  },
+  {
+   "id": "G7-03",
+   "gate": 7,
+   "text": "No feature specification is still a draft",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P7"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "FeatureSpec",
+     "where": {
+      "status": "Draft"
+     }
+    },
+    "noun": "draft feature specification(s)"
+   }
+  },
+  {
+   "id": "G7-04",
+   "gate": 7,
+   "text": "Each feature specification names security and observability needs",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L3",
+   "v2Ref": [
+    "LIFECYCLE/P7"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "FeatureSpec"
+    },
+    "fields": [
+     "security_notes",
+     "observability_notes"
+    ],
+    "noun": "feature specification"
+   }
+  },
+  {
+   "id": "G8-01",
+   "gate": 8,
+   "text": "Every Must story has a development work item",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P8"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P8-01"
+    ]
+   }
+  },
+  {
+   "id": "G8-02",
+   "gate": 8,
+   "text": "No work item is blocked",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P8"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "WorkItem",
+     "where": {
+      "status": "Blocked"
+     }
+    },
+    "noun": "blocked work item(s)"
+   }
+  },
+  {
+   "id": "G8-03",
+   "gate": 8,
+   "text": "Done work items link to a pull request",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P8"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "WorkItem",
+     "where": {
+      "status": "Done"
+     }
+    },
+    "fields": [
+     "pr_url"
+    ],
+    "noun": "finished work item"
+   }
+  },
+  {
+   "id": "G8-04",
+   "gate": 8,
+   "text": "No finished work item is missing code review or its definition of done",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P8"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "WorkItem",
+     "where": {
+      "status": "Done",
+      "$or": [
+       {
+        "dod_met": false
+       },
+       {
+        "code_reviewed": false
+       }
+      ]
+     }
+    },
+    "noun": "finished work item(s) without review or definition of done"
+   }
+  },
+  {
+   "id": "G8-05",
+   "gate": 8,
+   "text": "Developer tests pass and the build is reproducible",
+   "type": "ATTEST",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P8"
+   ],
+   "attest": {
+    "role": "Tech lead",
+    "mode": "and",
+    "statement": "Developer-level tests pass on the build that goes to QA."
+   }
+  },
+  {
+   "id": "G9-01",
+   "gate": 9,
+   "text": "QG1 Requirement coverage: every approved Must requirement has a test case",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG1"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P9-01"
+    ]
+   }
+  },
+  {
+   "id": "G9-02",
+   "gate": 9,
+   "text": "QG2 Functional correctness: functional test cases pass on their latest run",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG2"
+   ],
+   "query": {
+    "op": "latest_run",
+    "sel": {
+     "type": "TestCase",
+     "where": {
+      "kind": "functional",
+      "status": [
+       "In review",
+       "Approved"
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "functional test case"
+   }
+  },
+  {
+   "id": "G9-03",
+   "gate": 9,
+   "text": "QG3 Negative and edge cases: invalid input and boundary cases exist and pass",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG3"
+   ],
+   "query": {
+    "op": "all",
+    "of": [
+     {
+      "op": "latest_run",
+      "sel": {
+       "type": "TestCase",
+       "where": {
+        "kind": "negative",
+        "status": [
+         "In review",
+         "Approved"
+        ]
+       }
+      },
+      "min": 1,
+      "noun": "negative test case"
+     },
+     {
+      "op": "latest_run",
+      "sel": {
+       "type": "TestCase",
+       "where": {
+        "kind": "edge",
+        "status": [
+         "In review",
+         "Approved"
+        ]
+       }
+      },
+      "min": 1,
+      "noun": "edge test case"
+     }
+    ]
+   }
+  },
+  {
+   "id": "G9-04",
+   "gate": 9,
+   "text": "QG4 Authorization: users cannot act outside their permissions (tests pass)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG4"
+   ],
+   "query": {
+    "op": "latest_run",
+    "sel": {
+     "type": "TestCase",
+     "where": {
+      "kind": "authorization",
+      "status": [
+       "In review",
+       "Approved"
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "authorization test case"
+   }
+  },
+  {
+   "id": "G9-05",
+   "gate": 9,
+   "text": "QG5 Data integrity: transactions and cross-module updates stay consistent (tests pass)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG5"
+   ],
+   "query": {
+    "op": "latest_run",
+    "sel": {
+     "type": "TestCase",
+     "where": {
+      "kind": "data_integrity",
+      "status": [
+       "In review",
+       "Approved"
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "data integrity test case"
+   }
+  },
+  {
+   "id": "G9-06",
+   "gate": 9,
+   "text": "QG6 Integration: dependent systems communicate and fail gracefully (tests pass)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG6"
+   ],
+   "query": {
+    "op": "latest_run",
+    "sel": {
+     "type": "TestCase",
+     "where": {
+      "kind": "integration",
+      "status": [
+       "In review",
+       "Approved"
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "integration test case"
+   }
+  },
+  {
+   "id": "G9-07",
+   "gate": 9,
+   "text": "QG7 Regression: previously working functionality is intact (tests pass)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG7"
+   ],
+   "query": {
+    "op": "latest_run",
+    "sel": {
+     "type": "TestCase",
+     "where": {
+      "kind": "regression",
+      "status": [
+       "In review",
+       "Approved"
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "regression test case"
+   }
+  },
+  {
+   "id": "G9-08",
+   "gate": 9,
+   "text": "QG8 Security: no unresolved critical or high finding",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG8"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "SecurityFinding",
+     "where": {
+      "status": "Open",
+      "severity": [
+       "Critical",
+       "High"
+      ]
+     }
+    },
+    "noun": "open critical or high security finding(s)"
+   }
+  },
+  {
+   "id": "G9-09",
+   "gate": 9,
+   "text": "QG9 Acceptance: every Must story is accepted by an authorised stakeholder",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG9"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P9-02"
+    ]
+   }
+  },
+  {
+   "id": "G9-10",
+   "gate": 9,
+   "text": "QG10 Release readiness: no blocking defect is open (resolved or knowingly accepted)",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9/QG10"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "Defect",
+     "where": {
+      "status": [
+       "Open",
+       "Fixed",
+       "Retest"
+      ],
+      "severity": [
+       "Critical",
+       "High"
+      ]
+     }
+    },
+    "noun": "blocking defect(s) not closed"
+   }
+  },
+  {
+   "id": "G9-11",
+   "gate": 9,
+   "text": "Release readiness decision is signed by QA lead and business owner",
+   "type": "ATTEST",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P9"
+   ],
+   "attest": {
+    "role": "QA lead",
+    "mode": "and",
+    "statement": "All ten quality gates are met or knowingly waived, and I recommend release."
+   }
+  },
+  {
+   "id": "G10-01",
+   "gate": 10,
+   "text": "A release is approved or deployed",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P10"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "DeployRelease",
+     "where": {
+      "status": [
+       "Approved",
+       "Deployed"
+      ]
+     }
+    },
+    "min": 1,
+    "noun": "approved release"
+   }
+  },
+  {
+   "id": "G10-02",
+   "gate": 10,
+   "text": "Every release has a version, environment, release notes and a rollback plan",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P10"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "DeployRelease",
+     "where": {
+      "status": [
+       "Approved",
+       "Deployed"
+      ]
+     }
+    },
+    "fields": [
+     "version",
+     "environment",
+     "release_notes",
+     "rollback_plan"
+    ],
+    "noun": "release"
+   }
+  },
+  {
+   "id": "G10-03",
+   "gate": 10,
+   "text": "Every deployed release passed its smoke test",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P10"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "DeployRelease",
+     "where": {
+      "status": "Deployed",
+      "smoke_result": {
+       "not": "pass"
+      }
+     }
+    },
+    "noun": "deployed release(s) without a passing smoke test"
+   }
+  },
+  {
+   "id": "G10-04",
+   "gate": 10,
+   "text": "Every Must story is shipped by an approved release",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P10"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P10-01"
+    ]
+   }
+  },
+  {
+   "id": "G10-05",
+   "gate": 10,
+   "text": "Every release records its migration",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P10"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "DeployRelease",
+     "where": {
+      "status": [
+       "Approved",
+       "Deployed"
+      ]
+     }
+    },
+    "fields": [
+     "migration_record"
+    ],
+    "noun": "release"
+   }
+  },
+  {
+   "id": "G10-06",
+   "gate": 10,
+   "text": "Release approved by sponsor and operations",
+   "type": "ATTEST",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P10"
+   ],
+   "attest": {
+    "role": "Sponsor",
+    "mode": "and",
+    "statement": "I approve this release to go live and rollback readiness is confirmed."
+   }
+  },
+  {
+   "id": "G11-01",
+   "gate": 11,
+   "text": "Every Must quality target (NFR) has an active alert",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P11"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P11-01"
+    ]
+   }
+  },
+  {
+   "id": "G11-02",
+   "gate": 11,
+   "text": "Every active alert has a runbook",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P11"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P11-02"
+    ]
+   }
+  },
+  {
+   "id": "G11-03",
+   "gate": 11,
+   "text": "Every runbook has an owner and a review date",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P11"
+   ],
+   "query": {
+    "op": "each_has_fields",
+    "sel": {
+     "type": "Runbook"
+    },
+    "fields": [
+     "owner",
+     "last_reviewed"
+    ],
+    "noun": "runbook"
+   }
+  },
+  {
+   "id": "G11-04",
+   "gate": 11,
+   "text": "Every resolved incident has a post-incident review",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P11"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "Incident",
+     "where": {
+      "status": "Resolved"
+     }
+    },
+    "noun": "resolved incident(s) awaiting review"
+   }
+  },
+  {
+   "id": "G11-05",
+   "gate": 11,
+   "text": "A production health review has been held",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P11"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "HealthReview",
+     "where": {
+      "status": "Reviewed"
+     }
+    },
+    "min": 1,
+    "noun": "health review"
+   }
+  },
+  {
+   "id": "G12-01",
+   "gate": 12,
+   "text": "Every piece of feedback has been triaged",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P12"
+   ],
+   "query": {
+    "op": "none_open",
+    "sel": {
+     "type": "Feedback",
+     "where": {
+      "status": "New"
+     }
+    },
+    "noun": "untriaged feedback item(s)"
+   }
+  },
+  {
+   "id": "G12-02",
+   "gate": 12,
+   "text": "Every planned feedback item has a change request",
+   "type": "AUTO",
+   "severity": "must",
+   "depth_level": "L1",
+   "v2Ref": [
+    "LIFECYCLE/P12"
+   ],
+   "query": {
+    "op": "coverage",
+    "rules": [
+     "CR-P12-01"
+    ]
+   }
+  },
+  {
+   "id": "G12-03",
+   "gate": 12,
+   "text": "Lessons learned are recorded",
+   "type": "AUTO",
+   "severity": "should",
+   "depth_level": "L2",
+   "v2Ref": [
+    "LIFECYCLE/P12"
+   ],
+   "query": {
+    "op": "count_min",
+    "sel": {
+     "type": "Lesson"
+    },
+    "min": 1,
+    "noun": "lesson learned"
+   }
+  }
+ ]
+}

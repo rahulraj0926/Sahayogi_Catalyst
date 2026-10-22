@@ -1,0 +1,67 @@
+'use client';
+import Link from 'next/link';
+import { useRef, useState } from 'react';
+import type { FeatureProps } from '../types';
+import { Badge, Card, Empty, ErrorBox, Loading, Page } from '@/components/ui';
+import { Field, useAction } from '@/components/kit';
+import { CostBar } from './Extras';
+import Viewer from './Viewer';
+import { fileUrl } from './Extras';
+import { actor, api, useApi } from '@/lib/api';
+
+
+/** Files: upload, let the assistant read, view. Prototype: files.js, fileviewer.js */
+export default function Files({ pid, args, query }: FeatureProps) {
+  return args[0] ? <Viewer pid={pid} id={args[0]} query={query} /> : <FileList pid={pid} />;
+}
+
+function FileList({ pid }: { pid: string }) {
+  const { data, error, loading, reload } = useApi<any>('/attachments', pid);
+  const items = useApi<any>('/items?limit=2000', pid);
+  const [target, setTarget] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const act = useAction();
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
+  const all: any[] = items.data?.items || [];
+  const comps = all.filter((i) => i.type === 'Competitor');
+  const upload = (file: File) => act.run(async () => {
+    const res = await fetch(`/api/attachments?target=${encodeURIComponent(target)}&name=${encodeURIComponent(file.name)}&product=${encodeURIComponent(pid)}`, { method: 'POST', headers: { 'x-actor': actor(), 'content-type': file.type || 'application/octet-stream' }, body: file });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || `Upload failed (${res.status})`);
+    setMsg(`${file.name} uploaded (${j.extraction?.status}).`); reload();
+  });
+  return (
+    <Page title="Files" sub="Upload a document, let the assistant read it, then review what it found in the Review inbox. Nothing counts until you accept it.">
+      <CostBar pid={pid} />
+      <Card title="Add a file">
+        <div className="row wrap">
+          <Field label="Attach it to"><select value={target} onChange={(e) => setTarget(e.target.value)} style={{ maxWidth: 360 }}><option value="">Choose what it belongs to…</option>{all.filter((i) => ['Product', 'Competitor', 'Feature', 'Requirement', 'IntakeBrief'].includes(i.type) || i.id.startsWith('CMP')).map((i) => <option key={i.id} value={i.id}>{i.id}: {i.title}</option>)}</select></Field>
+          <input ref={input} type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }} />
+          <button className="btn primary" disabled={!target || act.busy} onClick={() => input.current?.click()}>{act.busy ? 'Uploading…' : 'Choose a file to upload'}</button>
+        </div>
+        <div className="xs muted">Word, PowerPoint, Excel, CSV, PDF, text and images, up to 25 MB. Programs and scripts are refused.</div>
+        {act.box}{msg && <div className="callout ok">{msg}</div>}
+      </Card>
+      <div style={{ height: 14 }} />
+      <Card title="Files" sub={`${data.total}`} flush>
+        {data.attachments.length === 0 ? <Empty>No files yet.</Empty> : (
+          <table className="tbl compact"><thead><tr><th>File</th><th>Attached to</th><th>Text</th><th>Added</th><th /></tr></thead><tbody>
+            {data.attachments.map((a: any) => (
+              <tr key={a.id}>
+                <td><Link className="strong" href={`/products/${pid}/files/${a.id}`}>{a.filename}</Link><div className="xs muted">{a.id} · {Math.round(a.size_bytes / 1024)} KB</div></td>
+                <td>{(a.targets || []).map((t: string) => <Link key={t} href={`/products/${pid}/item/${t}`} className="mono xs" style={{ marginRight: 6 }}>{t}</Link>)}</td>
+                <td><Badge kind={a.extracted_text_status === 'ok' ? 'ok' : 'warn'}>{a.extracted_text_status}</Badge></td>
+                <td className="small muted">{a.uploaded_by}<br />{a.uploaded_on}</td>
+                <td><a className="btn ghost sm" href={fileUrl(pid, a.id, 'download')}>Download</a> <button className="btn ghost sm" onClick={async () => (await act.ask(`Delete ${a.filename}?`, 'Delete')) && act.run(async () => { await api(`/attachments/${a.id}`, { method: 'DELETE', product: pid }); reload(); })}>Delete</button></td>
+              </tr>
+            ))}
+          </tbody></table>
+        )}
+      </Card>
+      {data.attachments.length > 0 && <div className="small muted" style={{ marginTop: 10 }}>Open a file to ask the assistant to read it.</div>}
+    </Page>
+  );
+}
+

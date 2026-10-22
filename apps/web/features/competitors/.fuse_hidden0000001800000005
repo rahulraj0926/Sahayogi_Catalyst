@@ -1,0 +1,139 @@
+'use client';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Effort, Queue, Sources } from './Experts';
+import Profile from './Profile';
+import type { FeatureProps } from '../types';
+import { Badge, Card, Empty, ErrorBox, Loading, Page } from '@/components/ui';
+import { Field, Modal, Stat, Tabs, useAction } from '@/components/kit';
+import { api, useApi } from '@/lib/api';
+
+const LEVEL_TONE: Record<string, string> = { strong: 'ok', parity: 'ok', partial: 'warn', absent: 'bad', unknown: '' };
+
+/** Competitors: tiers, capability grid, prices, side-by-side compare. Prototype: cw_list.js, cw_compare.js, cw_profile.js, competitors_grid.js */
+export default function Competitors({ pid, args, query }: FeatureProps) {
+  const [tab, setTab] = useState(['compare', 'sources', 'queue', 'effort', 'grid', 'prices'].includes(args[0]) ? args[0] : 'list');
+  if (args[0] && !['compare', 'sources', 'queue', 'effort', 'grid', 'prices'].includes(args[0])) return <Profile pid={pid} id={args[0]} query={query} />;
+  return (
+    <Page title="Competitors" sub="Who else solves this, what they offer, what they charge. Values go stale: stale ones are shown but not counted.">
+      <Tabs value={tab} onChange={setTab} tabs={[['list', 'Competitors'], ['grid', 'Capability grid'], ['prices', 'Prices'], ['compare', 'Compare side by side'], ['sources', 'Sources and evidence'], ['queue', 'Verification queue'], ['effort', 'Effort and cost']]} />
+      {tab === 'list' && <List pid={pid} />}
+      {tab === 'grid' && <Grid pid={pid} />}
+      {tab === 'prices' && <Prices pid={pid} />}
+      {tab === 'compare' && <Compare pid={pid} />}
+      {tab === 'sources' && <Sources pid={pid} />}
+      {tab === 'queue' && <Queue pid={pid} />}
+      {tab === 'effort' && <Effort pid={pid} />}
+    </Page>
+  );
+}
+
+function List({ pid }: { pid: string }) {
+  const { data, error, loading, reload } = useApi<any>('/competitors/tiers', pid);
+  const [adding, setAdding] = useState(false);
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
+  const c = data.counts;
+  return (
+    <>
+      <div className="grid g4" style={{ marginBottom: 12 }}><Stat value={c.total} label="competitors" /><Stat value={c.T1 || 0} label="close (tier 1)" /><Stat value={c.T2 || 0} label="near (tier 2)" /><Stat value={data.caps.total} label="capability ratings" /></div>
+      {(data.warnings || []).map((w: string) => <div key={w} className="callout warn" style={{ marginBottom: 8 }}>{w}</div>)}
+      <div className="row" style={{ marginBottom: 8 }}><span className="spacer" /><button className="btn primary" onClick={() => setAdding(true)}>Add a competitor</button></div>
+      {['T1', 'T2', 'T3', 'S', 'unassigned'].map((t) => {
+        const list: any[] = data.tiers[t] || [];
+        if (!list.length) return null;
+        return (
+          <Card key={t} title={{ T1: 'Tier 1: head to head', T2: 'Tier 2: nearby', T3: 'Tier 3: watch', S: 'Substitutes and alternatives', unassigned: 'No tier yet' }[t]} sub={`${list.length}`} flush>
+            <table className="tbl compact"><tbody>{list.map((x) => (
+              <tr key={x.id}><td><Link className="strong" href={`/products/${pid}/competitors/${x.id}`}>{x.title}</Link><div className="xs muted">{x.positioning}</div></td>
+                <td className="small">{x.rated} ratings · {x.prices} prices</td><td><Badge kind={x.freshness === 'fresh' ? 'ok' : 'warn'}>{x.freshness}</Badge>{x.stale > 0 && <span className="xs muted"> {x.stale} stale</span>}{x.unverified > 0 && <span className="xs muted"> {x.unverified} unverified</span>}</td><td><Badge>{x.status}</Badge></td></tr>
+            ))}</tbody></table>
+          </Card>
+        );
+      })}
+      {adding && <AddCompetitor pid={pid} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
+    </>
+  );
+}
+
+function AddCompetitor({ pid, onClose, onDone }: { pid: string; onClose: () => void; onDone: () => void }) {
+  const [f, setF] = useState<any>({ title: '', kind: 'direct', tier: 'T2', website: '', positioning: '' });
+  const act = useAction();
+  return (
+    <Modal title="Add a competitor" onClose={onClose}>
+      <Field label="Name *"><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
+      <div className="grid g2"><Field label="Kind"><select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}><option value="direct">Direct</option><option value="indirect">Indirect</option><option value="alternative">Alternative / substitute</option></select></Field>
+        <Field label="Tier"><select value={f.tier} onChange={(e) => setF({ ...f, tier: e.target.value })}>{['T1', 'T2', 'T3', 'S'].map((t) => <option key={t}>{t}</option>)}</select></Field></div>
+      <Field label="Website"><input value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></Field>
+      <Field label="How they position themselves"><textarea rows={2} value={f.positioning} onChange={(e) => setF({ ...f, positioning: e.target.value })} /></Field>
+      {act.box}
+      <button className="btn primary" disabled={!f.title.trim() || act.busy} onClick={() => act.run(async () => { const fields: any = { ...f }; Object.keys(fields).forEach((k) => fields[k] === '' && delete fields[k]); await api('/items', { method: 'POST', body: { type: 'Competitor', fields }, product: pid }); onDone(); })}>Add</button>
+    </Modal>
+  );
+}
+
+function Grid({ pid }: { pid: string }) {
+  const { data, error, loading } = useApi<any>('/competitors/grid', pid);
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
+  if (!data.rows.length) return <Empty>No capability ratings yet.</Empty>;
+  return (
+    <Card flush>
+      <div style={{ overflow: 'auto' }}><table className="tbl compact">
+        <thead><tr><th>Capability</th><th>Weight</th>{data.competitors.map((c: any) => <th key={c.id}><Link href={`/products/${pid}/competitors/${c.id}`}>{c.title}</Link><div className="xs muted">{c.tier}</div></th>)}</tr></thead>
+        <tbody>
+          {data.rows.map((r: any) => <tr key={r.tag}><td className="strong">{r.tag}</td><td>{r.importance}</td>{data.competitors.map((c: any) => { const cell = r.cells[c.id]; return <td key={c.id}>{cell ? <Badge kind={LEVEL_TONE[cell.level] ?? ''}>{cell.level}</Badge> : <span className="muted">–</span>}{cell && cell.counted === false && <span className="xs muted"> not counted</span>}</td>; })}</tr>)}
+          <tr><td className="strong">Weighted score</td><td />{data.competitors.map((c: any) => { const s = data.scores.find((x: any) => x.id === c.id); return <td key={c.id} className="strong">{s ? `${s.weighted}%` : ''}</td>; })}</tr>
+        </tbody>
+      </table></div>
+      <div className="small muted" style={{ padding: 10 }}>{data.note}</div>
+    </Card>
+  );
+}
+
+function Prices({ pid }: { pid: string }) {
+  const { data, error, loading } = useApi<any>('/competitors/prices', pid);
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
+  if (!data.groups.length) return <Empty>No prices recorded yet.</Empty>;
+  return (
+    <>
+      <div className="small muted" style={{ marginBottom: 8 }}>Exchange rates as of {data.fx.date}: 1 USD = ₹{data.fx.USD}, 1 EUR = ₹{data.fx.EUR}. Prices are only compared inside identical groups.</div>
+      {data.groups.map((g: any) => (
+        <Card key={g.key} title={`${g.unit} · ${g.price_type} · ${g.billing_model} · ${g.tax_basis}`} flush>
+          <table className="tbl compact"><thead><tr><th>Competitor</th><th>Plan</th><th>Price</th><th>In INR</th><th>Captured</th><th>State</th></tr></thead><tbody>
+            {g.rows.map((r: any) => <tr key={r.id}><td><Link href={`/products/${pid}/competitors/${r.competitor.id}`}>{r.competitor.title}</Link></td><td>{r.plan}</td><td>{r.currency} {r.amount}</td><td>₹{Math.round(r.amount_inr).toLocaleString('en-IN')}</td><td className="small muted">{r.captured_on} ({r.ageDays} d)</td><td><Badge kind={r.counted ? 'ok' : 'warn'}>{r.counted ? 'counted' : r.freshness !== 'fresh' ? r.freshness : 'not counted'}</Badge></td></tr>)}
+          </tbody></table>
+        </Card>
+      ))}
+    </>
+  );
+}
+
+function Compare({ pid }: { pid: string }) {
+  const [ours, setOurs] = useState(true);
+  const [users, setUsers] = useState(10);
+  const { data, error, loading } = useApi<any>(`/competitors/compare?include_ours=${ours}&users=${users}`, pid);
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
+  const cols: any[] = data.columns;
+  return (
+    <>
+      <div className="row" style={{ marginBottom: 10 }}><label><input type="checkbox" checked={ours} onChange={(e) => setOurs(e.target.checked)} /> Include our product</label><label className="small muted">Users for per-user prices <input type="number" min={1} value={users} onChange={(e) => setUsers(Number(e.target.value) || 1)} style={{ width: 80 }} /></label></div>
+      <Card title="Profile" flush><div style={{ overflow: 'auto' }}><table className="tbl compact"><thead><tr><th />{cols.map((c) => <th key={c.id}>{c.title}<div className="xs muted">{c.tier}</div></th>)}</tr></thead><tbody>
+        {data.profile_rows.map((r: any) => <tr key={r.field}><td className="muted">{r.label}</td>{cols.map((c) => <td key={c.id}>{(() => { const v = r.values[c.id]; const x = v && typeof v === 'object' && 'value' in v ? v.value : v; return Array.isArray(x) ? x.join(', ') : x ?? ''; })()}</td>)}</tr>)}
+      </tbody></table></div></Card>
+      <div style={{ height: 12 }} />
+      <Card title="Capabilities" flush><div style={{ overflow: 'auto' }}><table className="tbl compact"><thead><tr><th>Capability</th><th>Weight</th>{cols.map((c) => <th key={c.id}>{c.title}</th>)}</tr></thead><tbody>
+        {data.capability_rows.map((r: any) => <tr key={r.tag}><td className="strong">{r.tag}</td><td>{r.importance}</td>{cols.map((c) => { const x = r.cells[c.id]; return <td key={c.id}>{x ? <Badge kind={LEVEL_TONE[x.level || x.rating] ?? ''}>{x.level || x.rating}</Badge> : ''}</td>; })}</tr>)}
+      </tbody></table></div></Card>
+      <div style={{ height: 12 }} />
+      <Card title="Prices (excluding GST, in INR)" flush><table className="tbl compact"><thead><tr><th>Competitor</th><th>Plan</th><th>Amount</th><th>Group</th><th>12 months</th><th>36 months</th><th>State</th></tr></thead><tbody>
+        {data.price_rows.map((r: any) => <tr key={r.id}><td>{r.competitor}</td><td>{r.plan}</td><td>{r.currency} {r.amount} / {r.unit}</td><td className="small">{r.group}</td><td>{r.cost_12m_inr ? `₹${Math.round(r.cost_12m_inr).toLocaleString('en-IN')}` : ''}</td><td>{r.cost_36m_inr ? `₹${Math.round(r.cost_36m_inr).toLocaleString('en-IN')}` : ''}</td><td><Badge kind={r.counted ? 'ok' : 'warn'}>{r.counted ? 'counted' : r.freshness}</Badge></td></tr>)}
+      </tbody></table></Card>
+      <ul className="small muted">{(data.rules || []).map((r: string) => <li key={r}>{r}</li>)}</ul>
+      <a className="btn sm" href={`/api/competitors/compare?include_ours=${ours}&users=${users}&format=csv&product=${pid}`}>Download CSV</a>
+    </>
+  );
+}
+

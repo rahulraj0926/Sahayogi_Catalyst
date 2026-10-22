@@ -1,0 +1,25 @@
+{
+  "_comment": "Freshness cadences per competitor dimension and tier, in days (refresh interval and maximum age). Source: Competitor analysis module design, section 6 'Seed DimensionSpec cadences'. A value older than 'refresh' is DUE, older than 'max' is STALE and drops out of outputs.",
+  "v2Ref": ["COMP-6/DimensionSpec"],
+  "dimensions": {
+    "capability": { "label": "DIM-03 capability grid", "T1": { "refresh": 90, "max": 180 }, "T2": { "refresh": 180, "max": 365 }, "S": { "refresh": 365, "max": 365 } },
+    "price_street": { "label": "DIM-04 street price", "T1": { "refresh": 30, "max": 90 }, "T2": { "refresh": 90, "max": 180 }, "S": { "refresh": 90, "max": 180 } },
+    "price_list": { "label": "DIM-04 list, MRP, quote, tender", "T1": { "refresh": 90, "max": 180 }, "T2": { "refresh": 90, "max": 180 }, "T3": { "refresh": 365, "max": 365 }, "S": { "refresh": 365, "max": 365 } },
+    "positioning": { "label": "DIM-05 positioning", "T1": { "refresh": 90, "max": 180 }, "T2": { "refresh": 180, "max": 365 } }
+  },
+  "evidenceMaxAgeDays": { "interview": 730, "survey": 365, "document": 1095, "web_page": 365, "price_list": 180, "regulation": 365, "data_file": 365, "datasheet": 365, "screenshot": 365, "other": 730 },
+  "effortModel": {
+    "_comment": "Planning figures (hours) from the competitor design report section 1. Authors' calibration, to be recalibrated in the three-competitor pilot.",
+    "setup": { "low": 16, "likely": 20, "high": 24 },
+    "perTier": {
+      "T1": { "low": 16, "likely": 22, "high": 30, "monthlyLow": 2, "monthlyHigh": 3 },
+      "T2": { "low": 3, "likely": 5.5, "high": 8, "monthlyLow": 0.5, "monthlyHigh": 1 },
+      "T3": { "low": 0.5, "likely": 0.8, "high": 1, "monthlyLow": 0.1, "monthlyHigh": 0.25 },
+      "S": { "low": 1, "likely": 2, "high": 3, "monthlyLow": 0, "monthlyHigh": 0 }
+    },
+    "verificationPass": { "low": 12, "likely": 18, "high": 24 },
+    "monthlyFixed": { "low": 12, "high": 19.5, "items": ["Weekly alert triage 4-6", "Verification queue 2-4", "Source health 1-2", "Field signals 2", "Quarterly Tier 1 re-verification spread over the year 5-8"] },
+    "rupeesPerHour": { "low": 800, "high": 1500 },
+    "toolsPerMonth": { "low": 2200, "high": 7400 }
+  }
+}

@@ -1,0 +1,144 @@
+'use client';
+import { Bold, GripVertical, Italic, ListChecks, Pin, PinOff, Plus, Search, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+type Note = { id: string; html: string; tone: number; pinned: boolean; at: string };
+
+const KEY = 'sahayogi.mynotes.v2';
+// Colours are handed out automatically; a person never has to choose one.
+const TONES = [
+  'bg-violet-100 text-violet-950 dark:bg-violet-900/45 dark:text-violet-50',
+  'bg-yellow-100 text-yellow-950 dark:bg-yellow-900/40 dark:text-yellow-50',
+  'bg-pink-100 text-pink-950 dark:bg-pink-900/40 dark:text-pink-50',
+  'bg-sky-100 text-sky-950 dark:bg-sky-900/40 dark:text-sky-50',
+  'bg-green-100 text-green-950 dark:bg-green-900/40 dark:text-green-50',
+  'bg-orange-100 text-orange-950 dark:bg-orange-900/40 dark:text-orange-50',
+  'bg-teal-100 text-teal-950 dark:bg-teal-900/40 dark:text-teal-50',
+];
+const pickTone = (not?: number) => { let t = Math.floor(Math.random() * TONES.length); if (t === not) t = (t + 1) % TONES.length; return t; };
+const uid = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
+const BTN = { minHeight: 0, minWidth: 0, padding: 0 } as const;
+const TOOL = 'inline-flex h-7 w-7 items-center justify-center rounded-md opacity-70 transition hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/15';
+
+/** Keep only bold, italic and line breaks; everything else a note might contain (pasted markup, scripts, styles) is dropped. */
+function clean(html: string): string {
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+  const walk = (n: Node): string => {
+    if (n.nodeType === 3) return (n.textContent || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (n.nodeType !== 1) return '';
+    const el = n as HTMLElement; const tag = el.tagName.toLowerCase(); const inner = [...el.childNodes].map(walk).join('');
+    if (tag === 'b' || tag === 'strong') return `<b>${inner}</b>`;
+    if (tag === 'i' || tag === 'em') return `<i>${inner}</i>`;
+    if (tag === 'br') return '<br>';
+    if (tag === 'div' || tag === 'p') return `${inner}<br>`;
+    return inner;
+  };
+  return [...doc.body.firstElementChild!.childNodes].map(walk).join('').replace(/(<br>)+$/, '');
+}
+const plain = (html: string) => { const d = document.createElement('div'); d.innerHTML = html; return (d.textContent || '').trim(); };
+function read(): Note[] { try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v.map((n) => ({ ...n, html: clean(String(n.html || '')) })) : []; } catch { return []; } }
+
+/** Tapping a ☐ / ☑ ticks or unticks it. */
+function toggleBox() {
+  const sel = window.getSelection(); const node = sel?.anchorNode;
+  if (!sel || !node || node.nodeType !== 3) return false;
+  const t = node.textContent || ''; const off = sel.anchorOffset;
+  const i = [off - 1, off].find((k) => t[k] === '☐' || t[k] === '☑');
+  if (i === undefined) return false;
+  node.textContent = t.slice(0, i) + (t[i] === '☐' ? '☑' : '☐') + t.slice(i + 1);
+  const r = document.createRange(); r.setStart(node, Math.min(off, (node.textContent || '').length)); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+  return true;
+}
+
+function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, grip, className = '' }: {
+  html: string; placeholder?: string; tone: number; pinned?: boolean; onPin?: () => void; className?: string;
+  onCommit: (html: string) => void; onClear: () => void; grip?: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (ref.current) ref.current.innerHTML = html; /* set once; the browser owns the text while it is being edited */ // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const cmd = (c: string) => { ref.current?.focus(); document.execCommand(c); };
+  const save = () => { if (ref.current) onCommit(clean(ref.current.innerHTML)); };
+  return (
+    <div className={`group relative flex h-[17rem] min-w-0 flex-col rounded-xl p-4 shadow-sm transition-shadow focus-within:shadow-md ${TONES[tone % TONES.length]} ${className}`}>
+      {grip}
+      <div ref={ref} contentEditable suppressContentEditableWarning role="textbox" aria-multiline aria-label={placeholder ? 'New note' : 'Note'} data-placeholder={placeholder}
+        onBlur={save} onClick={() => { if (toggleBox()) save(); }}
+        onPaste={(e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') (e.target as HTMLElement).blur(); }}
+        className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-[0.95rem] leading-snug outline-none empty:before:opacity-60 empty:before:content-[attr(data-placeholder)]" />
+      <div className="mt-2 flex items-center gap-0.5" onMouseDown={(e) => e.preventDefault()}>
+        <button type="button" style={BTN} className={TOOL} aria-label="Bold" title="Bold" onClick={() => cmd('bold')}><Bold size={15} /></button>
+        <button type="button" style={BTN} className={TOOL} aria-label="Italic" title="Italic" onClick={() => cmd('italic')}><Italic size={15} /></button>
+        <button type="button" style={BTN} className={TOOL} aria-label="Add a tick box" title="Add a tick box" onClick={() => { ref.current?.focus(); const sel = window.getSelection(); const before = sel?.anchorNode?.nodeType === 3 ? (sel.anchorNode.textContent || '').slice(0, sel.anchorOffset) : ''; if (before && !before.endsWith('\n')) document.execCommand('insertLineBreak'); document.execCommand('insertText', false, '☐ '); }}><ListChecks size={16} /></button>
+        {onPin && <button type="button" style={BTN} className={`${TOOL} ${pinned ? '!opacity-100' : ''}`} aria-label={pinned ? 'Unpin note' : 'Pin note'} title={pinned ? 'Unpin' : 'Pin to top'} onClick={onPin}>{pinned ? <PinOff size={15} /> : <Pin size={15} />}</button>}
+        {placeholder && <button type="button" onClick={save} className="ml-auto inline-flex items-center gap-1 rounded-md bg-black/80 px-2.5 py-1 text-xs font-semibold text-white hover:bg-black" style={{ minHeight: 0 }}><Plus size={13} />Add note</button>}
+        <button type="button" style={BTN} className={`${TOOL} ${placeholder ? '' : 'ml-auto'}`} aria-label={placeholder ? 'Clear' : 'Delete note'} title={placeholder ? 'Clear' : 'Delete'} onClick={() => { if (ref.current && placeholder) ref.current.innerHTML = ''; onClear(); }}><Trash2 size={15} /></button>
+      </div>
+    </div>
+  );
+}
+
+/** Personal sticky notes. They are saved in this browser only: nothing goes to the server, and nobody else sees them. */
+export function MyNotes() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [ready, setReady] = useState(false);
+  const [next, setNext] = useState(0);
+  const [q, setQ] = useState('');
+  const [drag, setDrag] = useState<string | null>(null);
+  const [armed, setArmed] = useState<string | null>(null);
+  const [fresh, setFresh] = useState(0); // bumps to give the empty card a clean editor after adding
+
+  useEffect(() => {
+    let n = read();
+    try {
+      if (!n.length && !localStorage.getItem(KEY + '.seeded')) {
+        const t = new Date().toISOString();
+        n = ['<b>Demo:</b> ask Legal to sign off the laws list before the Stage 1 check.', '<b>Demo:</b> re-check the competitor price before the sponsor review.', '<b>Demo:</b> hand-over pack: confirm owner, support contact and rollback steps.'].map((html, i) => ({ id: uid(), html, tone: i, pinned: i === 0, at: t }));
+        localStorage.setItem(KEY, JSON.stringify(n)); localStorage.setItem(KEY + '.seeded', '1');
+      }
+    } catch { /* storage blocked */ }
+    setNotes(n); setNext(pickTone()); setReady(true);
+  }, []);
+  const commit = (n: Note[]) => { setNotes(n); try { localStorage.setItem(KEY, JSON.stringify(n)); } catch { /* storage blocked: notes last until the page is closed */ } };
+  const add = (html: string) => { if (!plain(html)) return; commit([{ id: uid(), html, tone: next, pinned: false, at: new Date().toISOString() }, ...notes]); setNext(pickTone(next)); setFresh((f) => f + 1); };
+  const edit = (id: string, html: string) => { if (!plain(html)) { commit(notes.filter((n) => n.id !== id)); return; } commit(notes.map((n) => (n.id === id && n.html !== html ? { ...n, html } : n))); };
+  const move = (from: string, before: string) => {
+    if (from === before) return;
+    const m = notes.find((n) => n.id === from); if (!m) return;
+    const rest = notes.filter((n) => n.id !== from); const at = rest.findIndex((n) => n.id === before);
+    rest.splice(at < 0 ? rest.length : at, 0, m); commit(rest);
+  };
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = s ? notes.filter((n) => plain(n.html).toLowerCase().includes(s)) : notes;
+    return [...list.filter((n) => n.pinned), ...list.filter((n) => !n.pinned)];
+  }, [notes, q]);
+
+  if (!ready) return null;
+  return (
+    <div className="flex flex-col gap-[var(--space-md)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="btn primary inline-flex items-center gap-1.5" onClick={() => (document.querySelector('[aria-label="New note"]') as HTMLElement | null)?.focus()}><Plus size={16} />Add note</button>
+        {notes.length > 3 && (
+          <label className="relative w-full max-w-xs">
+            <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes" aria-label="Search notes" className="h-8 w-full rounded-lg border border-[var(--divider)] bg-[var(--surface)] pl-8 pr-2.5 text-sm text-[var(--text-heading)] outline-none placeholder:text-[var(--text-muted)]" />
+          </label>
+        )}
+      </div>
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(15.5rem,1fr))] gap-4">
+        <li><Editor key={`new-${fresh}`} html="" placeholder="Write your note here, then press Add note" tone={next} onCommit={add} onClear={() => undefined} /></li>
+        {shown.map((n) => (
+          <li key={n.id} draggable={armed === n.id} onDragStart={(e) => { setDrag(n.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', n.id); }} onDragEnd={() => { setDrag(null); setArmed(null); }}
+            onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (drag) move(drag, n.id); setDrag(null); setArmed(null); }} className={drag === n.id ? 'opacity-40' : ''}>
+            <Editor html={n.html} tone={n.tone} pinned={n.pinned} onPin={() => commit(notes.map((x) => (x.id === n.id ? { ...x, pinned: !x.pinned } : x)))}
+              onCommit={(h) => edit(n.id, h)} onClear={() => commit(notes.filter((x) => x.id !== n.id))}
+              grip={<span aria-label="Drag to rearrange" title="Drag to rearrange" onMouseDown={() => setArmed(n.id)} onMouseUp={() => setArmed(null)} className="absolute right-2 top-2 cursor-grab opacity-0 transition-opacity group-hover:opacity-60 active:cursor-grabbing"><GripVertical size={16} /></span>} />
+          </li>
+        ))}
+      </ul>
+      {notes.length > 0 && shown.length === 0 && <p className="text-sm text-[var(--text-muted)]">No note matches your search.</p>}
+    </div>
+  );
+}

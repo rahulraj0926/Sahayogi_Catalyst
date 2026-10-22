@@ -1,0 +1,39 @@
+'use client';
+import { ReactNode, useEffect, useState } from 'react';
+import { Card, ErrorBox, Loading, Page } from '@/components/ui';
+import { actor } from '@/lib/api';
+import { startTour } from '@/components/tour/Tour';
+
+/** Minimal markdown: # headings, - lists, paragraphs, `code`, **bold** */
+function inline(t: string): ReactNode[] {
+  return t.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((p, i) => p.startsWith('**') ? <b key={i}>{p.slice(2, -2)}</b> : p.startsWith('`') ? <code key={i} className="mono">{p.slice(1, -1)}</code> : p);
+}
+function Md({ text }: { text: string }) {
+  const out: ReactNode[] = []; let list: string[] = [];
+  const flush = () => { if (list.length) { out.push(<ul key={out.length}>{list.map((l, i) => <li key={i}>{inline(l)}</li>)}</ul>); list = []; } };
+  text.split('\n').forEach((ln) => {
+    const h = /^(#{1,4})\s+(.*)$/.exec(ln);
+    if (/^\s*[-*]\s+/.test(ln)) list.push(ln.replace(/^\s*[-*]\s+/, ''));
+    else { flush(); if (h) { const L = h[1].length; out.push(L === 1 ? <h1 key={out.length}>{h[2]}</h1> : L === 2 ? <h2 key={out.length} style={{ marginTop: 18 }}>{h[2]}</h2> : <h3 key={out.length} style={{ marginTop: 12 }}>{h[2]}</h3>); } else if (ln.trim()) out.push(<p key={out.length}>{inline(ln)}</p>); }
+  });
+  flush();
+  return <>{out}</>;
+}
+
+/** The written user guide. The sidebar's "How to use" opens the guided tour; this page is the long version. */
+export default function Help() {
+  const [text, setText] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { fetch('/api/v1/help/guide', { headers: { 'x-actor': actor() } }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`Could not load the guide (${r.status})`)))).then(setText).catch((e) => setErr(e.message)); }, []);
+  return (
+    <Page title="How to use" sub="Written for the person who runs a product through the stages. No technical knowledge needed.">
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="card-b" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 220 }}><div style={{ fontWeight: 600 }}>Take the guided tour</div><div className="xs muted">A short Next / Back walk through the dashboard and the platform.</div></div>
+          <button className="btn primary" onClick={startTour}>Start the tour</button>
+        </div>
+      </div>
+      {err ? <ErrorBox message={err} /> : text === null ? <Loading /> : <Card><div style={{ maxWidth: 820 }}><Md text={text} /></div></Card>}
+    </Page>
+  );
+}

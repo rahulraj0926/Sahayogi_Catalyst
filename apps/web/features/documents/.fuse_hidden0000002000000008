@@ -1,0 +1,50 @@
+'use client';
+import Link from 'next/link';
+import { useState } from 'react';
+import type { FeatureProps } from '../types';
+import { Badge, Bar, ErrorBox, Loading, Page } from '@/components/ui';
+import { useApi } from '@/lib/api';
+import { STAGES, STATUS, WHAT } from './labels';
+import Reader from './Reader';
+
+/** The list of the 30 documents, grouped by the five stages; /documents/<key> opens one. Prototype: documents.js, docreader.js */
+export default function Documents({ pid, args }: FeatureProps) {
+  if (args[0]) return <Reader pid={pid} docKey={args[0]} />;
+  return <List pid={pid} />;
+}
+
+function List({ pid }: { pid: string }) {
+  const { data, error, loading } = useApi<any>('/documents', pid);
+  const [status, setStatus] = useState('all'); const [q, setQ] = useState('');
+  if (loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
+  const docs: any[] = data.documents;
+  const avg = docs.length ? Math.round(docs.reduce((m, d) => m + d.completeness, 0) / docs.length) : 0;
+  const by = (s: string) => docs.filter((d) => d.status === s).length;
+  const shown = docs.filter((d) => (status === 'all' || d.status === status) && (!q || (d.title + ' ' + (WHAT[d.key] || '') + ' ' + d.key.replace(/_/g, ' ')).toLowerCase().includes(q.toLowerCase())));
+  return (
+    <Page title="Documents" sub={`${data.approved} of ${data.total} approved. Documents are written from the saved records, never typed twice.`}
+      right={<span className="row"><Link className="btn" href={`/products/${pid}/doc`}>Read the whole dossier</Link><a className="btn" href={`/api/dossier?format=md&download=1&product=${pid}`}>Download .md</a><a className="btn" href={`/api/dossier?format=html&download=1&product=${pid}`}>Download .html</a></span>}>
+      <div className="row wrap" style={{ marginBottom: 6 }}>
+        <div style={{ width: 220 }}><Bar pct={avg} /></div><span className="small muted">{avg}% complete on average</span>
+        {['all', ...Object.keys(STATUS)].map((k) => <button key={k} className={`btn sm ${status === k ? 'primary' : ''}`} aria-pressed={status === k} onClick={() => setStatus(status === k ? 'all' : k)}>{k === 'all' ? 'All' : `${STATUS[k].label} ${by(k)}`}</button>)}
+        <input type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 190 }} />
+      </div>
+      {shown.length === 0 && <div className="loading">No document matches. <button className="btn sm" onClick={() => { setStatus('all'); setQ(''); }}>Show all</button></div>}
+      {STAGES.map((st, ph) => {
+        const g = shown.filter((d) => d.phase === ph); if (!g.length) return null;
+        return (
+          <div key={ph}>
+            <div className="row" style={{ margin: '22px 0 8px', alignItems: 'baseline' }}><h2>Stage {ph}: {st.name}</h2><span className="small muted">{st.q}</span></div>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: 10 }}>
+              {g.map((d) => (
+                <Link key={d.key} className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, color: 'inherit' }} href={`/products/${pid}/documents/${d.key}`} title={`${WHAT[d.key] || d.title} (${STATUS[d.status]?.label}, ${d.completeness}% complete${d.missing_count ? `, ${d.missing_count} missing` : ''})`}>
+                  <span style={{ flex: 1, fontWeight: 600 }}>{d.title}{d.changed_since_approval && <span style={{ color: 'var(--warn)' }} title="Changed since it was approved"> !</span>}</span>
+                  <Badge kind={STATUS[d.status]?.kind}>{STATUS[d.status]?.label}</Badge><b className="small">{d.completeness}%</b>
+                </Link>))}
+            </div>
+          </div>);
+      })}
+    </Page>
+  );
+}

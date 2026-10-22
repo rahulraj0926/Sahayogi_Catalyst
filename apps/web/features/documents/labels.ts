@@ -1,0 +1,43 @@
+/** Plain-words summaries of the 30 documents (from the prototype's documents.js). */
+export const STAGES = [
+  { name: 'Intake / Discovery', q: 'What is this and why now?' },
+  { name: 'Product and market analysis', q: 'Is the problem real, and where do we stand?' },
+  { name: 'Product definition / scope', q: 'What exactly will we build first?' },
+  { name: 'Requirements', q: 'What must it do, precisely?' },
+  { name: 'User and business flows', q: 'How do people and processes move through it?' },
+];
+export const STATUS: Record<string, { label: string; kind: string }> = {
+  not_started: { label: 'Not started', kind: '' }, draft: { label: 'Draft', kind: 'warn' }, in_review: { label: 'Waiting for approval', kind: 'info' }, approved: { label: 'Approved', kind: 'ok' },
+};
+export const WHAT: Record<string, string> = {
+    intake_document: 'The first page of the story: what the product is, who asked for it and why now.',
+    stakeholder_register: 'Everyone who decides, builds, buys, uses or regulates the product, and what each of them needs.',
+    evidence_register: 'The sources behind the facts: interviews, reports and files.',
+    constraints: 'The limits you cannot move: budget, dates, rules and technology.',
+    open_questions: 'What nobody can answer yet, who owns each question and what it blocks.',
+    initial_scope: 'The first line drawn around what is in, what is out and what comes later.',
+    market_analysis: 'Who the market is, who competes and where the opportunity lies.',
+    competitor_analysis: 'How the competitors compare on features, price and strengths.',
+    customer_context: 'Who the customers are, what they are trying to do and what frustrates them.',
+    problem_landscape: 'The problems worth solving, ranked by how much they hurt.',
+    market_risks: 'What could go wrong in the market and how likely it is.',
+    product_definition: 'What the product is, who it is for and what makes it different.',
+    scope_statement: 'Exactly what the first release includes and what it leaves out.',
+    capability_map: 'The things the product must be able to do, grouped into modules.',
+    priorities: 'What gets built first, and why.',
+    success_metrics: 'How you will know the product is working: targets and how they are measured.',
+    out_of_scope: 'What the product will deliberately not do.',
+    prd: 'The requirements: what the product must do, written so each one can be tested.',
+    user_stories: 'Each need written from the user’s side: who, what and why.',
+    business_rules: 'The company rules the product must follow, such as price or approval limits.',
+    acceptance_criteria: 'The checks that decide whether each requirement is really done.',
+    nfrs: 'Quality targets: speed, reliability, security, accessibility.',
+    integration_requirements: 'The other systems the product must talk to, and how.',
+    traceability: 'A map from every need to the requirement, story and test that covers it.',
+    user_journeys: 'The path each kind of user takes through the product, start to finish.',
+    process_maps: 'The business process behind the product, including who does what.',
+    workflow_diagrams: 'Step-by-step diagrams of the main workflows.',
+    state_maps: 'The states a record moves through (for example Draft or Approved) and what moves it on.',
+    exception_flows: 'What happens when something fails or goes wrong.',
+    cross_module_flows: 'How a task travels between different parts of the product.',
+};

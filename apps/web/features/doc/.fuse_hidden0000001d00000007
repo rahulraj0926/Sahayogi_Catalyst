@@ -1,0 +1,138 @@
+'use client';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import type { FeatureProps } from '../types';
+import { Badge, ErrorBox, Loading } from '@/components/ui';
+import { Sentence, ago } from '@/components/kit';
+import RecordForm from '@/components/RecordForm';
+import { DocBody, useDocHtml } from '@/components/DocBody';
+import { go, useApi } from '@/lib/api';
+
+const STAGE_NAME = ['Stage 0: Intake and discovery', 'Stage 1: Product and market', 'Stage 2: Scope and definition', 'Stage 3: Requirements', 'Stage 4: Flows'];
+const NOISE = new Set(['settings', 'connections']);
+const NOISE_TYPES = new Set(['Transition', 'State', 'FlowStep', 'Entity', 'Pointer', 'AcceptanceCriterion', 'Attachment', 'Handoff', 'Baseline']);
+const NOISE_TEXT = /(move between states|a flow step|a state|a data object|a pointer|an acceptance|acceptance check|a link between|a connection)/i;
+const PLAIN: [RegExp, string][] = [[/ready-for-handoff/g, 'ready for hand-over'], [/handed-off/g, 'handed over']];
+const plain = (t: string) => PLAIN.reduce((x, [re, to]) => x.replace(re, to), String(t));
+
+/** Several lines of the same kind (the same person changing the same status of many items) become one line. */
+function groupFeed(entries: any[]) {
+  const out: any[] = []; const seen = new Map<string, any>();
+  for (const e of entries) {
+    const m = /^(.+?) changed the status of ".*" from (\S+) to (\S+)$/.exec(e.text || '');
+    if (!m) { out.push({ text: plain(e.text), at: e.at }); continue; }
+    const key = `${m[1]}|${m[2]}|${m[3]}`;
+    if (seen.has(key)) { seen.get(key).n += 1; continue; }
+    const g = { n: 1, who: m[1], from: m[2], to: m[3], at: e.at, text: '' }; seen.set(key, g); out.push(g);
+  }
+  return out.map((g) => (g.n === undefined ? g : { at: g.at, text: `${g.who} changed the status of ${g.n === 1 ? '1 item' : g.n + ' items'} from ${plain(g.from)} to ${plain(g.to)}` }));
+}
+const worth = (e: any) => !NOISE.has(e.group) && !(e.details && NOISE_TYPES.has(e.details.type)) && !NOISE_TEXT.test(e.text || '');
+
+/** Product document: the product's home. Where we are, what blocks us, who we wait for, what changed, then all the documentation. Prototype: living.js */
+export default function ProductDoc({ pid }: FeatureProps) {
+  const journey = useApi<any>('/journey', pid);
+  const stages = useApi<any>('/stages', pid);
+  const audit = useApi<any>('/audit?limit=40', pid);
+  const docs = useApi<any>('/documents', pid);
+  const sheet = useApi<any>('/sheet', pid);
+  const meta = useApi<any>('/meta', pid);
+  const existing = useApi<any>('/existing', pid);
+  const dossier = useDocHtml('/dossier?format=html', pid);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [showLater, setShowLater] = useState(false);
+  const types = meta.data?.schema?.types || {};
+  const entered = sheet.data?.plans?.length || 0;
+
+  const view = useMemo(() => {
+    if (!docs.data || !stages.data) return null;
+    const current = stages.data.current as number;
+    const hasContent = (d: any) => d.phase <= current || d.completeness > 0 || d.status !== 'not_started' || (d.key === 'product_definition' && entered > 0);
+    return { current, hasContent, later: (docs.data.documents as any[]).filter((d) => !hasContent(d)) };
+  }, [docs.data, stages.data, entered]);
+
+  if ([journey, stages, audit, docs, sheet].some((x) => x.loading) || !dossier.ready && !dossier.error) return <Loading />;
+  const bad = [journey, stages, audit, docs, sheet].find((x) => x.error);
+  if (bad || !view) return <ErrorBox message={bad?.error || dossier.error || 'No data'} />;
+
+  const st: any[] = stages.data.stages; const recheck = (s: any) => /re-check/i.test(s.state_text || '');
+  const cur = st.find((s) => !s.signed_off || recheck(s)) || st[stages.data.current] || st[0];
+  const open = (cur.items || []).filter((i: any) => !i.done && i.kind === 'required');
+  const wy = journey.data.waiting.for_you; const wo = journey.data.waiting.for_others;
+  const waitItems = [...(wy.items || []).map((x: any) => ({ who: 'You', what: x.what || x.title || 'a decision' })), ...(wo.items || []).map((x: any) => ({ who: x.approver, what: x.what || x.title || 'a decision' }))];
+  const recent = groupFeed((audit.data.entries || []).filter(worth)).slice(0, 6);
+  const D: any[] = docs.data.documents; const vis = D.filter((d) => d.phase <= view.current);
+  const apprVis = vis.filter((d) => d.status === 'approved' || st[d.phase]?.signed_off).length; const parts = vis.reduce((m, d) => m + d.missing_count, 0);
+  const prod = sheet.data.product;
+  const fix = (i: any) => {
+    const f = i.fix; if (!f) return null;
+    return <Link className="btn sm primary" style={{ marginTop: 6 }} href={f.type === 'request' ? `/products/${pid}/work/${f.session}?step=${f.request}` : `/products/${pid}/gates/${cur.stage}`}>{f.label}</Link>;
+  };
+  const AddBtn = ({ label, type }: { label: string; type: string }) => types[type] ? <button className="btn sm" onClick={() => setAdding(type)}>{label}</button> : null;
+  const laterTitles = new Set(showLater ? [] : view.later.map((d: any) => d.title));
+
+  // contents: group by stage, mark missing / approved
+  const byTitle = new Map(D.map((d) => [d.title, d]));
+  const toc: React.ReactNode[] = []; let last = -1;
+  dossier.toc.forEach((t) => {
+    const d = byTitle.get(t.text); if (!d || laterTitles.has(d.title)) return;
+    if (d.phase !== last) { last = d.phase; toc.push(<div key={'s' + d.phase} className="st">{STAGE_NAME[d.phase] || `Stage ${d.phase}`}</div>); }
+    toc.push(<button key={t.id} onClick={() => document.getElementById(t.id)?.scrollIntoView({ behavior: 'smooth' })}>{t.text}
+      {d.missing_count ? <span className="lv-gap" title={`${d.missing_count} parts missing`}>{d.missing_count}</span> : d.status === 'approved' || st[d.phase]?.signed_off ? <span className="lv-done">✓</span> : null}</button>);
+  });
+  // hide the later documents in the body with a style rule
+  const hideCss = [...laterTitles].length ? view.later.map((d: any) => `#doc-${d.key}`).map((s) => `${s}, ${s} + hr`).join(',') + '{display:none}' : '';
+
+  return (
+    <div>
+      <div className="row top wrap" style={{ gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 300 }}>
+          <h1>{prod.name}</h1>
+          {prod.one_liner && <p style={{ color: 'var(--ink-2)', fontSize: 15, maxWidth: '70ch' }}>{prod.one_liner}</p>}
+          <div className="small muted" style={{ marginTop: 6 }}>The whole documentation of this product, kept up to date as people work. So far: {apprVis} of {vis.length} documents signed off (approved, or part of a stage that is signed off){parts ? `, ${parts} ${parts === 1 ? 'part' : 'parts'} still missing` : ', nothing missing'}.{view.later.length && !showLater ? ` ${view.later.length} more documents open up in the later stages.` : ''}</div>
+        </div>
+        <div className="row lv-acts">
+          <button className="btn" onClick={() => window.print()}>Print</button>
+          <a className="btn" href={`/api/dossier?format=html&download=1&product=${pid}`}>Download as Word-ready HTML</a>
+          <a className="btn" href={`/api/dossier?format=md&download=1&product=${pid}`}>Download as Markdown</a>
+        </div>
+      </div>
+
+      <div className="lv-panel">
+        <div className="lv-box"><h2>Where we are</h2><div className="lv-big">Stage {cur.stage}: {cur.name}</div>
+          <div className="bar" style={{ margin: '10px 0 4px' }}><i className="accent" style={{ width: `${cur.readiness || 0}%` }} /></div>
+          <div className="lv-sub">{cur.required_done} of {cur.required_total} things needed for the sign-off are done</div>
+          <div className="lv-sub">{recheck(cur) ? 'It was signed off, but something it rests on has changed since. Use the button next to each item below.' : cur.signed_off ? 'This stage is signed off.' : 'The button at the top shows the next thing to do.'}</div></div>
+        <div className="lv-box"><h2>What is blocking this stage</h2>
+          {open.length ? <ul className="lv-list">{open.slice(0, 4).map((i: any) => <li key={i.id}><b>{i.need}</b><span className="when">{i.todo}</span>{fix(i)}</li>)}</ul> : <div className="lv-ok">Nothing is blocking it.</div>}
+          {open.length > 4 && <div className="lv-sub"><Link href={`/products/${pid}/gates`}>{open.length - 4} more</Link></div>}</div>
+        <div className="lv-box"><h2>Who we are waiting for</h2>
+          {waitItems.length ? <ul className="lv-list">{waitItems.slice(0, 5).map((x, i) => <li key={i}><b>{x.who}</b> to {x.what}</li>)}</ul> : <div className="lv-sub">Nobody. Nothing is waiting on a person.</div>}
+          {(wo.count || wy.total) ? <div className="lv-sub"><Link href={`/products/${pid}/approvals`}>See everything waiting</Link></div> : null}</div>
+        <div className="lv-box"><h2>What changed lately</h2>
+          {recent.length ? <ul className="lv-list">{recent.map((e, i) => <li key={i}><Sentence text={e.text} /><span className="when">{ago(e.at)}</span></li>)}</ul> : <div className="lv-sub">Nothing has been recorded yet.</div>}
+          <div className="lv-sub"><Link href={`/products/${pid}/admin`}>Full history</Link></div></div>
+      </div>
+
+      <div className="row wrap small lv-add" style={{ marginBottom: 14 }}>
+        <span>Add to the document:</span>
+        <AddBtn label="+ Pricing plan" type="PricingPlan" /><AddBtn label="+ Feature" type="Feature" /><AddBtn label="+ Rule" type="BusinessRule" /><AddBtn label="+ Question" type="Question" />
+        {existing.data?.applies && <Link className="btn sm" href={`/products/${pid}/existing`}>+ Old-system function</Link>}
+        <span style={{ flex: 1 }} /><Link href={`/products/${pid}/sheet`}>Quick answers (plans, features, prices)</Link>
+      </div>
+
+      <div className="lv-wrap">
+        <nav className="lv-toc card"><div className="card-b" style={{ padding: 10 }}>
+          <div className="strong small">Contents</div>{toc}
+          {view.later.length > 0 && !showLater && <button className="btn sm" style={{ marginTop: 8 }} onClick={() => setShowLater(true)}>{view.later.length} later documents</button>}
+        </div></nav>
+        <div className="card"><div className="card-b">
+          {hideCss && <style>{hideCss}</style>}
+          {dossier.error ? <ErrorBox message={dossier.error} /> : <DocBody html={dossier.body} />}
+          {view.later.length > 0 && !showLater && <div className="callout" style={{ marginTop: 16 }}><b>Stages {view.current + 1} to 4: {view.later.length} more documents open up as you reach them.</b> <span className="muted">Nothing is lost: they fill in as you answer questions.</span> <button className="btn sm" onClick={() => setShowLater(true)}>Show them now</button></div>}
+        </div></div>
+      </div>
+      {adding && <RecordForm pid={pid} typeDef={types[adding]} onCancel={() => setAdding(null)} onDone={() => { setAdding(null); sheet.reload(); docs.reload(); dossier.reload(); }} />}
+    </div>
+  );
+}

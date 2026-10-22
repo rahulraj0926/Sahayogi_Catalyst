@@ -1,0 +1,56 @@
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+
+export type Json = any;
+
+export function actor(): string {
+  try { return (localStorage.getItem('sd_actor') || '').trim(); } catch { return ''; }
+}
+export function setActor(name: string) { try { localStorage.setItem('sd_actor', name); } catch { /* storage blocked */ } }
+
+export async function api<T = Json>(path: string, init?: { method?: string; body?: unknown; product?: string }): Promise<T> {
+  // a call made from /products/<product>/... is about that product even when the caller did not say so
+  const fromUrl = typeof window !== 'undefined' ? /^\/products\/([^/]+)/.exec(window.location.pathname)?.[1] : undefined;
+  const product = init?.product || (fromUrl ? decodeURIComponent(fromUrl) : undefined);
+  const url = product && !/[?&]product=/.test(path) ? path + (path.includes('?') ? '&' : '?') + 'product=' + encodeURIComponent(product) : path;
+  const res = await fetch('/api' + url, {
+    method: init?.method || 'GET',
+    headers: { 'content-type': 'application/json', 'x-actor': actor() },
+    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.message || data.error || `Request failed (${res.status})`), { status: res.status, code: data.code, requestId: data.requestId, data });
+  return data as T;
+}
+
+/** GET a path (scoped to a product when `pid` is given). `reload()` fetches again. */
+export function useApi<T = Json>(path: string | null, pid?: string) {
+  const [data, setData] = useState<T | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const load = useCallback(() => {
+    if (!path) return;
+    setLoading(true);
+    api<T>(path, { product: pid }).then((d) => { setData(d); setError(null); }).catch((e) => setError(e.message)).finally(() => setLoading(false));
+  }, [path, pid]);
+  useEffect(() => { load(); }, [load]);
+  return { data, error, loading, reload: load };
+}
+
+export const tone = (status: string): string => {
+  const s = String(status || '').toLowerCase();
+  if (/signed off|passed|pass|approved|complete|consistent|accepted|done|released|deployed/.test(s) && !/not|without/.test(s)) return 'ok';
+  if (/hold|waived|conditions|pending|progress|review|draft|attest|proposed|planned/.test(s)) return 'warn';
+  if (/fail|blocked|reject|open|risk|at_risk|critical/.test(s)) return 'bad';
+  return '';
+};
+
+/** The server hands out prototype-style hash links ("#/p/PRD-1/work/S1-A", "#/gates/2"). Turn one into a platform path. */
+export function go(pid: string, href?: string | null): string {
+  if (!href) return `/products/${pid}`;
+  const h = href.replace(/^#/, '').replace(/^\/p\//, '/products/');
+  if (h === '/' || h === '') return '/';
+  if (h.startsWith('/products/')) return h;
+  if (h.startsWith('/go/')) return `/products/${pid}/${h.slice(4)}`;
+  return `/products/${pid}${h.startsWith('/') ? h : '/' + h}`;
+}

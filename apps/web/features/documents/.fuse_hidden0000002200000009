@@ -1,0 +1,123 @@
+'use client';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Badge, Card, ErrorBox, Loading } from '@/components/ui';
+import { Modal, PersonSelect, useAction } from '@/components/kit';
+import { DocBody, useDocHtml } from '@/components/DocBody';
+import { actor, api, useApi } from '@/lib/api';
+import { STAGES, STATUS, WHAT } from './labels';
+
+const ROLES = ['Product Owner', 'Sponsor', 'Product leader', 'Tech lead', 'QA lead', 'Legal'];
+const plainWhy = (why: string, phase: number) => {
+  const w = String(why || '').trim(); if (!w) return '';
+  if (/^(G[C0-4]-\d+[a-z]?\.?\s*)+$/.test(w)) return `Needed to pass the Stage ${phase} checkpoint.`;
+  const adv = /^G([0-4])-\d+[a-z]?\s*\(advisory\)\.?$/.exec(w); if (adv) return `Recommended for the Stage ${adv[1]} checkpoint.`;
+  return w.replace(/\bG([0-4])-\d+[a-z]?\b/g, 'the Stage $1 checkpoint').replace(/\bGC-\d+[a-z]?\b/g, 'the checkpoint').replace(/\(advisory\)/g, '(recommended)').replace(/^./, (c) => c.toUpperCase());
+};
+
+/** Submit for review / Approve / Return to draft. Handles the "not complete enough" exception and the "nobody approves their own work" rules. */
+function StatusDialog({ pid, doc, target, onClose, onDone }: { pid: string; doc: any; target: string; onClose: () => void; onDone: (msg: string) => void }) {
+  const verb = ({ in_review: 'Submit for review', approved: 'Approve', draft: 'Return to draft' } as any)[target];
+  const [role, setRole] = useState(doc.owner_role); const [note, setNote] = useState('');
+  const [waiver, setWaiver] = useState<any>(null); const [reason, setReason] = useState(''); const [appr, setAppr] = useState('');
+  const [needSecond, setNeedSecond] = useState(false); const [second, setSecond] = useState('');
+  const [err, setErr] = useState(''); const act = useAction();
+  const roles = ROLES.includes(doc.owner_role) ? ROLES : [doc.owner_role, ...ROLES];
+  const submit = () => act.run(async () => {
+    setErr('');
+    const body: any = { status: target, role };
+    if (note.trim()) body.note = note.trim();
+    if (waiver) { if (!reason.trim() || !appr) return setErr('Please give the reason and pick the second person.'); body.waiver = { reason: reason.trim(), approver: appr }; }
+    if (needSecond) { if (!second) return setErr('Pick the person who approves this. Nobody approves their own work.'); body.second_approver = second; }
+    try {
+      const res = await api<any>(`/documents/${doc.key}/status`, { method: 'POST', body, product: pid });
+      onDone(res.pending ? `${doc.title}: waiting for ${res.approval.approver} to approve. It does not count until they do.` : `${doc.title}: ${target === 'approved' ? 'approved' : target === 'in_review' ? 'sent for review' : 'back to draft'}.`);
+    } catch (e: any) {
+      const mm = /is (\d+)% complete; approval needs at least (\d+)%/.exec(e.message || '');
+      if (e.status === 409 && (e.data?.threshold !== undefined || mm)) { setWaiver(e.data?.threshold !== undefined ? e.data : { completeness: +mm![1], threshold: +mm![2], missing: doc.missing }); setErr(e.message); }
+      else if (e.status === 409 && e.data?.code === 'self_approval') { setNeedSecond(true); setErr(e.message); }
+      else if (e.status === 409 && /not.?started|no source|nothing/i.test(e.message)) setErr('There is nothing in this document yet, so it cannot be submitted. Answer a few questions in Work on it first.');
+      else if (e.status === 422 && /different person/i.test(e.message)) setErr('The second person must be someone other than you. Pick another name.');
+      else setErr(e.message);
+    }
+  });
+  return (
+    <Modal title={`${verb}: ${doc.title}`} onClose={onClose}>
+      <div className="stack">
+        {target === 'approved' ? <p>Approving says this document is good enough to build on. It needs to be at least {doc.threshold}% complete; this one is {doc.completeness}% complete.</p>
+          : target === 'in_review' ? <p>Submitting tells the approver the document is ready to be read and signed off. You can still change the underlying answers afterwards.</p>
+            : <p>This takes the document back to draft so it can be worked on again. The approval record is kept in the history.</p>}
+        <label className="strong">In which role are you doing this?<select value={role} onChange={(e) => setRole(e.target.value)}>{roles.map((r: string) => <option key={r}>{r}</option>)}</select></label>
+        <label className="strong">A short note (optional)<input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="For example: checked with the sponsor on Friday" /></label>
+        {waiver && <div className="callout warn"><b>Not complete enough: {waiver.completeness}% against {waiver.threshold}% needed.</b> You can still approve it as an exception. A second person agrees, and the reason is written into the record.
+          {waiver.missing?.length > 0 && <div className="small">Still missing: {waiver.missing.slice(0, 5).map((x: any) => x.label || x).join('; ')}{waiver.missing.length > 5 ? ` and ${waiver.missing.length - 5} more` : ''}</div>}
+          <label className="strong" style={{ display: 'block', marginTop: 8 }}>Why is it fine to approve it now?<textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="For example: the missing parts are covered by the signed contract" style={{ width: '100%' }} /></label>
+          <label className="strong" style={{ display: 'block', marginTop: 8 }}>Who else agrees? (must be a different person from you)<PersonSelect pid={pid} value={appr} onChange={setAppr} none="Choose a person…" /></label>
+          <div className="xs muted">You are acting as {actor()}. Change this at the top of the page if needed.</div></div>}
+        {needSecond && <div className="callout warn"><b>{actor()} prepared this document, so someone else has to approve it.</b> Pick the person who approves it, for example the sponsor. They are asked, and the document counts as approved only after they say yes.
+          <label className="strong" style={{ display: 'block', marginTop: 8 }}>Who approves this?<PersonSelect pid={pid} value={second} onChange={setSecond} none="Choose a person…" /></label></div>}
+        {err && <ErrorBox message={err} />}{act.box}
+        <div className="row" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn primary" disabled={act.busy} onClick={submit}>{waiver ? 'Ask for approval as an exception' : needSecond ? 'Ask that person to approve it' : verb}</button></div>
+      </div>
+    </Modal>
+  );
+}
+
+export default function Reader({ pid, docKey }: { pid: string; docKey: string }) {
+  const model = useApi<any>(`/documents/${docKey}`, pid);
+  const all = useApi<any>('/documents', pid);
+  const hist = useApi<any>('/audit?action=document.status&limit=300', pid);
+  const aps = useApi<any>('/approvals', pid);
+  const html = useDocHtml(`/documents/${docKey}?format=html`, pid);
+  const [dlg, setDlg] = useState<string | null>(null); const [msg, setMsg] = useState('');
+  if (model.loading || all.loading || (!html.ready && !html.error)) return <Loading />;
+  if (model.error || !model.data) return <ErrorBox message={model.error === 'Request failed (404)' ? `There is no document called "${docKey}".` : model.error || 'No data'} />;
+  const m = model.data; const docs: any[] = all.data?.documents || []; const idx = docs.findIndex((d) => d.key === docKey);
+  const prev = idx > 0 ? docs[idx - 1] : null; const next = idx >= 0 && idx < docs.length - 1 ? docs[idx + 1] : null;
+  const doc = { key: docKey, title: m.title, owner_role: m.owner_role, completeness: m.completeness, threshold: all.data?.approval_threshold_percent, missing: m.missing };
+  const pending = (aps.data?.waiting || []).find((a: any) => a.kind === 'document' && a.read?.document === docKey);
+  const st = m.status;
+  const workHref = (x: any) => x.target?.request ? `/products/${pid}/plan?request=${x.target.request}` : `/products/${pid}/work`;
+  const mine = (hist.data?.entries || []).filter((e: any) => e.subject === docKey);
+  const done = (t: string) => { setDlg(null); setMsg(t); model.reload(); all.reload(); hist.reload(); aps.reload(); html.reload(); };
+  const primary = pending ? <Link className="btn primary" href={`/products/${pid}/approvals`} title={`${pending.prepared_by} asked on ${String(pending.created_at).slice(0, 10)}`}>Waiting for {pending.approver}</Link>
+    : st === 'draft' ? <button className="btn primary" onClick={() => setDlg('in_review')}>Submit for review</button>
+      : st === 'in_review' ? <button className="btn primary" onClick={() => setDlg('approved')}>Approve</button>
+        : st === 'approved' ? null : <Link className="btn primary" href={m.missing?.[0] ? workHref(m.missing[0]) : `/products/${pid}/work`}>Add what is missing</Link>;
+  return (
+    <div>
+      {msg && <div className="callout ok" style={{ marginBottom: 10 }}>{msg}</div>}
+      <Card>
+        <Link className="small" href={`/products/${pid}/documents`}>← All documents</Link>
+        <h1 title={WHAT[docKey] || ''}>{m.title}</h1>
+        <div className="row wrap" style={{ marginBottom: 6 }}>
+          <Badge kind={STATUS[st]?.kind}>{STATUS[st]?.label || st}</Badge>
+          {m.changed_since_approval && <Badge kind="warn">Changed since approved</Badge>}
+          <b>{m.completeness}%</b> <span className="muted small">complete</span>
+          {m.approved_by && <span className="small">Approved by {m.approved_by}</span>}
+        </div>
+        {m.waiver && <div className="callout warn"><b>Approved as an exception. </b>At {m.waiver.completeness}% against {m.waiver.threshold}% needed. {m.waiver.approver} agreed: {m.waiver.reason}</div>}
+        <div className="small muted" style={{ margin: '6px 0' }}>{WHAT[docKey]} {st !== 'approved' && st !== 'not_started' && m.completeness < (doc.threshold ?? 80) ? `To approve it, the document needs to be at least ${doc.threshold}% complete, or a second person can agree to an exception.` : ''}</div>
+        <div className="row">{primary}<span style={{ flex: 1 }} />
+          {st === 'draft' && <button className="btn" onClick={() => setDlg('approved')}>Approve now (skip review)</button>}
+          {(st === 'in_review' || st === 'approved') && <button className="btn" onClick={() => setDlg('draft')}>Return to draft</button>}
+          <button className="btn" onClick={() => window.print()}>Print</button>
+          <a className="btn" href={`/api/documents/${docKey}?format=md&download=1&product=${pid}`}>Download .md</a>
+          <a className="btn" href={`/api/documents/${docKey}?format=html&download=1&product=${pid}`}>Download .html</a></div>
+      </Card>
+      {m.missing?.length > 0 && (
+        <details className="callout warn" style={{ margin: '12px 0' }}><summary className="strong">{m.missing.length} {m.missing.length === 1 ? 'thing' : 'things'} missing</summary>
+          <ul style={{ listStyle: 'none', padding: 0 }}>{m.missing.map((x: any, i: number) => (
+            <li key={i} className="row" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}><div style={{ flex: 1 }}><div className="strong">{x.label}</div><div className="small muted">{x.section ? `In: ${x.section}. ` : ''}{plainWhy(x.why, m.phase)}</div></div>
+              <Link className="btn sm" href={workHref(x)}>Add it{x.target?.minutes ? ` (about ${x.target.minutes} min)` : ''}</Link></li>))}</ul>
+          <p className="small muted">Nothing has been invented to cover the gap.</p></details>)}
+      <div style={{ marginTop: 12 }}><Card><div className="lv-body">{html.error ? <ErrorBox message={html.error} /> : <DocBody html={html.body} />}
+        {st === 'not_started' && !html.body.trim() && <p className="muted">Nothing has been written for this document yet.</p>}</div></Card></div>
+      {(mine.length > 0 || m.approved_by) && <div style={{ marginTop: 12 }}><Card title="Approval history"><ul>{mine.length === 0 && <li>{String(m.approved_at || '').slice(0, 10)} {m.approved_by} approved this document.</li>}{mine.map((e: any, i: number) => <li key={i}><span className="muted">{String(e.at).slice(0, 10)}</span> {e.text}</li>)}</ul></Card></div>}
+      <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
+        {prev ? <Link href={`/products/${pid}/documents/${prev.key}`}>← {prev.title}</Link> : <span />}{next ? <Link href={`/products/${pid}/documents/${next.key}`}>{next.title} →</Link> : <span />}</div>
+      {dlg && <StatusDialog pid={pid} doc={doc} target={dlg} onClose={() => setDlg(null)} onDone={done} />}
+    </div>
+  );
+}

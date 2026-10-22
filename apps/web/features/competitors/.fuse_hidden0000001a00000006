@@ -1,0 +1,297 @@
+'use client';
+/** One competitor on one page: overview (editable), prices, capabilities, files, notes, sources. Prototype: cw_profile.js */
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Badge, Card, Empty, ErrorBox, Loading, Page } from '@/components/ui';
+import { Field, Modal, Tabs, useAction, useConfirm, fmtDate } from '@/components/kit';
+import { actor, api, useApi } from '@/lib/api';
+import { VerifyDialog } from './Experts';
+import { useAssist } from '../files/Extras';
+
+const sp = (s?: string) => String(s ?? '').replace(/_/g, ' ');
+const filled = (v: any) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0);
+const today = () => new Date().toISOString().slice(0, 10);
+const addDays = (d: string, n: number) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+const money = (a: any, c = 'INR') => (a === undefined || a === null ? '' : `${c === 'INR' ? 'Rs' : c} ${Number(a).toLocaleString('en-IN')}`);
+
+type FD = { kind: 'text' | 'longtext' | 'enum' | 'list' | 'number'; label: string; options?: [string, string][] };
+const OVERLAP: [string, string][] = [['high', 'High overlap'], ['medium', 'Some overlap'], ['low', 'Little overlap']];
+const SIZES = ['1-10', '11-50', '51-200', '201-1000', '1001-5000', '5000+'];
+const OWN: [string, string][] = [['private', 'Private'], ['public', 'Listed company'], ['subsidiary', 'Part of a bigger group'], ['state', 'State owned'], ['unknown', 'Not known']];
+const F: Record<string, FD> = {
+  website: { kind: 'text', label: 'Website' }, legal_name: { kind: 'text', label: 'Legal name' },
+  positioning: { kind: 'longtext', label: 'How they position themselves' }, target_customers: { kind: 'longtext', label: 'Who they sell to' },
+  segment_overlap: { kind: 'enum', label: 'Overlap with our customers', options: OVERLAP },
+  strengths: { kind: 'longtext', label: 'What they are good at' }, weaknesses: { kind: 'longtext', label: 'Where they are weak' },
+  gtm_channels: { kind: 'list', label: 'How they sell' }, technology_notes: { kind: 'longtext', label: 'Technology notes' },
+  certifications: { kind: 'list', label: 'Certifications' }, key_customers: { kind: 'list', label: 'Well-known customers' },
+  founded_year: { kind: 'number', label: 'Founded' }, hq_country: { kind: 'text', label: 'Head office' },
+  size_band: { kind: 'enum', label: 'Number of people', options: SIZES.map((s) => [s, `${s} people`]) }, headcount_note: { kind: 'text', label: 'About their size' },
+  funding_summary: { kind: 'longtext', label: 'Funding' }, ownership: { kind: 'enum', label: 'Ownership', options: OWN },
+  pricing_na_reason: { kind: 'longtext', label: 'Why there is no price' },
+};
+const SECTIONS: { id: string; title: string; fields: string[]; more: string[] }[] = [
+  { id: 'about', title: 'About them', fields: ['positioning', 'target_customers', 'website', 'segment_overlap'], more: ['legal_name'] },
+  { id: 'sw', title: 'Strengths and weaknesses', fields: ['strengths', 'weaknesses'], more: [] },
+  { id: 'sell', title: 'How they sell and build', fields: ['gtm_channels', 'technology_notes', 'certifications', 'key_customers'], more: [] },
+  { id: 'facts', title: 'Company facts', fields: ['founded_year', 'hq_country', 'size_band', 'ownership'], more: ['headcount_note', 'funding_summary'] },
+];
+const TIERS: [string, string][] = [['T1', 'Tier 1: head to head'], ['T2', 'Tier 2: nearby'], ['T3', 'Tier 3: watch'], ['S', 'Substitute or alternative']];
+
+function Control({ d, value, onChange }: { d: FD; value: any; onChange: (v: any) => void }) {
+  if (d.kind === 'enum') return <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}><option value="">Not filled in</option>{d.options!.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
+  if (d.kind === 'longtext') return <textarea rows={3} style={{ width: '100%' }} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
+  if (d.kind === 'list') return <input type="text" style={{ width: '100%' }} value={Array.isArray(value) ? value.join(', ') : value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder="separate with commas" />;
+  if (d.kind === 'number') return <input type="number" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
+  return <input type="text" style={{ width: '100%' }} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
+}
+const norm = (d: FD, v: any) => (d.kind === 'number' ? (v === '' || v === undefined ? '' : Number(v)) : d.kind === 'list' ? (Array.isArray(v) ? v : String(v ?? '').trim() ? String(v).split(/[;,]/).map((s) => s.trim()).filter(Boolean) : '') : typeof v === 'string' ? v.trim() : v);
+const show = (k: string, v: any) => {
+  if (!filled(v)) return <dd className="muted">Not filled in yet</dd>;
+  const d = F[k];
+  if (d?.kind === 'enum') return <dd>{d.options!.find(([x]) => x === v)?.[1] ?? String(v)}</dd>;
+  if (k === 'website') return <dd><a href={/^https?:/.test(v) ? v : `https://${v}`} target="_blank" rel="noopener noreferrer">{v}</a></dd>;
+  if (Array.isArray(v)) return <dd>{v.map((x) => <Badge key={x}>{x}</Badge>)}</dd>;
+  return <dd>{String(v)}</dd>;
+};
+
+function Section({ sec, c, onSaved }: { sec: (typeof SECTIONS)[number]; c: any; onSaved: () => void }) {
+  const [edit, setEdit] = useState(false);
+  const [vals, setVals] = useState<Record<string, any>>({});
+  const act = useAction();
+  const keys = [...sec.fields, ...sec.more];
+  const start = () => { setVals(Object.fromEntries(keys.map((k) => [k, c[k]]))); setEdit(true); };
+  return (
+    <Card title={sec.title} right={edit ? undefined : <button className="btn sm" onClick={start}>Edit</button>}>
+      {!edit ? <dl className="kv">{keys.map((k) => <div key={k} style={{ display: 'contents' }}><dt>{F[k].label}</dt>{show(k, c[k])}</div>)}</dl> : (
+        <div>
+          {keys.map((k) => <Field key={k} label={F[k].label}><Control d={F[k]} value={vals[k]} onChange={(v) => setVals({ ...vals, [k]: v })} /></Field>)}
+          {act.box}
+          <div className="row"><button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
+            const fields: any = {};
+            for (const k of keys) { const v = norm(F[k], vals[k]); if (JSON.stringify(v ?? '') !== JSON.stringify(c[k] ?? '')) fields[k] = v; }
+            if (Object.keys(fields).length) await api(`/items/${c.id}`, { method: 'PATCH', body: { fields } });
+            setEdit(false); onSaved();
+          })}>Save</button><button className="btn" onClick={() => setEdit(false)}>Cancel</button></div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function AddPrice({ pid, c, onClose, onDone }: { pid: string; c: any; onClose: () => void; onDone: () => void }) {
+  const units = useApi<any>('/price-units', pid);
+  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst' });
+  const act = useAction();
+  const choices: any[] = (units.data?.choices || []).filter((x: any) => !x.usage || units.data?.sells_usage !== false);
+  const set = (k: string, x: any) => setV({ ...v, [k]: x });
+  return (
+    <Modal title={`Add a price for ${c.title}`} onClose={onClose}>
+      <Field label="Name of the plan or product"><input type="text" value={v.plan} onChange={(e) => set('plan', e.target.value)} placeholder="Pro plan" /></Field>
+      <div className="row"><Field label="Amount"><input type="number" min={0} value={v.amount} onChange={(e) => set('amount', e.target.value)} /></Field><Field label="Currency"><select value={v.currency} onChange={(e) => set('currency', e.target.value)}>{['INR', 'USD', 'EUR', 'GBP'].map((x) => <option key={x}>{x}</option>)}</select></Field></div>
+      <Field label="What is the price for?" help="This decides how the cost is scaled in comparisons."><select value={v.for} onChange={(e) => set('for', e.target.value)}><option value="">Choose one</option>{choices.map((x) => <option key={x.v} value={x.v}>{x.label}</option>)}</select></Field>
+      <Field label="What kind of price is it?"><select value={v.price_type} onChange={(e) => set('price_type', e.target.value)}>{['list', 'mrp', 'street', 'dealer', 'distributor', 'oem', 'quote', 'tender_award', 'promo'].map((x) => <option key={x} value={x}>{sp(x)}</option>)}</select></Field>
+      <Field label="Does that price include GST?"><select value={v.tax_basis} onChange={(e) => set('tax_basis', e.target.value)}><option value="incl_gst">Includes GST</option><option value="excl_gst">Excludes GST</option><option value="not_applicable">No GST applies</option></select></Field>
+      {act.box}
+      <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
+        const f = choices.find((x) => x.v === v.for);
+        const miss = [v.amount === '' && 'the amount', !f && 'what the price is for'].filter(Boolean);
+        if (miss.length) throw new Error(`Please fill in ${miss.join(' and ')}.`);
+        const fields = { title: `${c.title} ${v.plan || f.label}`, plan: v.plan, amount: Number(v.amount), currency: v.currency, price_type: v.price_type, tax_basis: v.tax_basis, captured_on: today(), ...f.f };
+        const r = await api<any>('/items', { method: 'POST', body: { type: 'PricePoint', fields } });
+        await api('/links', { method: 'POST', body: { type: 'contains', source: c.id, target: r.item.id } });
+        onDone();
+      })}>Add price</button>
+      <div className="small muted" style={{ marginTop: 6 }}>Today&apos;s date is saved as the date you captured it. Add source and date details in its row later.</div>
+    </Modal>
+  );
+}
+
+function Candidates({ att, c, onClose, onDone }: { att: any; c: any; onClose: () => void; onDone: () => void }) {
+  const [r, setR] = useState<any>(null); const [err, setErr] = useState<string | null>(null);
+  const [state, setState] = useState<Record<string, string>>({}); const [over, setOver] = useState<Record<string, boolean>>({});
+  useEffect(() => { api<any>(`/attachments/${att.id}/suggest`, { method: 'POST', body: {} }).then(setR).catch((e) => setErr(e.message)); }, [att.id]);
+  const cands: any[] = r?.candidates || [];
+  return (
+    <Modal title={`Candidates found in ${att.filename}`} onClose={onClose}>
+      <div className="callout warn small" style={{ marginBottom: 10 }}>These come from simple pattern matching, not from the assistant, and can be wrong. Anything you accept is saved as a draft that still needs checking.</div>
+      {err && <ErrorBox message={err} />}{!r && !err && <Loading />}
+      {r && cands.length === 0 && <Empty>No prices or company facts were found with simple pattern matching. Try asking the assistant instead, or add them by hand.</Empty>}
+      {cands.map((cd) => {
+        const isPrice = cd.kind === 'price_point'; const f = cd.fields || {};
+        const canOver = !isPrice && cd.field && filled(c[cd.field]) && JSON.stringify(c[cd.field]) !== JSON.stringify(f[cd.field]);
+        return (
+          <div key={cd.id} className="callout" style={{ marginBottom: 8 }}>
+            <div className="row wrap"><Badge>{isPrice ? 'Price' : 'Company fact'}</Badge><b>{isPrice ? `${f.plan || 'Price'}: ${money(f.amount, f.currency)} ${f.unit || ''}` : `${F[cd.field]?.label || cd.field}: ${Array.isArray(f[cd.field]) ? f[cd.field].join(', ') : f[cd.field]}`}</b>
+              <span className="spacer" /><button className="btn sm primary" disabled={!!state[cd.id]} onClick={async () => { try { const res = await api<any>(`/attachments/${att.id}/accept`, { method: 'POST', body: { candidates: [cd], competitor_id: c.id, overwrite: !!over[cd.id] } }); const done = (res.created || []).length || (res.updated || []).length; setState({ ...state, [cd.id]: done ? 'Added' : 'Skipped' }); if (done) onDone(); } catch (e: any) { setErr(e.message); } }}>{state[cd.id] || 'Accept'}</button></div>
+            <blockquote style={{ margin: '4px 0' }}>{cd.quote}</blockquote>
+            <div className="small muted">Found at: {cd.location?.label || 'the file'}</div>
+            {(cd.assumptions || []).length > 0 && <div className="small" style={{ color: 'var(--warn)' }}>Guessed: {cd.assumptions.join('; ')}</div>}
+            {canOver && <label className="small"><input type="checkbox" checked={!!over[cd.id]} onChange={(e) => setOver({ ...over, [cd.id]: e.target.checked })} /> Replace what we have now ({Array.isArray(c[cd.field]) ? c[cd.field].join(', ') : String(c[cd.field])})</label>}
+          </div>
+        );
+      })}
+    </Modal>
+  );
+}
+
+const GOALS: [string, string][] = [['competitor_profile', 'Find company facts'], ['competitor_prices', 'Find prices'], ['capabilities', 'Find capabilities']];
+
+export default function Profile({ pid, id, query }: { pid: string; id: string; query: URLSearchParams }) {
+  const { data, error, loading, reload } = useApi<any>(`/items/${id}`, pid);
+  const prices = useApi<any>('/items?type=PricePoint&limit=2000', pid);
+  const caps = useApi<any>('/items?type=CompetitorCapability&limit=3000', pid);
+  const notes = useApi<any>('/items?type=CompetitorNote&limit=2000', pid);
+  const atts = useApi<any>('/attachments', pid);
+  const [tab, setTab] = useState(['overview', 'prices', 'capabilities', 'files', 'notes', 'sources'].includes(query.get('tab') || '') ? query.get('tab')! : 'overview');
+  const [addPrice, setAddPrice] = useState(false);
+  const [verify, setVerify] = useState<any>(null);
+  const [cand, setCand] = useState<any>(null);
+  const [ask, dialog] = useConfirm();
+  const assist = useAssist(pid);
+  const act = useAction();
+  const [newTag, setNewTag] = useState(''); const [newNote, setNewNote] = useState(''); const [naWhy, setNaWhy] = useState<string | null>(null);
+  const [assistMsg, setAssistMsg] = useState<string | null>(null);
+  if (loading || prices.loading || caps.loading) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'Not found'} />;
+  const c = data.item;
+  const out = (type: string) => new Set((data.links as any[]).filter((l) => l.direction === 'out' && l.otherType === type).map((l) => l.other));
+  const myPrices = ((prices.data?.items as any[]) || []).filter((p) => out('PricePoint').has(p.id) && p.status !== 'Retired');
+  const myCaps = ((caps.data?.items as any[]) || []).filter((p) => out('CompetitorCapability').has(p.id) && p.status !== 'Retired');
+  const noteIds = new Set((data.links as any[]).filter((l) => l.direction === 'in' && l.type === 'note_on').map((l) => l.other));
+  const myNotes = ((notes.data?.items as any[]) || []).filter((n) => noteIds.has(n.id) && n.status !== 'Retired');
+  const myFiles = ((atts.data?.attachments as any[]) || []).filter((a) => (a.targets || []).includes(id));
+  const allTags = Array.from(new Set(((caps.data?.items as any[]) || []).map((x) => x.capability_tag).filter(Boolean))) as string[];
+  const refreshAll = () => { reload(); prices.reload(); caps.reload(); notes.reload(); atts.reload(); };
+  const unchecked = (p: any) => p.verification === 'unverified' || (p.origin === 'human' && !p.verified_by && p.verification !== 'verified' && p.verification !== 'rejected');
+  const checks = [
+    { done: filled(c.website), label: 'Add their website' }, { done: filled(c.positioning), label: 'Say in a line how they compete' },
+    { done: filled(c.target_customers), label: 'Say who they sell to' }, { done: filled(c.strengths) && filled(c.weaknesses), label: 'Note their strengths and weaknesses' },
+    { done: filled(c.founded_year) && filled(c.hq_country) && filled(c.size_band), label: 'Add company facts (founded, head office, size)' },
+    { done: myPrices.length > 0 || filled(c.pricing_na_reason), label: myPrices.length ? 'Prices recorded' : 'Add at least one price, or say why there is none' },
+    { done: myCaps.length > 0, label: myCaps.length ? 'Capabilities rated' : 'Rate what they can do' },
+    { done: myFiles.length > 0, label: 'Upload a source file (deck, price list, PDF)' },
+    { done: !!c.last_reviewed_on && !(c.review_by && c.review_by < today()), label: c.last_reviewed_on ? 'Review is overdue. Mark it reviewed' : 'Mark as reviewed once it looks right' },
+  ];
+  const pct = Math.round((checks.filter((x) => x.done).length / checks.length) * 100);
+  const patch = (iid: string, fields: any) => act.run(async () => { await api(`/items/${iid}`, { method: 'PATCH', body: { fields } }); refreshAll(); });
+  const runAssist = (a: any, goal: string, label: string) => act.run(async () => {
+    const r = await assist.run(a.id, { goal, target: c.id });
+    if (r) setAssistMsg(`${a.filename}: ${(r.added || []).length} proposals added to the review inbox${(r.rejected_hallucinations || []).length ? `, ${r.rejected_hallucinations.length} thrown away (quote not in the file)` : ''}${(r.dropped || []).length ? `, ${r.dropped.length} incomplete` : ''}. Nothing is saved until you accept it there.`);
+  });
+  return (
+    <Page title={c.title} sub={`${c.id} · ${c.kind} · tier ${c.tier} · ${c.status}`}
+      right={<span className="row">
+        <Link className="btn sm" href={`/products/${pid}/competitors`}>All competitors</Link>
+        <select value={c.tier} onChange={(e) => patch(id, { tier: e.target.value, ...(e.target.value === 'S' ? { kind: 'substitute' } : {}) })} title="Move to another group">{TIERS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+        <button className="btn sm primary" onClick={() => patch(id, { last_reviewed_on: today(), review_by: addDays(today(), 90) })}>Mark reviewed today</button>
+        <button className="btn sm danger" onClick={async () => { if (await ask(`Stop tracking ${c.title}? It is kept in history but no longer counted.`, 'Stop tracking')) act.run(async () => { await api(`/items/${id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); }); }}>Stop tracking</button>
+        <Link className="btn sm" href={`/products/${pid}/item/${id}?raw=1`}>Full record</Link></span>}>
+      {dialog}{assist.dialog}{act.box}
+      <div className="row wrap small" style={{ marginBottom: 10, gap: 16 }}>
+        {c.website && <span><span className="muted">Website </span><a href={/^https?:/.test(c.website) ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer">{c.website}</a></span>}
+        <span><span className="muted">Last reviewed </span>{c.last_reviewed_on ? fmtDate(c.last_reviewed_on) : 'Not reviewed yet'}{c.review_by && c.review_by < today() && <Badge kind="bad">Review overdue</Badge>}</span>
+        {c.review_by && <span><span className="muted">Next review by </span>{fmtDate(c.review_by)}</span>}
+        {data.stale && <Badge kind="warn">Some values are out of date</Badge>}
+      </div>
+      <Tabs value={tab} onChange={setTab} tabs={[['overview', 'Overview'], ['prices', `Prices (${myPrices.length})`], ['capabilities', `Capabilities (${myCaps.length})`], ['files', `Files (${myFiles.length})`], ['notes', `Notes (${myNotes.length})`], ['sources', 'Sources']]} />
+      <div style={{ marginTop: 12 }}>
+        {tab === 'overview' && (
+          <div className="grid g2">
+            <div className="stack">{SECTIONS.map((s) => <Section key={s.id} sec={s} c={c} onSaved={refreshAll} />)}</div>
+            <div className="stack">
+              <Card title="Progress"><div className="strong" style={{ fontSize: 22 }}>{pct}%</div><div className="small muted">{checks.filter((x) => x.done).length} of {checks.length} things done</div></Card>
+              <Card title="To do"><ul className="list">{checks.map((x) => <li key={x.label} style={{ opacity: x.done ? 0.6 : 1 }}>{x.done ? '✓ ' : '○ '}{x.label}</li>)}</ul></Card>
+            </div>
+          </div>
+        )}
+        {tab === 'prices' && (
+          <div className="stack">
+            <div className="row"><span className="spacer" /><button className="btn primary" onClick={() => setAddPrice(true)}>Add a price</button></div>
+            <Card title="Prices" sub={`${myPrices.length}`} flush>
+              {myPrices.length === 0 ? <Empty>No prices recorded.</Empty> : (
+                <table className="tbl compact"><thead><tr><th>Plan</th><th>Price</th><th>Kind</th><th>Seen</th><th>Checked</th><th /></tr></thead><tbody>
+                  {myPrices.map((p) => (
+                    <tr key={p.id}><td><Link href={`/products/${pid}/item/${p.id}`}>{p.plan || p.title}</Link></td><td>{money(p.amount, p.currency)} <span className="muted small">/ {p.unit}</span></td><td className="small">{sp(p.price_type)}</td>
+                      <td className="small">{fmtDate(p.captured_on)} {p._freshness && p._freshness !== 'fresh' && <Badge kind="warn">{p._freshness}</Badge>}</td>
+                      <td>{unchecked(p) ? <Badge kind="warn">needs a second person</Badge> : p.status === 'Reviewed' ? <Badge kind="ok">{p.verified_by ? `Checked by ${p.verified_by}` : 'Checked'}</Badge> : p.status === 'Disputed' ? <Badge kind="bad">Disputed</Badge> : <Badge kind="warn">Not checked yet</Badge>}</td>
+                      <td className="nowrap">{(unchecked(p) || p.status === 'Draft') && <button className="btn xs" onClick={() => setVerify({ ids: [p.id], label: `${p.plan || p.title}: ${money(p.amount, p.currency)}` })}>Mark as checked</button>} <button className="btn xs danger" onClick={async () => { if (await ask(`Remove "${p.plan || p.id}"? It is kept in history but no longer counted.`, 'Remove')) act.run(async () => { await api(`/items/${p.id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); }); }}>Remove</button></td></tr>
+                  ))}
+                </tbody></table>
+              )}
+            </Card>
+            <Card title="No price published?" sub="If they publish no price, say why">
+              <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="Price on request only" />
+              <button className="btn sm" style={{ marginTop: 6 }} onClick={() => patch(id, { pricing_na_reason: (naWhy ?? c.pricing_na_reason ?? '').trim() })}>Save</button>
+            </Card>
+          </div>
+        )}
+        {tab === 'capabilities' && (
+          <div className="stack">
+            <Card title="Rate what they can do" sub={`${myCaps.length} rated`} flush>
+              {myCaps.length === 0 ? <Empty>No capabilities rated yet.</Empty> : (
+                <table className="tbl compact"><thead><tr><th>Capability</th><th>Level</th><th>Importance</th><th>Note</th><th>Checked</th><th /></tr></thead><tbody>
+                  {myCaps.map((p) => (
+                    <tr key={p.id}><td><Link href={`/products/${pid}/item/${p.id}`}>{p.capability_tag}</Link></td>
+                      <td><select value={p.level || 'unknown'} onChange={(e) => patch(p.id, { level: e.target.value, captured_on: today() })}>{['unknown', 'absent', 'partial', 'parity', 'strong'].map((x) => <option key={x}>{x}</option>)}</select></td>
+                      <td><select value={p.importance ?? ''} onChange={(e) => patch(p.id, { importance: Number(e.target.value) })}><option value="">-</option>{[1, 2, 3, 4, 5].map((x) => <option key={x}>{x}</option>)}</select></td>
+                      <td><input type="text" defaultValue={p.note || ''} onBlur={(e) => e.target.value !== (p.note || '') && patch(p.id, { note: e.target.value.trim() })} style={{ width: '100%' }} /></td>
+                      <td>{unchecked(p) ? <button className="btn xs" onClick={() => setVerify({ ids: [p.id], label: `${p.capability_tag}: ${p.level}` })}>Mark as checked</button> : <Badge kind={p.status === 'Reviewed' ? 'ok' : 'warn'}>{p.status}</Badge>}</td>
+                      <td><button className="btn xs danger" onClick={() => act.run(async () => { await api(`/items/${p.id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); })}>Remove</button></td></tr>
+                  ))}
+                </tbody></table>
+              )}
+            </Card>
+            <Card title="Add a capability">
+              <div className="row"><input list="cap-tags" type="text" placeholder="What can they do? e.g. RS-485 and Modbus support" value={newTag} onChange={(e) => setNewTag(e.target.value)} style={{ flex: 1 }} /><datalist id="cap-tags">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
+                <button className="btn primary" disabled={!newTag.trim()} onClick={() => act.run(async () => { const tag = newTag.trim(); const r = await api<any>('/items', { method: 'POST', body: { type: 'CompetitorCapability', fields: { title: `${c.title}: ${tag}`, capability_tag: tag, level: 'unknown', captured_on: today() } } }); await api('/links', { method: 'POST', body: { type: 'contains', source: id, target: r.item.id } }); setNewTag(''); refreshAll(); })}>Add</button></div>
+            </Card>
+          </div>
+        )}
+        {tab === 'files' && (
+          <Card title="Source files" sub="Decks, price lists and PDFs about this competitor. Upload them on the Files page." right={<Link className="btn sm" href={`/products/${pid}/files`}>Upload on Files</Link>}>
+            {assistMsg && <div className="callout ok" style={{ marginBottom: 8 }}>{assistMsg} <Link href={`/products/${pid}/inbox`}>Open the review inbox</Link></div>}
+            {myFiles.length === 0 ? <Empty>No files attached to this competitor yet.</Empty> : myFiles.map((a) => (
+              <div key={a.id} className="row wrap" style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+                <div style={{ flex: 1 }}><div className="strong">{a.filename}</div><div className="small muted">{Math.round(a.size_bytes / 1024)} KB · uploaded {a.uploaded_on} by {a.uploaded_by}</div><Badge kind={a.extracted_text_status === 'ok' ? 'ok' : 'warn'}>{a.extracted_text_status}</Badge></div>
+                <Link className="btn sm" href={`/products/${pid}/files/${a.id}`}>Open in viewer</Link>
+                {GOALS.map(([g, l]) => <button key={g} className="btn sm" onClick={() => runAssist(a, g, l)}>{l}</button>)}
+                <button className="btn sm" onClick={() => setCand(a)}>Show simple candidates (no assistant)</button>
+                <a className="btn sm" href={`/api/attachments/${a.id}/download?product=${encodeURIComponent(pid)}`}>Download</a>
+                <button className="btn sm danger" onClick={async () => { if (await ask(`Remove ${a.filename} from this competitor? The file stays in history but is no longer listed.`, 'Remove')) act.run(async () => { await api(`/attachments/${a.id}`, { method: 'DELETE' }); refreshAll(); }); }}>Remove</button>
+              </div>
+            ))}
+          </Card>
+        )}
+        {tab === 'notes' && (
+          <Card title="Notes" sub="Things you heard or noticed that do not fit anywhere else">
+            <textarea rows={3} style={{ width: '100%' }} value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="What did you notice?" />
+            <button className="btn primary" style={{ margin: '6px 0 10px' }} disabled={!newNote.trim()} onClick={() => act.run(async () => { const r = await api<any>('/items', { method: 'POST', body: { type: 'CompetitorNote', fields: { title: `${c.title}: ${newNote.trim().slice(0, 60)}`, text: newNote.trim(), importance: 'medium' } } }); await api('/links', { method: 'POST', body: { type: 'note_on', source: r.item.id, target: id } }); setNewNote(''); refreshAll(); })}>Add note</button>
+            {myNotes.length === 0 ? <Empty>No notes yet.</Empty> : myNotes.map((n) => (
+              <div key={n.id} className="row" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}><div style={{ flex: 1 }}>{n.text}<div className="xs muted">{n.created_by} · {fmtDate(n.created_at)}</div></div><button className="btn xs danger" onClick={async () => { if (await ask('Remove this note? It stays in history but is no longer shown.', 'Remove')) act.run(async () => { await api(`/items/${n.id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); }); }}>Remove</button></div>
+            ))}
+          </Card>
+        )}
+        {tab === 'sources' && <SourcesTab links={data.links} pid={pid} />}
+      </div>
+      {addPrice && <AddPrice pid={pid} c={c} onClose={() => setAddPrice(false)} onDone={() => { setAddPrice(false); refreshAll(); }} />}
+      {verify && <VerifyDialog ids={verify.ids} label={verify.label} onClose={() => setVerify(null)} onDone={() => { setVerify(null); refreshAll(); }} />}
+      {cand && <Candidates att={cand} c={c} onClose={() => setCand(null)} onDone={refreshAll} />}
+    </Page>
+  );
+}
+
+function SourcesTab({ links, pid }: { links: any[]; pid: string }) {
+  const ev = useApi<any>('/items?type=Evidence&limit=5000', pid);
+  const ids = new Set(links.map((l) => l.other));
+  const list = ((ev.data?.items as any[]) || []).filter((e) => ids.has(e.id));
+  return (
+    <Card title="Sources" sub="Evidence that backs what we know about this competitor" flush>
+      {list.length === 0 ? <Empty>No evidence is linked to this competitor yet. Evidence is added when a file or web page is used for a price or capability.</Empty> : (
+        <table className="tbl compact"><thead><tr><th>ID</th><th>Evidence</th><th>Grade</th><th>Retrieved</th></tr></thead><tbody>
+          {list.map((e) => <tr key={e.id}><td><Link href={`/products/${pid}/item/${e.id}`}>{e.id}</Link></td><td>{e.url ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.title}</a> : e.title}</td><td><Badge kind="info">{e.grade || '?'}</Badge></td><td>{fmtDate(e.retrieved_on)}</td></tr>)}
+        </tbody></table>
+      )}
+    </Card>
+  );
+}

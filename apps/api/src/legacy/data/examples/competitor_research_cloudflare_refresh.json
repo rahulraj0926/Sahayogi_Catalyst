@@ -1,0 +1,28 @@
+{
+  "_comment": "Example output of a competitor research agent (task DR-1-14/DR-1-15): a REFRESH of three Cloudflare values that went stale. Push with: node scripts/agent_ingest.js data/examples/competitor_research_cloudflare_refresh.json --as Kanishk. Everything arrives as origin=agent, status Draft, UNVERIFIED; a different person must verify it. 'supersedes' links retire the stale values when the new ones are verified. The numbers are invented for the prototype (Sahayogi CDN is hypothetical).",
+  "request_id": "DR-1-14",
+  "submitted_by": "Kanishk",
+  "provenance": {
+    "agent": "claude-research",
+    "retrieved_on": "2026-10-09",
+    "grade": "B",
+    "confidence": "moderate",
+    "source_url": "https://www.cloudflare.com/plans/"
+  },
+  "items": [
+    { "tmp": "k_pop", "type": "CompetitorCapability",
+      "fields": { "title": "Cloudflare: India PoP depth (tier-2/3 cities)", "capability_tag": "India PoP depth (tier-2/3 cities)", "level": "partial", "evidence_basis": "documented", "importance": 5, "note": "Network map lists 3 new tier-2 cities since the last capture; still no ISP-embedded caches in tier-3." } },
+    { "tmp": "k_logs", "type": "CompetitorCapability",
+      "fields": { "title": "Cloudflare: In-country log retention option", "capability_tag": "In-country log retention option", "level": "parity", "evidence_basis": "documented", "importance": 5, "note": "Regional log storage is now selectable on the Business plan (docs page, section 'Regional Services')." } },
+    { "tmp": "p_std", "type": "PricePoint",
+      "fields": { "title": "Cloudflare Standard egress (APAC)", "plan": "Standard egress (APAC)", "value_metric": "egress", "unit": "GB", "amount": 0.049, "currency": "USD", "price_type": "list", "billing_model": "usage", "tax_basis": "excl_gst", "region": "APAC" } }
+  ],
+  "links": [
+    { "type": "contains", "source": "CMP-001", "target": "k_pop" },
+    { "type": "contains", "source": "CMP-001", "target": "k_logs" },
+    { "type": "contains", "source": "CMP-001", "target": "p_std" },
+    { "type": "supersedes", "source": "k_pop", "target": "CCP-003" },
+    { "type": "supersedes", "source": "k_logs", "target": "CCP-004" },
+    { "type": "supersedes", "source": "p_std", "target": "PPT-001" }
+  ]
+}

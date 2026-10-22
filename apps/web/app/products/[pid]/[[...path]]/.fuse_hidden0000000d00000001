@@ -1,0 +1,36 @@
+'use client';
+import Link from 'next/link';
+import { Suspense, use, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, Loading, Page } from '@/components/ui';
+import { byId } from '@/features/registry';
+import { api } from '@/lib/api';
+
+/** An address with an id (/products/PRD-001/gates) is replaced by the readable one (/products/sahayogi-cdn/gates). */
+function useCanonical(pid: string, path: string[]) {
+  const router = useRouter();
+  const search = useSearchParams().toString();
+  useEffect(() => {
+    if (!/^prd-\d+$/i.test(pid)) return;
+    let live = true;
+    api<{ slug: string }>(`/v1/products/${encodeURIComponent(pid)}`)
+      .then((r) => { if (live && r.slug !== pid) router.replace(`/products/${r.slug}${path.length ? '/' + path.map(encodeURIComponent).join('/') : ''}${search ? '?' + search : ''}`); })
+      .catch(() => { /* keep the id address; the screen shows its own error */ });
+    return () => { live = false; };
+  }, [pid, path.join('/'), search]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** Every product screen lives behind this one route: /products/:slug/<feature>/<args...> */
+function Host({ pid, path }: { pid: string; path: string[] }) {
+  const query = useSearchParams();
+  useCanonical(pid, path);
+  const feature = byId(path[0] || 'overview');
+  if (!feature) return <Page title="Not found"><Card><p>There is no screen called “{path[0]}”.</p><Link className="btn" href={`/products/${pid}`}>Back to the overview</Link></Card></Page>;
+  const F = feature.component;
+  return <F pid={pid} args={path.slice(1)} query={query} />;
+}
+
+export default function ProductScreen({ params }: { params: Promise<{ pid: string; path?: string[] }> }) {
+  const { pid, path } = use(params);
+  return <Suspense fallback={<Loading />}><Host pid={pid} path={(path || []).map(decodeURIComponent)} /></Suspense>;
+}

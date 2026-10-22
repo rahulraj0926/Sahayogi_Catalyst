@@ -1,0 +1,41 @@
+'use client';
+import Link from 'next/link';
+import { Badge, Bar, Card, ErrorBox, Loading, Page } from '@/components/ui';
+import { Stat } from '@/components/kit';
+import { useApi } from '@/lib/api';
+
+/** Status report of one product. Prototype: reports.js (/products/:pid/report) */
+export default function ProductReport({ pid }: { pid: string }) {
+  const { data: r, error, loading } = useApi<any>('/reports/product', pid);
+  if (loading) return <Loading />;
+  if (error || !r) return <ErrorBox message={error || 'No data'} />;
+  const q = `product=${encodeURIComponent(pid)}`;
+  return (
+    <Page title={`Status report: ${r.product.name}`} sub={`As of ${r.as_of} · ${r.product.stage_label} · owner ${r.product.owner} · thoroughness ${r.product.thoroughness}`}
+      right={<span className="row"><a className="btn sm" href={`/api/v1/reports/product?format=html&${q}`} target="_blank">Printable page</a><a className="btn sm" href={`/api/v1/reports/product?format=csv&${q}`}>CSV</a></span>}>
+      <div className="callout" style={{ marginBottom: 12 }}><b>What happens next:</b> {r.what_happens_next}{(r.stage_warnings || []).map((w: string) => <div key={w} className="small">{w}</div>)}</div>
+      <div className="grid g4" style={{ marginBottom: 12 }}>
+        <Stat value={`${r.progress.overall_documents_percent}%`} label="documents complete" />
+        <Stat value={`${r.handoff.stories_approved} of ${r.handoff.stories_total}`} label="stories approved" />
+        <Stat value={r.risks.length} label="open risks" kind={r.risks.length ? 'warn' : undefined} />
+        <Stat value={r.handoff.packages} label="hand-over packages" />
+      </div>
+      <Card title="Stage by stage" flush>
+        <table className="tbl compact"><thead><tr><th>Stage</th><th>State</th><th style={{ width: 180 }}>Readiness</th><th>Must-haves</th><th>Holding it up</th></tr></thead><tbody>
+          {r.progress.phases.map((p: any) => (
+            <tr key={p.phase}><td className="strong">{p.label}</td><td><Badge>{p.state_text}</Badge>{p.decided_on && <div className="xs muted">{p.decision} · {p.decided_on}</div>}</td><td><Bar pct={p.readiness} /></td><td>{p.must_ok} of {p.must_total}</td><td className="small">{(p.blockers || []).slice(0, 3).map((b: any) => b.message || b.text).join('; ')}{(p.blockers || []).length > 3 ? ` +${p.blockers.length - 3} more` : ''}</td></tr>
+          ))}
+        </tbody></table>
+      </Card>
+      <div className="grid g2" style={{ marginTop: 14 }}>
+        <Card title="Risks" flush><table className="tbl compact"><tbody>{r.risks.map((x: any) => <tr key={x.id}><td><Link href={`/products/${pid}/item/${x.id}`}>{x.title}</Link><div className="xs muted">{x.category} · {x.owner}</div></td><td>score {x.score}</td><td><Badge>{x.status}</Badge></td></tr>)}</tbody></table></Card>
+        <Card title="Decisions" flush><table className="tbl compact"><tbody>{r.decisions.map((x: any) => <tr key={x.id}><td><Link href={`/products/${pid}/item/${x.id}`}>{x.title}</Link></td><td className="small">{x.chosen}</td><td className="small muted">{x.decider} · {x.decided_on}</td></tr>)}</tbody></table></Card>
+      </div>
+      <div className="grid g2" style={{ marginTop: 14 }}>
+        <Card title="Documents" sub={`${r.documents.completed.length} done · ${r.documents.pending.length} to go`} flush><table className="tbl compact"><tbody>{r.documents.pending.slice(0, 12).map((d: any) => <tr key={d.key}><td>{d.title}</td><td>{d.completeness}%</td><td><Badge>{d.status.replace('_', ' ')}</Badge></td></tr>)}</tbody></table></Card>
+        <Card title="Hand-over readiness">{r.handoff_readiness ? <><div>{r.handoff_readiness.ready_stories} of {r.handoff_readiness.total_stories} stories ready for developers.</div><ul className="small">{(r.handoff_readiness.not_ready || []).map((s: any) => <li key={s.id}>{s.title}: {(s.reasons || []).join('; ')}</li>)}</ul></> : null}<Link className="btn sm" href={`/products/${pid}/handoff`}>Open hand-over</Link></Card>
+      </div>
+      {((r.waivers || []).length > 0 || (r.conditions || []).length > 0) && <Card title="Exceptions and follow-ups"><ul>{(r.waivers || []).map((w: any) => <li key={w.id}>Set aside: {w.title || w.criterion_id}</li>)}{(r.conditions || []).map((c: any) => <li key={c.id}>Follow-up: {c.text || c.title} ({c.status})</li>)}</ul></Card>}
+    </Page>
+  );
+}

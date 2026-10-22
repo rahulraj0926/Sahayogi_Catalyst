@@ -1,0 +1,2067 @@
+diff -ruN --strip-trailing-cr legacy-orig/data/data_requests.json legacy/data/data_requests.json
+--- legacy-orig/data/data_requests.json	2026-10-16 19:32:07.110417737 +0000
++++ legacy/data/data_requests.json	2026-10-16 19:38:15.715436065 +0000
+@@ -1,5 +1,5 @@
+ {
+- "_comment": "The data-collection plan. 89 requests across stages 0-4. owner_kind: HUMAN (only the company can know or decide), DOCUMENT (paste or upload existing material), AGENT_RESEARCH (a prompt for an outside AI assistant plus an import format, OR a plain form filled in by hand; a different person checks the assistant's output), DERIVED (the tool prepares it by itself). done_when is a JSON query (same DSL as the checks plus criterion_pass / gate_decided / derived_ran / all_done / any). why.criteria are check ids this request feeds; why_plain says in one specific sentence why we ask. Form fields: kind text|longtext|enum|number|date|bool|ref|lines; \"lines\" fields carry typed columns (text, number, date, choice, yesno, pick) so nobody types a code word or a record id. depth_level: the lowest depth at which the request is needed. minutes: estimated minutes of a person's time (0 for steps the tool does itself). Examples live in data/request_examples.json and depend on the product type and whether it is sold or internal.",
++ "_comment": "The data-collection plan. 136 requests across stages 0-12 (89 for stages 0-4, 47 for stages 5-12). owner_kind: HUMAN (only the company can know or decide), DOCUMENT (paste or upload existing material), AGENT_RESEARCH (a prompt for an outside AI assistant plus an import format, OR a plain form filled in by hand; a different person checks the assistant's output), DERIVED (the tool prepares it by itself). done_when is a JSON query (same DSL as the checks plus criterion_pass / gate_decided / derived_ran / all_done / any). why.criteria are check ids this request feeds; why_plain says in one specific sentence why we ask. Form fields: kind text|longtext|enum|number|date|bool|ref|lines; \"lines\" fields carry typed columns (text, number, date, choice, yesno, pick) so nobody types a code word or a record id. depth_level: the lowest depth at which the request is needed. minutes: estimated minutes of a person's time (0 for steps the tool does itself). Examples live in data/request_examples.json and depend on the product type and whether it is sold or internal.",
+  "v2Ref": [
+   "COMP-4/workflow",
+   "6.2-6.6",
+@@ -93,6 +93,78 @@
+    "phase": 4,
+    "bring": "The last open questions.",
+    "outcome": "Approved stories ready to go to the developers."
++  },
++  "S5-A": {
++   "title": "Screens and design review",
++   "purpose": "Make sure every must-have story has a screen, its states and an approved design review.",
++   "who": "UX designer + Product leader",
++   "phase": 5,
++   "bring": "Links to the designs and the list of must-have stories.",
++   "outcome": "Screens linked to designs, all states described, a design review approved and a sign-off decision."
++  },
++  "S6-A": {
++   "title": "Architecture review",
++   "purpose": "Agree how the system will technically work and review its security.",
++   "who": "Architect + Security lead",
++   "phase": 6,
++   "bring": "The quality targets from Stage 3 and any existing diagrams.",
++   "outcome": "Components defined, every quality target answered, decisions recorded, API contracts registered and a sign-off decision."
++  },
++  "S7-A": {
++   "title": "Specification workshop",
++   "purpose": "Turn each must-have story into a specification a developer can build from.",
++   "who": "Business analyst + Tech lead",
++   "phase": 7,
++   "bring": "The stories, flows and business rules from Stages 3 and 4.",
++   "outcome": "A complete, approved specification for every must-have story and a sign-off decision."
++  },
++  "S8-A": {
++   "title": "Build status",
++   "purpose": "Check the build is tracked, reviewed and tested.",
++   "who": "Tech lead + developers",
++   "phase": 8,
++   "bring": "The list of work items and their pull requests.",
++   "outcome": "Every story tracked, no work blocked, reviews recorded, tests confirmed and a sign-off decision."
++  },
++  "S9-A": {
++   "title": "Test design",
++   "purpose": "Plan the tests and cover every must-have requirement.",
++   "who": "QA lead",
++   "phase": 9,
++   "bring": "The requirements and the architecture notes.",
++   "outcome": "A test plan and test cases for every must-have requirement, including bad input, permissions, data and integrations."
++  },
++  "S9-B": {
++   "title": "Results and release readiness",
++   "purpose": "Record the results, deal with defects and findings, collect acceptance and decide on release.",
++   "who": "QA lead + Security lead + business owner",
++   "phase": 9,
++   "bring": "Test results, scanner reports and the stakeholders who will accept.",
++   "outcome": "Passing runs, no blocking defect or serious finding, acceptance for every must-have story and a release decision."
++  },
++  "S10-A": {
++   "title": "Release check",
++   "purpose": "Prepare the release and get it approved.",
++   "who": "DevOps lead + sponsor",
++   "phase": 10,
++   "bring": "Version, environment, release notes and the rollback plan.",
++   "outcome": "A complete release record, an approval, a passing smoke test and a sign-off decision."
++  },
++  "S11-A": {
++   "title": "Operations setup",
++   "purpose": "Make sure the live product is watched, has runbooks and learns from incidents.",
++   "who": "Operations head + Product leader",
++   "phase": 11,
++   "bring": "The quality targets, your alert list and past incidents.",
++   "outcome": "An alert and a runbook for every important target, reviewed incidents, a health review and a sign-off decision."
++  },
++  "S12-A": {
++   "title": "Feedback review",
++   "purpose": "Collect feedback, decide what to change and record what was learned.",
++   "who": "Product leader + team",
++   "phase": 12,
++   "bring": "Support notes, user comments and production defects.",
++   "outcome": "Triaged feedback, a change request for every planned item, lessons recorded and a sign-off decision."
+   }
+  },
+  "requests": [
+@@ -9792,6 +9864,1655 @@
+     "noun": "flow pack"
+    },
+    "auto_session": "S4-B"
++  },
++  {
++   "id": "DR-5-01",
++   "phase": 5,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S5-A",
++   "title": "List the screens for every must-have story",
++   "ask": "Name the screen that serves each must-have story.",
++   "why_plain": "The Stage 5 sign-off wants every must-have story to have a screen.",
++   "why": {
++    "criteria": [
++     "G5-01"
++    ],
++    "tiles": [
++     "gate 5 card"
++    ]
++   },
++   "creates": "Screen records",
++   "depends_on": [
++    "DR-4-07"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P5"
++   ],
++   "link_to": "#/phase/5",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 5,
++    "criterion": "G5-01"
++   }
++  },
++  {
++   "id": "DR-5-02",
++   "phase": 5,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S5-A",
++   "title": "Link each screen to its design",
++   "ask": "Paste the Figma or Penpot link for each screen.",
++   "why_plain": "The sign-off wants each screen to point at its design, never hold a copy of it.",
++   "why": {
++    "criteria": [
++     "G5-03"
++    ],
++    "tiles": [
++     "gate 5 card"
++    ]
++   },
++   "creates": "Design link on each screen",
++   "depends_on": [
++    "DR-5-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P5"
++   ],
++   "link_to": "#/phase/5",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 5,
++    "criterion": "G5-03"
++   }
++  },
++  {
++   "id": "DR-5-03",
++   "phase": 5,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S5-A",
++   "title": "Describe the four states of every screen",
++   "ask": "For each screen, say what people see while it loads, when it is empty, on an error and when they are not allowed in.",
++   "why_plain": "The sign-off wants all four states defined for every screen.",
++   "why": {
++    "criteria": [
++     "G5-02"
++    ],
++    "tiles": [
++     "gate 5 card"
++    ]
++   },
++   "creates": "Screen state records",
++   "depends_on": [
++    "DR-5-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P5"
++   ],
++   "link_to": "#/phase/5",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 5,
++    "criterion": "G5-02"
++   }
++  },
++  {
++   "id": "DR-5-04",
++   "phase": 5,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 3,
++   "sequential": true,
++   "session": "S5-A",
++   "title": "Confirm layout and accessibility were checked",
++   "ask": "The UX designer confirms each screen was checked on a narrow window and with keyboard and screen-reader basics.",
++   "why_plain": "The sign-off wants this checked by the person who knows the design.",
++   "why": {
++    "criteria": [
++     "G5-06"
++    ],
++    "tiles": [
++     "gate 5 card"
++    ]
++   },
++   "creates": "Attestation (UX designer)",
++   "depends_on": [
++    "DR-5-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P5"
++   ],
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 5,
++    "criterion": "G5-06"
++   },
++   "form": {
++    "special": "attest",
++    "criterion": "G5-06",
++    "gate": 5,
++    "role": "UX designer",
++    "fields": [
++     {
++      "key": "by",
++      "label": "The UX designer who signs",
++      "kind": "person",
++      "required": true
++     },
++     {
++      "key": "note",
++      "label": "Anything the record should say? (optional)",
++      "kind": "longtext"
++     }
++    ]
++   }
++  },
++  {
++   "id": "DR-5-05",
++   "phase": 5,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S5-A",
++   "title": "Ask for the design review and answer its comments",
++   "ask": "Request the design review, then deal with any changes it asks for.",
++   "why_plain": "The sign-off wants an approved design review with no comments still waiting.",
++   "why": {
++    "criteria": [
++     "G5-04",
++     "G5-05"
++    ],
++    "tiles": [
++     "gate 5 card"
++    ]
++   },
++   "creates": "Design review",
++   "depends_on": [
++    "DR-5-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P5"
++   ],
++   "link_to": "#/phase/5",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 5,
++    "criterion": [
++     "G5-04",
++     "G5-05"
++    ]
++   }
++  },
++  {
++   "id": "DR-5-06",
++   "phase": 5,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S5-A",
++   "title": "Decide whether to move on from Stage 5",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide whether the design is ready for the architects.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 5 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-5-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P5"
++   ],
++   "link_to": "#/gates/5",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 5
++   }
++  },
++  {
++   "id": "DR-6-01",
++   "phase": 6,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S6-A",
++   "title": "Define the frontend, backend and database",
++   "ask": "Describe each main part of the system and what it is for.",
++   "why_plain": "The Stage 6 sign-off wants a frontend, a backend and a database defined.",
++   "why": {
++    "criteria": [
++     "G6-03"
++    ],
++    "tiles": [
++     "gate 6 card"
++    ]
++   },
++   "creates": "Component records",
++   "depends_on": [
++    "DR-5-06"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P6"
++   ],
++   "link_to": "#/phase/6",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 6,
++    "criterion": "G6-03"
++   }
++  },
++  {
++   "id": "DR-6-02",
++   "phase": 6,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S6-A",
++   "title": "Give every quality target an architecture answer",
++   "ask": "For each must-have or should-have quality target, record the decision that meets it.",
++   "why_plain": "The sign-off wants no quality target left without an answer.",
++   "why": {
++    "criteria": [
++     "G6-01"
++    ],
++    "tiles": [
++     "gate 6 card"
++    ]
++   },
++   "creates": "Architecture decisions linked to targets",
++   "depends_on": [
++    "DR-6-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P6"
++   ],
++   "link_to": "#/phase/6",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 6,
++    "criterion": "G6-01"
++   }
++  },
++  {
++   "id": "DR-6-03",
++   "phase": 6,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S6-A",
++   "title": "Write down each decision and settle the open ones",
++   "ask": "For each decision: why it was needed, what was chosen and what follows. Then accept or reject any still proposed.",
++   "why_plain": "The sign-off wants complete decisions and none left only proposed.",
++   "why": {
++    "criteria": [
++     "G6-02",
++     "G6-05"
++    ],
++    "tiles": [
++     "gate 6 card"
++    ]
++   },
++   "creates": "Decision text and status",
++   "depends_on": [
++    "DR-6-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P6"
++   ],
++   "link_to": "#/phase/6",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 6,
++    "criterion": [
++     "G6-02",
++     "G6-05"
++    ]
++   }
++  },
++  {
++   "id": "DR-6-04",
++   "phase": 6,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S6-A",
++   "title": "Register each API contract",
++   "ask": "Link its specification and give it a version and an owner.",
++   "why_plain": "The sign-off wants every API contract to have all three.",
++   "why": {
++    "criteria": [
++     "G6-04"
++    ],
++    "tiles": [
++     "gate 6 card"
++    ]
++   },
++   "creates": "API contract records",
++   "depends_on": [
++    "DR-6-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P6"
++   ],
++   "link_to": "#/phase/6",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 6,
++    "criterion": "G6-04"
++   }
++  },
++  {
++   "id": "DR-6-05",
++   "phase": 6,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 3,
++   "sequential": true,
++   "session": "S6-A",
++   "title": "Confirm the security design was reviewed",
++   "ask": "The Security lead confirms sign-in, permissions and data protection were reviewed.",
++   "why_plain": "The sign-off wants a named person to vouch for the security design.",
++   "why": {
++    "criteria": [
++     "G6-06"
++    ],
++    "tiles": [
++     "gate 6 card"
++    ]
++   },
++   "creates": "Attestation (Security lead)",
++   "depends_on": [
++    "DR-6-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P6"
++   ],
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 6,
++    "criterion": "G6-06"
++   },
++   "form": {
++    "special": "attest",
++    "criterion": "G6-06",
++    "gate": 6,
++    "role": "Security lead",
++    "fields": [
++     {
++      "key": "by",
++      "label": "The Security lead who signs",
++      "kind": "person",
++      "required": true
++     },
++     {
++      "key": "note",
++      "label": "Anything the record should say? (optional)",
++      "kind": "longtext"
++     }
++    ]
++   }
++  },
++  {
++   "id": "DR-6-06",
++   "phase": 6,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S6-A",
++   "title": "Decide whether to move on from Stage 6",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide whether the architecture is ready to be specified.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 6 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-6-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P6"
++   ],
++   "link_to": "#/gates/6",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 6
++   }
++  },
++  {
++   "id": "DR-7-01",
++   "phase": 7,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S7-A",
++   "title": "Write a specification for every must-have story",
++   "ask": "Start one specification per must-have story.",
++   "why_plain": "The Stage 7 sign-off wants a specification for each must-have story.",
++   "why": {
++    "criteria": [
++     "G7-01"
++    ],
++    "tiles": [
++     "gate 7 card"
++    ]
++   },
++   "creates": "Feature specification records",
++   "depends_on": [
++    "DR-6-06"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P7"
++   ],
++   "link_to": "#/phase/7",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 7,
++    "criterion": "G7-01"
++   }
++  },
++  {
++   "id": "DR-7-02",
++   "phase": 7,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S7-A",
++   "title": "Complete each specification",
++   "ask": "Fill in the flow, edge cases, what needs testing and the definition of done.",
++   "why_plain": "The sign-off wants every specification complete, not a stub.",
++   "why": {
++    "criteria": [
++     "G7-02"
++    ],
++    "tiles": [
++     "gate 7 card"
++    ]
++   },
++   "creates": "Specification fields",
++   "depends_on": [
++    "DR-7-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P7"
++   ],
++   "link_to": "#/phase/7",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 7,
++    "criterion": "G7-02"
++   }
++  },
++  {
++   "id": "DR-7-03",
++   "phase": 7,
++   "depth_level": "L3",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S7-A",
++   "title": "Name the security and observability needs of each feature",
++   "ask": "Say what must be protected and what must be logged or watched.",
++   "why_plain": "At the thorough level the sign-off wants both named for every feature.",
++   "why": {
++    "criteria": [
++     "G7-04"
++    ],
++    "tiles": [
++     "gate 7 card"
++    ]
++   },
++   "creates": "Specification fields",
++   "depends_on": [
++    "DR-7-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P7"
++   ],
++   "link_to": "#/phase/7",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 7,
++    "criterion": "G7-04"
++   }
++  },
++  {
++   "id": "DR-7-04",
++   "phase": 7,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S7-A",
++   "title": "Review each specification and move it out of draft",
++   "ask": "The Tech lead reads each one and approves it or sends it back.",
++   "why_plain": "The sign-off wants no specification left as a draft.",
++   "why": {
++    "criteria": [
++     "G7-03"
++    ],
++    "tiles": [
++     "gate 7 card"
++    ]
++   },
++   "creates": "Approved status",
++   "depends_on": [
++    "DR-7-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P7"
++   ],
++   "link_to": "#/phase/7",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 7,
++    "criterion": "G7-03"
++   }
++  },
++  {
++   "id": "DR-7-05",
++   "phase": 7,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S7-A",
++   "title": "Decide whether to move on from Stage 7",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide whether the specifications are ready for the developers.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 7 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-7-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P7"
++   ],
++   "link_to": "#/gates/7",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 7
++   }
++  },
++  {
++   "id": "DR-8-01",
++   "phase": 8,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S8-A",
++   "title": "Create a work item for every must-have story",
++   "ask": "Add one work item per must-have story, or pull them from the developer tool.",
++   "why_plain": "The Stage 8 sign-off wants every must-have story to be tracked.",
++   "why": {
++    "criteria": [
++     "G8-01"
++    ],
++    "tiles": [
++     "gate 8 card"
++    ]
++   },
++   "creates": "Work item records",
++   "depends_on": [
++    "DR-7-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P8"
++   ],
++   "link_to": "#/phase/8",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 8,
++    "criterion": "G8-01"
++   }
++  },
++  {
++   "id": "DR-8-02",
++   "phase": 8,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S8-A",
++   "title": "Keep each item's status current and clear what is blocked",
++   "ask": "Update the status; say what is stopping anything blocked.",
++   "why_plain": "The sign-off wants no work item left blocked.",
++   "why": {
++    "criteria": [
++     "G8-02"
++    ],
++    "tiles": [
++     "gate 8 card"
++    ]
++   },
++   "creates": "Work item status",
++   "depends_on": [
++    "DR-8-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P8"
++   ],
++   "link_to": "#/phase/8",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 8,
++    "criterion": "G8-02"
++   }
++  },
++  {
++   "id": "DR-8-03",
++   "phase": 8,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S8-A",
++   "title": "Link every finished item to its pull request",
++   "ask": "Paste the pull request link on each finished item.",
++   "why_plain": "The sign-off wants proof in the code system for every finished item.",
++   "why": {
++    "criteria": [
++     "G8-03"
++    ],
++    "tiles": [
++     "gate 8 card"
++    ]
++   },
++   "creates": "Pull request link",
++   "depends_on": [
++    "DR-8-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P8"
++   ],
++   "link_to": "#/phase/8",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 8,
++    "criterion": "G8-03"
++   }
++  },
++  {
++   "id": "DR-8-04",
++   "phase": 8,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S8-A",
++   "title": "Record code review and the definition of done",
++   "ask": "For each finished item, tick that it was reviewed and meets the definition of done.",
++   "why_plain": "The sign-off wants no finished item without both.",
++   "why": {
++    "criteria": [
++     "G8-04"
++    ],
++    "tiles": [
++     "gate 8 card"
++    ]
++   },
++   "creates": "Review and done marks",
++   "depends_on": [
++    "DR-8-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P8"
++   ],
++   "link_to": "#/phase/8",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 8,
++    "criterion": "G8-04"
++   }
++  },
++  {
++   "id": "DR-8-05",
++   "phase": 8,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 3,
++   "sequential": true,
++   "session": "S8-A",
++   "title": "Confirm developer tests pass and the build repeats",
++   "ask": "The Tech lead confirms the developer tests pass and the same build can be made again.",
++   "why_plain": "The sign-off wants a named person to vouch for the build.",
++   "why": {
++    "criteria": [
++     "G8-05"
++    ],
++    "tiles": [
++     "gate 8 card"
++    ]
++   },
++   "creates": "Attestation (Tech lead)",
++   "depends_on": [
++    "DR-8-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P8"
++   ],
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 8,
++    "criterion": "G8-05"
++   },
++   "form": {
++    "special": "attest",
++    "criterion": "G8-05",
++    "gate": 8,
++    "role": "Tech lead",
++    "fields": [
++     {
++      "key": "by",
++      "label": "The Tech lead who signs",
++      "kind": "person",
++      "required": true
++     },
++     {
++      "key": "note",
++      "label": "Anything the record should say? (optional)",
++      "kind": "longtext"
++     }
++    ]
++   }
++  },
++  {
++   "id": "DR-8-06",
++   "phase": 8,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S8-A",
++   "title": "Decide whether to move on from Stage 8",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide whether the build is ready for testing.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 8 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-8-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P8"
++   ],
++   "link_to": "#/gates/8",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 8
++   }
++  },
++  {
++   "id": "DR-9-01",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 5,
++   "sequential": true,
++   "session": "S9-A",
++   "title": "Write the test plan",
++   "ask": "Say what will be tested, how and by whom.",
++   "why_plain": "Every quality check in Stage 9 builds on the plan.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "Test plan",
++   "depends_on": [
++    "DR-8-06"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/phase/9",
++   "done_when": {
++    "op": "count_min",
++    "sel": {
++     "type": "TestPlan"
++    },
++    "min": 1,
++    "noun": "test plan"
++   }
++  },
++  {
++   "id": "DR-9-02",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S9-A",
++   "title": "Write a test case for every must-have requirement",
++   "ask": "Add at least one test case against each must-have requirement.",
++   "why_plain": "Quality check 1: every must-have requirement has a test.",
++   "why": {
++    "criteria": [
++     "G9-01"
++    ],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "Test case records",
++   "depends_on": [
++    "DR-9-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/phase/9",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 9,
++    "criterion": "G9-01"
++   }
++  },
++  {
++   "id": "DR-9-03",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S9-A",
++   "title": "Add the tests for bad input, permissions, data and integrations",
++   "ask": "Cover invalid input and edges, people acting beyond their rights, data staying consistent and other systems failing.",
++   "why_plain": "Quality checks 3 to 6 want these cases to exist and pass.",
++   "why": {
++    "criteria": [
++     "G9-03",
++     "G9-04",
++     "G9-05",
++     "G9-06"
++    ],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "More test cases",
++   "depends_on": [
++    "DR-9-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/phase/9",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 9,
++    "criterion": [
++     "G9-03",
++     "G9-04",
++     "G9-05",
++     "G9-06"
++    ]
++   }
++  },
++  {
++   "id": "DR-9-04",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S9-B",
++   "title": "Record the test runs, including a regression run",
++   "ask": "Enter each run's result, or import them from a spreadsheet or test report.",
++   "why_plain": "Quality checks 2 and 7: the latest runs pass and nothing that worked before broke.",
++   "why": {
++    "criteria": [
++     "G9-02",
++     "G9-07"
++    ],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "Test run records",
++   "depends_on": [
++    "DR-9-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/phase/9",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 9,
++    "criterion": [
++     "G9-02",
++     "G9-07"
++    ]
++   }
++  },
++  {
++   "id": "DR-9-05",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S9-B",
++   "title": "Log defects and security findings, then fix or knowingly accept them",
++   "ask": "Enter every defect and finding; fix, retest or accept each one.",
++   "why_plain": "Quality checks 8 and 10: no serious finding and no blocking defect left open.",
++   "why": {
++    "criteria": [
++     "G9-08",
++     "G9-10"
++    ],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "Defect and finding records",
++   "depends_on": [
++    "DR-9-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/phase/9",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 9,
++    "criterion": [
++     "G9-08",
++     "G9-10"
++    ]
++   }
++  },
++  {
++   "id": "DR-9-06",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S9-B",
++   "title": "Get every must-have story accepted",
++   "ask": "Ask an authorised stakeholder to accept each must-have story.",
++   "why_plain": "Quality check 9: the people who asked for it say it is right.",
++   "why": {
++    "criteria": [
++     "G9-09"
++    ],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "Acceptance records",
++   "depends_on": [
++    "DR-9-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/phase/9",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 9,
++    "criterion": "G9-09"
++   }
++  },
++  {
++   "id": "DR-9-07",
++   "phase": 9,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S9-B",
++   "title": "Decide on release and sign off Stage 9",
++   "ask": "The QA lead and the business owner both sign the release decision, then record the Stage 9 decision.",
++   "why_plain": "This is where you decide whether the product is good and safe enough to release.",
++   "why": {
++    "criteria": [
++     "G9-11"
++    ],
++    "tiles": [
++     "gate 9 card"
++    ]
++   },
++   "creates": "Release decision and gate decision",
++   "depends_on": [
++    "DR-9-06"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P9"
++   ],
++   "link_to": "#/gates/9",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "all_done",
++    "of": [
++     {
++      "op": "criterion_pass",
++      "gate": 9,
++      "criterion": "G9-11"
++     },
++     {
++      "op": "gate_decided",
++      "gate": 9
++     }
++    ]
++   }
++  },
++  {
++   "id": "DR-10-01",
++   "phase": 10,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S10-A",
++   "title": "Create the release record",
++   "ask": "Give the version, where it goes, the release notes and the rollback plan.",
++   "why_plain": "The Stage 10 sign-off wants all four on every release.",
++   "why": {
++    "criteria": [
++     "G10-02"
++    ],
++    "tiles": [
++     "gate 10 card"
++    ]
++   },
++   "creates": "Release record",
++   "depends_on": [
++    "DR-9-07"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P10"
++   ],
++   "link_to": "#/phase/10",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 10,
++    "criterion": "G10-02"
++   }
++  },
++  {
++   "id": "DR-10-02",
++   "phase": 10,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S10-A",
++   "title": "Record the database migration",
++   "ask": "Say what changes in the data, or that nothing does.",
++   "why_plain": "The sign-off wants each release to record its migration.",
++   "why": {
++    "criteria": [
++     "G10-05"
++    ],
++    "tiles": [
++     "gate 10 card"
++    ]
++   },
++   "creates": "Migration note on the release",
++   "depends_on": [
++    "DR-10-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P10"
++   ],
++   "link_to": "#/phase/10",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 10,
++    "criterion": "G10-05"
++   }
++  },
++  {
++   "id": "DR-10-03",
++   "phase": 10,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 3,
++   "sequential": true,
++   "session": "S10-A",
++   "title": "Approve the release",
++   "ask": "The sponsor approves the release to go live and confirms the rollback is ready.",
++   "why_plain": "The sign-off wants a named approver for the release.",
++   "why": {
++    "criteria": [
++     "G10-06",
++     "G10-01"
++    ],
++    "tiles": [
++     "gate 10 card"
++    ]
++   },
++   "creates": "Attestation (Sponsor)",
++   "depends_on": [
++    "DR-10-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P10"
++   ],
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 10,
++    "criterion": [
++     "G10-06",
++     "G10-01"
++    ]
++   },
++   "form": {
++    "special": "attest",
++    "criterion": "G10-06",
++    "gate": 10,
++    "role": "Sponsor",
++    "fields": [
++     {
++      "key": "by",
++      "label": "The Sponsor who signs",
++      "kind": "person",
++      "required": true
++     },
++     {
++      "key": "note",
++      "label": "Anything the record should say? (optional)",
++      "kind": "longtext"
++     }
++    ]
++   }
++  },
++  {
++   "id": "DR-10-04",
++   "phase": 10,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S10-A",
++   "title": "Record the deployment and its smoke test",
++   "ask": "Say when it went live and whether the quick check passed.",
++   "why_plain": "The sign-off wants every deployed release to have passed its smoke test.",
++   "why": {
++    "criteria": [
++     "G10-03"
++    ],
++    "tiles": [
++     "gate 10 card"
++    ]
++   },
++   "creates": "Deployment status and smoke-test result",
++   "depends_on": [
++    "DR-10-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P10"
++   ],
++   "link_to": "#/phase/10",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 10,
++    "criterion": "G10-03"
++   }
++  },
++  {
++   "id": "DR-10-05",
++   "phase": 10,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S10-A",
++   "title": "Confirm every must-have story is in a release",
++   "ask": "Check each must-have story ships in an approved release.",
++   "why_plain": "The sign-off wants nothing promised and left out.",
++   "why": {
++    "criteria": [
++     "G10-04"
++    ],
++    "tiles": [
++     "gate 10 card"
++    ]
++   },
++   "creates": "Story-to-release links",
++   "depends_on": [
++    "DR-10-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P10"
++   ],
++   "link_to": "#/phase/10",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 10,
++    "criterion": "G10-04"
++   }
++  },
++  {
++   "id": "DR-10-06",
++   "phase": 10,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S10-A",
++   "title": "Decide whether to move on from Stage 10",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide whether the release is done.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 10 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-10-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P10"
++   ],
++   "link_to": "#/gates/10",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 10
++   }
++  },
++  {
++   "id": "DR-11-01",
++   "phase": 11,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S11-A",
++   "title": "Create an alert for every must-have quality target",
++   "ask": "For each target, set up what will tell you when it is not being met.",
++   "why_plain": "The Stage 11 sign-off wants every must-have target watched.",
++   "why": {
++    "criteria": [
++     "G11-01"
++    ],
++    "tiles": [
++     "gate 11 card"
++    ]
++   },
++   "creates": "Alert records",
++   "depends_on": [
++    "DR-10-06"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P11"
++   ],
++   "link_to": "#/phase/11",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 11,
++    "criterion": "G11-01"
++   }
++  },
++  {
++   "id": "DR-11-02",
++   "phase": 11,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S11-A",
++   "title": "Write a runbook for every active alert",
++   "ask": "Say what to do when each alert fires.",
++   "why_plain": "The sign-off wants no alert without a runbook.",
++   "why": {
++    "criteria": [
++     "G11-02"
++    ],
++    "tiles": [
++     "gate 11 card"
++    ]
++   },
++   "creates": "Runbook records",
++   "depends_on": [
++    "DR-11-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P11"
++   ],
++   "link_to": "#/phase/11",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 11,
++    "criterion": "G11-02"
++   }
++  },
++  {
++   "id": "DR-11-03",
++   "phase": 11,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S11-A",
++   "title": "Name an owner and a review date for each runbook",
++   "ask": "Put one person and one date on every runbook.",
++   "why_plain": "The sign-off wants runbooks that someone looks after.",
++   "why": {
++    "criteria": [
++     "G11-03"
++    ],
++    "tiles": [
++     "gate 11 card"
++    ]
++   },
++   "creates": "Runbook owner and date",
++   "depends_on": [
++    "DR-11-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P11"
++   ],
++   "link_to": "#/phase/11",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 11,
++    "criterion": "G11-03"
++   }
++  },
++  {
++   "id": "DR-11-04",
++   "phase": 11,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S11-A",
++   "title": "Record each incident and review it once resolved",
++   "ask": "Log what happened and what was learned. This task reopens whenever a new incident is logged.",
++   "why_plain": "The sign-off wants every resolved incident reviewed.",
++   "why": {
++    "criteria": [
++     "G11-04"
++    ],
++    "tiles": [
++     "gate 11 card"
++    ]
++   },
++   "creates": "Incident records and reviews",
++   "depends_on": [
++    "DR-11-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P11"
++   ],
++   "link_to": "#/phase/11",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 11,
++    "criterion": "G11-04"
++   }
++  },
++  {
++   "id": "DR-11-05",
++   "phase": 11,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S11-A",
++   "title": "Hold a production health review",
++   "ask": "Meet, look at how the live product is doing and record it.",
++   "why_plain": "The sign-off wants at least one health review held.",
++   "why": {
++    "criteria": [
++     "G11-05"
++    ],
++    "tiles": [
++     "gate 11 card"
++    ]
++   },
++   "creates": "Health review",
++   "depends_on": [
++    "DR-11-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P11"
++   ],
++   "link_to": "#/phase/11",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 11,
++    "criterion": "G11-05"
++   }
++  },
++  {
++   "id": "DR-11-06",
++   "phase": 11,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S11-A",
++   "title": "Decide whether to move on from Stage 11",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide whether operations are in good hands.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 11 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-11-05"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P11"
++   ],
++   "link_to": "#/gates/11",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 11
++   }
++  },
++  {
++   "id": "DR-12-01",
++   "phase": 12,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 5,
++   "sequential": true,
++   "session": "S12-A",
++   "title": "Collect feedback from users, support and production defects",
++   "ask": "Add each piece of feedback with where it came from.",
++   "why_plain": "Everything that follows starts from what real people told you.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 12 card"
++    ]
++   },
++   "creates": "Feedback records",
++   "depends_on": [
++    "DR-11-06"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P12"
++   ],
++   "link_to": "#/phase/12",
++   "done_when": {
++    "op": "count_min",
++    "sel": {
++     "type": "Feedback"
++    },
++    "min": 1,
++    "noun": "piece of feedback"
++   }
++  },
++  {
++   "id": "DR-12-02",
++   "phase": 12,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S12-A",
++   "title": "Triage every piece of feedback",
++   "ask": "Mark each item as planned, done or rejected.",
++   "why_plain": "The Stage 12 sign-off wants nothing left unsorted.",
++   "why": {
++    "criteria": [
++     "G12-01"
++    ],
++    "tiles": [
++     "gate 12 card"
++    ]
++   },
++   "creates": "Triage status",
++   "depends_on": [
++    "DR-12-01"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P12"
++   ],
++   "link_to": "#/phase/12",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 12,
++    "criterion": "G12-01"
++   }
++  },
++  {
++   "id": "DR-12-03",
++   "phase": 12,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S12-A",
++   "title": "Open a change request for every planned item",
++   "ask": "Write down what must change and which earlier stage it reopens.",
++   "why_plain": "The sign-off wants every planned change to be formally requested.",
++   "why": {
++    "criteria": [
++     "G12-02"
++    ],
++    "tiles": [
++     "gate 12 card"
++    ]
++   },
++   "creates": "Change requests linked to feedback",
++   "depends_on": [
++    "DR-12-02"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P12"
++   ],
++   "link_to": "#/phase/12",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 12,
++    "criterion": "G12-02"
++   }
++  },
++  {
++   "id": "DR-12-04",
++   "phase": 12,
++   "depth_level": "L2",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S12-A",
++   "title": "Record the lessons learned",
++   "ask": "Write what went well, what did not and what to do differently.",
++   "why_plain": "The sign-off wants the lessons kept for next time.",
++   "why": {
++    "criteria": [
++     "G12-03"
++    ],
++    "tiles": [
++     "gate 12 card"
++    ]
++   },
++   "creates": "Lesson records",
++   "depends_on": [
++    "DR-12-03"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P12"
++   ],
++   "link_to": "#/phase/12",
++   "done_when": {
++    "op": "criterion_pass",
++    "gate": 12,
++    "criterion": "G12-03"
++   }
++  },
++  {
++   "id": "DR-12-05",
++   "phase": 12,
++   "depth_level": "L1",
++   "owner_kind": "HUMAN",
++   "minutes": 10,
++   "sequential": true,
++   "session": "S12-A",
++   "title": "Decide whether to close Stage 12",
++   "ask": "Look at what is blocking, then record your decision.",
++   "why_plain": "This is where you decide this round of improvement is complete.",
++   "why": {
++    "criteria": [],
++    "tiles": [
++     "gate 12 card"
++    ]
++   },
++   "creates": "Gate decision",
++   "depends_on": [
++    "DR-12-04"
++   ],
++   "v2Ref": [
++    "LIFECYCLE/P12"
++   ],
++   "link_to": "#/gates/12",
++   "special": "gate_decision",
++   "done_when": {
++    "op": "gate_decided",
++    "gate": 12
++   }
+   }
+  ]
+ }
+diff -ruN --strip-trailing-cr legacy-orig/engine/compose.ts legacy/engine/compose.ts
+--- legacy-orig/engine/compose.ts	2026-10-16 19:32:06.482417706 +0000
++++ legacy/engine/compose.ts	2026-10-16 19:42:13.158447871 +0000
+@@ -19,9 +19,10 @@
+ import compose_p2Mod from './compose_p2';
+ import compose_p3Mod from './compose_p3';
+ import compose_p4Mod from './compose_p4';
++import compose_p5_12Mod from './compose_p5_12';
+ import * as unitsMod from './units';
+ 
+-const DEFS = [].concat(compose_p0Mod, compose_p1Mod, compose_p2Mod, compose_p3Mod, compose_p4Mod);
++const DEFS = [].concat(compose_p0Mod, compose_p1Mod, compose_p2Mod, compose_p3Mod, compose_p4Mod, compose_p5_12Mod);
+ const BY_KEY = Object.fromEntries(DEFS.map((d) => [d.key, d]));
+ const STATUSES = ['not_started', 'draft', 'in_review', 'approved'];
+ const ARTIFACT_TO_DOC = { Draft: 'draft', 'In review': 'in_review', Approved: 'approved', Changed: 'draft' };
+diff -ruN --strip-trailing-cr legacy-orig/engine/compose_p5_12.ts legacy/engine/compose_p5_12.ts
+--- legacy-orig/engine/compose_p5_12.ts	1970-01-01 00:00:00.000000000 +0000
++++ legacy/engine/compose_p5_12.ts	2026-10-16 19:42:13.096447868 +0000
+@@ -0,0 +1,148 @@
++/**
++ * engine/compose_p5_12.ts - one document for each of Phases 5 to 12: the UX / UI design pack, the architecture pack, the feature
++ * specifications, the build status report, the quality report, the release pack, the operations pack, and feedback and lessons.
++ * Same kit as compose_p0..p4: every document is composed from the records, and every missing part points at the task that supplies it.
++ */
++import * as K from './compose_kit';
++
++const { p, tableOf, sec, need, needCount, target, clip, plural, countBy, countsText } = K;
++
++const by = (items, fn) => countsText(countBy(items, fn));
++const TOLD = 'Not recorded yet';
++
++const uxDesignPack = {
++  key: 'ux_design_pack', title: 'UX / UI Design Pack', phase: 5, role: 'Product leader', artifact: null, reads: ['Screen', 'ScreenState', 'DesignReview'],
++  build(k) {
++    const screens = k.list('Screen'); const states = k.list('ScreenState'); const reviews = k.list('DesignReview');
++    const kindsSeen = (w) => states.some((s) => String(s.state_kind || '').toLowerCase().replace(/[- ]/g, '_').includes(w));
++    return [
++      sec('screens', 'Screens', [
++        screens.length ? p(`${plural(screens.length, 'screen')} designed for this product. ${screens.filter((s) => s.design_link).length} of ${screens.length} point to their design in Figma or Penpot.`) : p('No screens have been listed yet.'),
++        screens.length && tableOf(screens, [['Screen', (s) => `[[${s.id}]] ${s.title}`], ['Kind', (s) => s.kind], ['Design', (s) => s.design_link], ['Designer', (s) => s.designer], ['Layout checked', (s) => (s.responsive_checked ? 'yes' : 'no')], ['Accessibility checked', (s) => (s.accessibility_checked ? 'yes' : 'no')]]),
++      ], [needCount(screens, 1, 'At least one screen', 'Every must-have story needs a screen.', target({ request: 'DR-5-01' })), need(screens.length && screens.every((s) => s.design_link), 'Every screen points to its design', 'The design stays in Figma or Penpot; this tool only holds the link.', target({ request: 'DR-5-02' }))]),
++      sec('states', 'What people see in each situation', [
++        states.length ? p(`${plural(states.length, 'screen state')} described: ${by(states, (s) => s.state_kind)}.`) : p('No screen states have been described yet.'),
++        states.length && tableOf(states, [['State', (s) => `[[${s.id}]] ${s.title}`], ['Situation', (s) => s.state_kind], ['What people see', (s) => clip(s.description, 120)]]),
++      ], [need(['loading', 'empty', 'error', 'permission'].every(kindsSeen), 'Loading, empty, error and not-allowed states described', 'The sign-off wants all four for every screen.', target({ request: 'DR-5-03' }))]),
++      sec('review', 'Design review', [
++        reviews.length ? p(`${plural(reviews.length, 'design review')}: ${by(reviews, (r) => r.status)}.`) : p('No design review has been asked for yet.'),
++        reviews.length && tableOf(reviews, [['Review', (r) => `[[${r.id}]] ${r.title}`], ['Status', (r) => r.status], ['Reviewer', (r) => r.reviewer], ['Reviewed on', (r) => r.reviewed_on], ['Findings', (r) => clip(r.findings, 120)]]),
++      ], [need(reviews.some((r) => r.status === 'Approved'), 'An approved design review', 'The sign-off wants the design reviewed and approved.', target({ request: 'DR-5-05' }))]),
++    ];
++  },
++};
++
++const architecturePack = {
++  key: 'architecture_pack', title: 'System Architecture Pack', phase: 6, role: 'Tech lead', artifact: null, reads: ['ArchComponent', 'ArchDecision', 'ApiContract'],
++  build(k) {
++    const comps = k.list('ArchComponent'); const decs = k.list('ArchDecision'); const apis = k.list('ApiContract');
++    const has = (w) => comps.some((c) => String(c.kind || '').toLowerCase().includes(w));
++    return [
++      sec('components', 'The parts of the system', [
++        comps.length ? p(`${plural(comps.length, 'part')} defined: ${by(comps, (c) => c.kind)}.`) : p('No parts of the system have been defined yet.'),
++        comps.length && tableOf(comps, [['Part', (c) => `[[${c.id}]] ${c.title}`], ['Kind', (c) => c.kind], ['Technology', (c) => c.technology], ['Owner', (c) => c.owner], ['What it is for', (c) => clip(c.responsibility, 100)]]),
++      ], [need(has('front') && has('back') && has('data'), 'A frontend, a backend and a database', 'The sign-off wants all three defined.', target({ request: 'DR-6-01' }))]),
++      sec('decisions', 'Architecture decisions', [
++        decs.length ? p(`${plural(decs.length, 'decision')}: ${by(decs, (d) => d.status)}.`) : p('No architecture decisions have been recorded yet.'),
++        decs.length && tableOf(decs, [['Decision', (d) => `[[${d.id}]] ${d.title}`], ['Status', (d) => d.status], ['Why it was needed', (d) => clip(d.context, 100)], ['What was chosen', (d) => clip(d.decision, 100)], ['What follows', (d) => clip(d.consequences, 100)]]),
++      ], [needCount(decs, 1, 'At least one architecture decision', 'Each quality target needs an answer.', target({ request: 'DR-6-02' })), need(decs.length && decs.every((d) => d.status !== 'Proposed'), 'No decision left only proposed', 'Accept or reject each one.', target({ request: 'DR-6-03' }))]),
++      sec('apis', 'API contracts', [
++        apis.length ? p(`${plural(apis.length, 'API contract')}.`) : p('No API contracts have been registered yet.'),
++        apis.length && tableOf(apis, [['Contract', (a) => `[[${a.id}]] ${a.title}`], ['Specification', (a) => a.spec_link], ['Version', (a) => a.version], ['Owner', (a) => a.owner]]),
++      ], [need(apis.length && apis.every((a) => a.spec_link && a.version && a.owner), 'Every API contract has a specification link, a version and an owner', 'Others build against the contract.', target({ request: 'DR-6-04' }))]),
++    ];
++  },
++};
++
++const featureSpecs = {
++  key: 'feature_specifications', title: 'Feature Specifications', phase: 7, role: 'Tech lead', artifact: null, reads: ['FeatureSpec'],
++  build(k) {
++    const specs = k.list('FeatureSpec');
++    const complete = (s) => s.main_flow && s.edge_cases && s.testing_requirements && s.definition_of_done;
++    return [sec('specs', 'What must be built, feature by feature', [
++      specs.length ? p(`${plural(specs.length, 'specification')} written, ${specs.filter(complete).length} complete. Status: ${by(specs, (s) => s.status)}.`) : p('No feature specifications have been started yet.'),
++      specs.length && tableOf(specs, [['Specification', (s) => `[[${s.id}]] ${s.title}`], ['Status', (s) => s.status], ['Main flow', (s) => (s.main_flow ? 'yes' : 'missing')], ['Edge cases', (s) => (s.edge_cases ? 'yes' : 'missing')], ['What to test', (s) => (s.testing_requirements ? 'yes' : 'missing')], ['Definition of done', (s) => (s.definition_of_done ? 'yes' : 'missing')], ['Owner', (s) => s.owner]]),
++    ], [needCount(specs, 1, 'At least one feature specification', 'Every must-have story needs one.', target({ request: 'DR-7-01' })), need(specs.length && specs.every(complete), 'Every specification is complete', 'Developers build from these.', target({ request: 'DR-7-02' })), need(specs.length && specs.every((s) => s.status !== 'Draft'), 'No specification is still a draft', 'Review and approve each one.', target({ request: 'DR-7-04' }))])];
++  },
++};
++
++const buildStatus = {
++  key: 'build_status_report', title: 'Build Status Report', phase: 8, role: 'Tech lead', artifact: null, reads: ['WorkItem'],
++  build(k) {
++    const items = k.list('WorkItem'); const done = items.filter((w) => w.status === 'Done');
++    return [sec('items', 'Where the build stands', [
++      items.length ? p(`${plural(items.length, 'work item')}: ${by(items, (w) => w.status)}. ${done.filter((w) => w.pr_url).length} of ${done.length} finished ${done.length === 1 ? 'item links' : 'items link'} to a pull request.`) : p('No work items have been added yet.'),
++      items.length && tableOf(items, [['Work item', (w) => `[[${w.id}]] ${w.title}`], ['Status', (w) => w.status], ['Assignee', (w) => w.assignee], ['Pull request', (w) => w.pr_url], ['Reviewed', (w) => (w.code_reviewed ? 'yes' : 'no')], ['Meets definition of done', (w) => (w.dod_met ? 'yes' : 'no')]]),
++    ], [needCount(items, 1, 'At least one work item', 'Every must-have story needs a work item.', target({ request: 'DR-8-01' })), need(items.length && !items.some((w) => w.status === 'Blocked'), 'No work item is blocked', 'Clear what is stopping the work.', target({ request: 'DR-8-02' })), need(items.length && done.every((w) => w.pr_url), 'Every finished item links to its pull request', 'The code system holds the proof.', target({ request: 'DR-8-03' }))])];
++  },
++};
++
++const qualityReport = {
++  key: 'quality_report', title: 'Quality Report', phase: 9, role: 'QA lead', artifact: null, reads: ['TestPlan', 'TestCase', 'TestRun', 'Defect', 'SecurityFinding', 'UatSignoff'],
++  build(k) {
++    const plans = k.list('TestPlan'); const cases = k.list('TestCase'); const runs = k.list('TestRun'); const defects = k.list('Defect'); const finds = k.list('SecurityFinding'); const uat = k.list('UatSignoff');
++    const openDefects = defects.filter((d) => ['Open', 'Retest'].includes(d.status)); const openFinds = finds.filter((f) => f.status === 'Open' && ['Critical', 'High'].includes(f.severity));
++    return [
++      sec('tests', 'Tests', [
++        p(`${plural(plans.length, 'test plan')}, ${plural(cases.length, 'test case')}${cases.length ? ` (${by(cases, (c) => c.kind)})` : ''} and ${plural(runs.length, 'recorded run')}${runs.length ? ` (${by(runs, (r) => r.result)})` : ''}.`),
++      ], [needCount(plans, 1, 'A test plan', 'Everything else builds on the plan.', target({ request: 'DR-9-01' })), needCount(cases, 1, 'At least one test case', 'Every must-have requirement needs a test.', target({ request: 'DR-9-02' })), needCount(runs, 1, 'At least one recorded test run', 'The latest runs must pass.', target({ request: 'DR-9-04' }))]),
++      sec('defects', 'Defects and security findings', [
++        p(`${plural(defects.length, 'defect')} (${openDefects.length} open) and ${plural(finds.length, 'security finding')} (${openFinds.length} critical or high still open).`),
++        defects.length && tableOf(defects, [['Defect', (d) => `[[${d.id}]] ${d.title}`], ['Severity', (d) => d.severity], ['Status', (d) => d.status], ['Assignee', (d) => d.assignee]]),
++        finds.length && tableOf(finds, [['Finding', (f) => `[[${f.id}]] ${f.title}`], ['Severity', (f) => f.severity], ['Status', (f) => f.status], ['Owner', (f) => f.owner]]),
++      ], [need(!openFinds.length, 'No critical or high security finding is open', 'Fix it or knowingly accept it.', target({ request: 'DR-9-05' })), need(!openDefects.some((d) => ['Critical', 'High', 'Blocker'].includes(d.severity)), 'No blocking defect is open', 'Fix it or knowingly accept it.', target({ request: 'DR-9-05' }))]),
++      sec('acceptance', 'Acceptance', [
++        uat.length ? p(`${plural(uat.length, 'acceptance')}: ${by(uat, (u) => u.status)}.`) : p('No acceptance has been asked for yet.'),
++        uat.length && tableOf(uat, [['Acceptance', (u) => `[[${u.id}]] ${u.title}`], ['Status', (u) => u.status], ['Stakeholder', (u) => u.stakeholder], ['Signed on', (u) => u.signed_on]]),
++      ], [need(uat.some((u) => u.status === 'Accepted'), 'At least one accepted story', 'Every must-have story must be accepted.', target({ request: 'DR-9-06' }))]),
++    ];
++  },
++};
++
++const releasePack = {
++  key: 'release_pack', title: 'Release Pack', phase: 10, role: 'Sponsor', artifact: null, reads: ['DeployRelease'],
++  build(k) {
++    const rel = k.list('DeployRelease');
++    return [sec('releases', 'Releases', [
++      rel.length ? p(`${plural(rel.length, 'release')}: ${by(rel, (r) => r.status)}.`) : p('No release has been planned yet.'),
++      rel.length && tableOf(rel, [['Release', (r) => `[[${r.id}]] ${r.title}`], ['Version', (r) => r.version], ['Where', (r) => r.environment], ['Status', (r) => r.status], ['Release notes', (r) => (r.release_notes ? 'yes' : 'missing')], ['Rollback plan', (r) => (r.rollback_plan ? 'yes' : 'missing')], ['Migration', (r) => (r.migration_record ? 'yes' : 'missing')], ['Quick check', (r) => r.smoke_result], ['Approved by', (r) => r.approved_by]]),
++    ], [needCount(rel, 1, 'A release record', 'Nothing ships without one.', target({ request: 'DR-10-01' })), need(rel.length && rel.every((r) => r.version && r.environment && r.release_notes && r.rollback_plan), 'Every release has a version, a place, release notes and a rollback plan', 'People need to know what changed and how to undo it.', target({ request: 'DR-10-01' })), need(rel.some((r) => r.approved_by), 'An approved release', 'The sponsor approves going live.', target({ request: 'DR-10-03' }))])];
++  },
++};
++
++const operationsPack = {
++  key: 'operations_pack', title: 'Operations Pack', phase: 11, role: 'Product leader', artifact: null, reads: ['Alert', 'Runbook', 'Incident', 'HealthReview'],
++  build(k) {
++    const alerts = k.list('Alert'); const books = k.list('Runbook'); const inc = k.list('Incident'); const rev = k.list('HealthReview');
++    return [
++      sec('watch', 'What is watched and what to do', [
++        p(`${plural(alerts.length, 'alert')} (${alerts.filter((a) => a.status === 'Active').length} active) and ${plural(books.length, 'runbook')}.`),
++        alerts.length && tableOf(alerts, [['Alert', (a) => `[[${a.id}]] ${a.title}`], ['Status', (a) => a.status], ['Severity', (a) => a.severity], ['Owner', (a) => a.owner], ['Dashboard', (a) => a.dashboard_link]]),
++        books.length && tableOf(books, [['Runbook', (b) => `[[${b.id}]] ${b.title}`], ['Owner', (b) => b.owner], ['Last reviewed', (b) => b.last_reviewed]]),
++      ], [needCount(alerts, 1, 'At least one alert', 'Every must-have quality target needs one.', target({ request: 'DR-11-01' })), needCount(books, 1, 'At least one runbook', 'Every active alert needs one.', target({ request: 'DR-11-02' })), need(books.length && books.every((b) => b.owner && b.last_reviewed), 'Every runbook has an owner and a review date', 'Someone must look after it.', target({ request: 'DR-11-03' }))]),
++      sec('incidents', 'Incidents and health reviews', [
++        p(`${plural(inc.length, 'incident')}${inc.length ? ` (${by(inc, (i) => i.status)})` : ''} and ${plural(rev.length, 'health review')}.`),
++        inc.length && tableOf(inc, [['Incident', (i) => `[[${i.id}]] ${i.title}`], ['Severity', (i) => i.severity], ['Status', (i) => i.status], ['Review', (i) => (i.post_incident_review ? 'yes' : TOLD)]]),
++      ], [need(inc.filter((i) => ['Resolved', 'Reviewed'].includes(i.status)).every((i) => i.post_incident_review), 'Every resolved incident was reviewed', 'The review is where the learning happens.', target({ request: 'DR-11-04' })), needCount(rev, 1, 'A production health review', 'Look at how the live product is doing.', target({ request: 'DR-11-05' }))]),
++    ];
++  },
++};
++
++const feedbackLessons = {
++  key: 'feedback_and_lessons', title: 'Feedback and Lessons Learned', phase: 12, role: 'Product leader', artifact: null, reads: ['Feedback', 'Lesson'],
++  build(k) {
++    const fb = k.list('Feedback'); const les = k.list('Lesson');
++    return [
++      sec('feedback', 'What people told us', [
++        fb.length ? p(`${plural(fb.length, 'piece of feedback', 'pieces of feedback')}: ${by(fb, (f) => f.status)}.`) : p('No feedback has been collected yet.'),
++        fb.length && tableOf(fb, [['Feedback', (f) => `[[${f.id}]] ${f.title}`], ['From', (f) => f.source], ['Kind', (f) => f.kind], ['Status', (f) => f.status], ['Received', (f) => f.received_on]]),
++      ], [needCount(fb, 1, 'At least one piece of feedback', 'Everything that follows starts here.', target({ request: 'DR-12-01' })), need(fb.length && fb.every((f) => f.status !== 'New'), 'Every piece of feedback has been sorted', 'Plan it, finish it or reject it.', target({ request: 'DR-12-02' }))]),
++      sec('lessons', 'Lessons learned', [
++        les.length ? p(`${plural(les.length, 'lesson')} recorded.`) : p('No lessons have been recorded yet.'),
++        les.length && tableOf(les, [['Lesson', (l) => `[[${l.id}]] ${l.title}`], ['What happened', (l) => clip(l.what_happened, 100)], ['What to change', (l) => clip(l.what_to_change, 100)], ['Owner', (l) => l.owner]]),
++      ], [needCount(les, 1, 'At least one lesson', 'Keep what you learned for next time.', target({ request: 'DR-12-04' }))]),
++    ];
++  },
++};
++
++export default [uxDesignPack, architecturePack, featureSpecs, buildStatus, qualityReport, releasePack, operationsPack, feedbackLessons];
+diff -ruN --strip-trailing-cr legacy-orig/engine/journey.ts legacy/engine/journey.ts
+--- legacy-orig/engine/journey.ts	2026-10-16 19:32:06.303417697 +0000
++++ legacy/engine/journey.ts	2026-10-16 19:47:25.458463400 +0000
+@@ -202,7 +202,7 @@
+     next = { kind: 'task', phrase, title, minutes: mins, who: nextRow.who, href: nextRow.href, button: 'Continue', session: nextRow.session || null, step: nextRow.step || null, task: nextRow.id };
+   } else if (othersText) {
+     next = { kind: 'waiting', phrase: othersText, title: othersText, minutes: 0, who: 'other', href: `${base}/approvals`, button: 'See who', session: null, step: null, task: null };
+-  } else if (current === 6 && hs.handed_off) {
++  } else if (current === 6 && hs.handed_off && !nextactions.build(store, { state: st })[0]) {
+     next = { kind: 'done', phrase: 'All done: a hand-over package exists', title: 'Done', minutes: 0, who: 'you', href: `${base}/handoff`, button: 'Open hand-over', session: null, step: null, task: null };
+   } else {
+     const top = nextactions.build(store, { state: st })[0];
+diff -ruN --strip-trailing-cr legacy-orig/engine/nextactions.ts legacy/engine/nextactions.ts
+--- legacy-orig/engine/nextactions.ts	2026-10-16 19:32:06.686417716 +0000
++++ legacy/engine/nextactions.ts	2026-10-16 19:48:08.834465557 +0000
+@@ -63,7 +63,9 @@
+ function build(store, opts: any = {}) {
+   const st = opts.state || snapshot(store);
+   const out = [];
+-  const gateNo = st.nextGate;
++  // st.nextGate stops at 5 (the original journey); the real next sign-off runs on to the last stage
++  let gateNo = 0;
++  while (gateNo < gates.LAST_GATE && st.store.data.gates[gateNo] && ['Passed', 'Passed-with-conditions'].includes(st.store.data.gates[gateNo].state)) gateNo++;
+   const add = (a) => out.push({ ...a, value_per_minute: round1(a.value / Math.max(1, a.minutes)), value: round1(a.value) });
+ 
+   // 1 and 2: data requests (people) and agent research tasks. Value counts blocking checks at the next gate in full and
+@@ -111,7 +113,7 @@
+   }
+ 
+   // 6: gate attestations for the next undecided gate
+-  if (gateNo < 5) {
++  if (st.evals[gateNo]) {
+     for (const r of st.evals[gateNo].results.filter((x) => x.status === 'ATTEST_PENDING' && !attestCovered.has(x.id))) {
+       add({ id: `ATS:${r.id}`, kind: 'attestation', title: `${r.attest_required ? plain.roleName(r.attest_required.role) : 'A named person'} signs off: ${plain.lowerFirst(plain.needOf(r.id, r.text))}`, detail: r.attest_required ? plain.clean(r.attest_required.statement) : plain.clean(r.message), why: `The Stage ${gateNo} sign-off cannot happen until a person in that role signs this.`, minutes: 3, value: 3 * 2, blocks: [r.id], phase: gateNo, route: { ui: '#/gates', attest_api: `POST /api/gates/${gateNo}/attest` }, ref: r.id });
+     }
+diff -ruN --strip-trailing-cr legacy-orig/engine/plain.ts legacy/engine/plain.ts
+--- legacy-orig/engine/plain.ts	2026-10-16 19:32:06.209417692 +0000
++++ legacy/engine/plain.ts	2026-10-16 19:39:20.956439309 +0000
+@@ -87,6 +87,52 @@
+   'G4-12': ['Every must-have flow has been walked through with someone who did not write it', 'Walk someone else through each must-have flow, and have the Product Owner sign it off.'],
+   'G4-14': ['Every approved story has everything developers need', 'Complete each story so it carries everything developers need before handoff.'],
+   'G4-17': ['No must-answer question is still open for this stage', 'Answer each must-answer question, assume an answer (with an owner and a date to re-check), or set it aside with an approval.'],
++  'G5-01': ['Every must-have story has a screen designed for it', 'Add a screen for each must-have story that has none.'],
++  'G5-02': ['Every screen shows what people see while loading, when empty, on an error and when they are not allowed in', 'Describe the missing states of each screen.'],
++  'G5-03': ['Every screen points to its design', 'Paste the Figma or Penpot link on each screen that has none.'],
++  'G5-04': ['The design review is approved', 'Ask for the design review and get it approved.'],
++  'G5-05': ['No design review is waiting on changes', 'Make the changes the review asked for, then ask again.'],
++  'G5-06': ['The screens were checked on a narrow window and for accessibility', 'The UX designer confirms the screens were checked.'],
++  'G6-01': ['Every quality target has an answer in the architecture', 'Record the decision that meets each target that has none.'],
++  'G6-02': ['Every architecture decision says why it was needed, what was chosen and what follows', 'Fill in the missing parts of each decision.'],
++  'G6-03': ['The frontend, the backend and the database are defined', 'Describe the parts of the system that are missing.'],
++  'G6-04': ['Every API contract links to its specification and has a version and an owner', 'Add the missing link, version or owner.'],
++  'G6-05': ['No architecture decision is still only proposed', 'Accept or reject each decision that is still proposed.'],
++  'G6-06': ['The security design was reviewed', 'The Security lead confirms sign-in, permissions and data protection were reviewed.'],
++  'G7-01': ['Every must-have story has a feature specification', 'Start a specification for each story that has none.'],
++  'G7-02': ['Every specification is complete: flow, edge cases, what to test and when it is done', 'Fill in what is missing in each specification.'],
++  'G7-03': ['No specification is still a draft', 'Review each draft and approve it or send it back.'],
++  'G7-04': ['Every specification names what must be protected and what must be watched', 'Add the security and monitoring needs to each specification.'],
++  'G8-01': ['Every must-have story has a work item', 'Add a work item for each story that has none.'],
++  'G8-02': ['No work item is blocked', 'Clear what is stopping each blocked item.'],
++  'G8-03': ['Every finished work item links to its pull request', 'Add the pull request link to each finished item.'],
++  'G8-04': ['Every finished item was reviewed and meets the definition of done', 'Record the review and the done marks that are missing.'],
++  'G8-05': ['Developer tests pass and the build can be made again', 'The Tech lead confirms the tests pass and the build repeats.'],
++  'G9-01': ['Every must-have requirement has a test', 'Write a test for each must-have requirement that has none.'],
++  'G9-02': ['The latest run of every functional test passes', 'Fix what fails and run the tests again.'],
++  'G9-03': ['Bad input and edge cases are tested and pass', 'Add and run tests for invalid input and limits; fix any that fail.'],
++  'G9-04': ['People cannot do what they are not allowed to do', 'Add and run permission tests; fix any that fail.'],
++  'G9-05': ['Data stays consistent when several things change together', 'Add and run data tests; fix any that fail.'],
++  'G9-06': ['Connected systems work together and fail safely', 'Add and run tests with the connected systems; fix any that fail.'],
++  'G9-07': ['What worked before still works', 'Run the regression tests and fix what broke.'],
++  'G9-08': ['No critical or high security finding is open', 'Fix, or knowingly accept, each serious finding.'],
++  'G9-09': ['Every must-have story is accepted by someone authorised', 'Ask the right person to accept each story.'],
++  'G9-10': ['No blocking defect is open', 'Fix, or knowingly accept, each blocking defect.'],
++  'G9-11': ['The QA lead and the business owner have signed the release decision', 'Both people sign the release decision.'],
++  'G10-01': ['A release is approved or live', 'Approve a release, or record that it went live.'],
++  'G10-02': ['Every release has a version, a place to go, release notes and a rollback plan', 'Fill in what is missing on each release.'],
++  'G10-03': ['Every live release passed its quick check', 'Run the quick check and record the result.'],
++  'G10-04': ['Every must-have story ships in an approved release', 'Add each missing story to a release.'],
++  'G10-05': ['Every release records its database changes', 'Note the database changes, or that there are none.'],
++  'G10-06': ['The sponsor approved the release', 'The sponsor approves the release.'],
++  'G11-01': ['Every must-have quality target has an alert', 'Create an alert for each target that has none.'],
++  'G11-02': ['Every active alert has a runbook', 'Write what to do when each alert fires.'],
++  'G11-03': ['Every runbook has an owner and a review date', 'Add the person and the date to each runbook.'],
++  'G11-04': ['Every resolved incident was reviewed', 'Hold the review and record what was learned.'],
++  'G11-05': ['A health review of the live product has been held', 'Hold one and record it.'],
++  'G12-01': ['Every piece of feedback has been sorted', 'Mark each item as planned, done or rejected.'],
++  'G12-02': ['Every planned item has a change request', 'Open a change request for each planned item.'],
++  'G12-03': ['The lessons learned are written down', 'Record what went well, what did not and what to change.'],
+ };
+ 
+ /** "P1" -> "Stage 1: Market"; the other portfolio stages in plain words. */
+diff -ruN --strip-trailing-cr legacy-orig/engine/requests.ts legacy/engine/requests.ts
+--- legacy-orig/engine/requests.ts	2026-10-16 19:32:06.756417719 +0000
++++ legacy/engine/requests.ts	2026-10-16 19:45:52.776458791 +0000
+@@ -96,6 +96,7 @@
+   const ctx = new Q.Ctx(store, { depth });
+   const all = requests();
+   const statusById = {};
++  const inDepthById = {};
+   const out = all.map((r) => {
+     const inDepth = LEVEL_ORDER[r.depth_level] <= LEVEL_ORDER[depth];
+     const st = store.data.requestState[r.id] || null;
+@@ -108,10 +109,19 @@
+       try { const d = evalDone(ctx, r.done_when); done = d.pass; message = d.message; doneOffenders = d.offenders || []; doneCriteria = d.criteria || []; doneDetail = d.detail || []; } catch (e) { message = `rule error: ${e.message}`; }
+     }
+     statusById[r.id] = done;
++    inDepthById[r.id] = inDepth;
+     return { ...r, inDepth, done, doneMessage: message, doneOffenders, doneCriteria, doneDetail, na: !!(st && st.status === 'na'), answeredAt: st && st.at || null, answeredBy: st && st.by || null };
+   });
++  // A step marked sequential counts as done only when every step before it is done, so an empty check can never open the next step early.
++  const effDone = {};
++  const passThrough = {}; // a sequential step outside the chosen depth is skipped: it passes on whatever is still owed before it
+   for (const r of out) {
+-    r.blockedBy = (r.depends_on || []).filter((d) => !statusById[d]);
++    const before = (r.depends_on || []).every((d) => effDone[d] || (inDepthById[d] === false && !passThrough[d]));
++    if (r.sequential && r.done && !before) { r.done = false; r.doneMessage = 'waiting for the steps above'; }
++    if (r.sequential && inDepthById[r.id] === false) { passThrough[r.id] = true; effDone[r.id] = before; } else effDone[r.id] = r.done;
++  }
++  for (const r of out) {
++    r.blockedBy = (r.depends_on || []).filter((d) => !effDone[d] && (inDepthById[d] !== false || passThrough[d]));
+     r.status = r.done ? 'done' : r.blockedBy.length ? 'blocked' : 'ready';
+     if (r.owner_kind === 'AGENT_RESEARCH') {
+       r.agent = agentState(store, r);
+@@ -122,8 +132,8 @@
+   // impact: how many currently failing criteria does this request feed?
+   const failing = {};
+   let nextGate = 0;
+-  while (nextGate < 4 && store.data.gates[nextGate] && ['Passed', 'Passed-with-conditions'].includes(store.data.gates[nextGate].state)) nextGate++;
+-  for (const g of [0, 1, 2, 3, 4]) {
++  while (nextGate < gates.LAST_GATE && store.data.gates[nextGate] && ['Passed', 'Passed-with-conditions'].includes(store.data.gates[nextGate].state)) nextGate++;
++  for (let g = 0; g <= gates.LAST_GATE; g++) {
+     const ev = gateEval(ctx, g);
+     for (const res of ev.results) if (['FAIL', 'ATTEST_PENDING'].includes(res.status)) failing[res.id] = { severity: res.severity, gate: g };
+   }
+@@ -151,7 +161,7 @@
+   const byDepth = {};
+   for (const d of ['L1', 'L2', 'L3']) {
+     byDepth[d] = { all: mk(), phases: {} };
+-    for (const p of [0, 1, 2, 3, 4]) byDepth[d].phases[p] = mk();
++    for (let p = 0; p <= gates.LAST_GATE; p++) byDepth[d].phases[p] = mk();
+     for (const r of list) if (LEVEL_ORDER[r.depth_level] <= LEVEL_ORDER[d]) { add(byDepth[d].all, r); add(byDepth[d].phases[r.phase], r); }
+   }
+   return { byDepth, current: byDepth[currentDepth] };
+diff -ruN --strip-trailing-cr legacy-orig/engine/stages.ts legacy/engine/stages.ts
+--- legacy-orig/engine/stages.ts	2026-10-16 19:32:06.939417728 +0000
++++ legacy/engine/stages.ts	2026-10-16 19:47:25.457463400 +0000
+@@ -9,7 +9,7 @@
+ /** The slice of the engine Store this module reads. */
+ interface StoreLike { data: { gates?: Record<string, { state?: string }> }; list(type: string, pred?: (x: any) => boolean): unknown[] }
+ 
+-export const STAGE_NAMES = ['Intake', 'Market', 'Scope', 'Requirements', 'Flows'];
++export const STAGE_NAMES = ['Intake', 'Market', 'Scope', 'Requirements', 'Flows', 'Design', 'Architecture', 'Specification', 'Build', 'Quality', 'Release', 'Operate', 'Improve'];
+ export const PASSED = ['Passed', 'Passed-with-conditions'];
+ 
+ export const isPassed = (store: StoreLike, n: number): boolean => !!(store.data.gates && store.data.gates[n] && PASSED.includes(store.data.gates[n].state as string));

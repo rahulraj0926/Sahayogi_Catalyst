@@ -1,0 +1,71 @@
+'use client';
+/** Reads a generated document (or the whole dossier) as HTML, cleans it, and turns its prototype links into platform links.
+ *  Used by the Documents reader and the Product document. Prototype: docreader.js */
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+import { actor } from '@/lib/api';
+
+export type TocItem = { id: string; text: string; level: number };
+
+function clean(html: string, pid: string, sessionMap: Record<string, string>): { body: string; toc: TocItem[] } {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('script,style,iframe,object,embed,link,meta,title').forEach((n) => n.remove());
+  doc.querySelectorAll('*').forEach((el) => {
+    [...el.attributes].forEach((a) => { if (/^on/i.test(a.name) || (/^(href|src)$/i.test(a.name) && /^\s*javascript:/i.test(a.value))) el.removeAttribute(a.name); });
+  });
+  doc.querySelectorAll('a[href]').forEach((a) => {
+    const h = a.getAttribute('href') || '';
+    if (h.startsWith('#/')) {
+      const m = /^#\/plan\?request=([\w-]+)/.exec(h);
+      if (m && sessionMap[m[1]]) a.setAttribute('href', `/products/${pid}/work/${sessionMap[m[1]]}?step=${encodeURIComponent(m[1])}`);
+      else if (h.startsWith('#/p/') || h.startsWith('#/products/')) a.setAttribute('href', h.slice(1).replace(/^\/p\//, '/products/'));
+      else a.setAttribute('href', `/products/${pid}/${h.slice(2)}`);
+      a.classList.add('dr-link');
+    }
+  });
+  doc.querySelectorAll('aside.missing a').forEach((a) => a.classList.add('btn', 'sm'));
+  const toc: TocItem[] = [...doc.querySelectorAll('article > h1')].map((e) => ({ id: e.parentElement?.id || e.id, text: (e.textContent || '').trim(), level: 1 }));
+  return { body: doc.body.innerHTML, toc };
+}
+
+export function useDocHtml(path: string, pid: string) {
+  const [state, setState] = useState<{ body: string; toc: TocItem[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
+  useEffect(() => {
+    let dead = false; setState(null); setError(null);
+    (async () => {
+      try {
+        const sep = path.includes('?') ? '&' : '?';
+        const [res, sess] = await Promise.all([
+          fetch(`/api${path}${sep}product=${encodeURIComponent(pid)}`, { headers: { 'x-actor': actor() } }),
+          api<any>('/sessions?forms=0', { product: pid }).catch(() => null),
+        ]);
+        const text = await res.text();
+        if (!res.ok) { let m = `HTTP ${res.status}`; try { m = JSON.parse(text).error || m; } catch { /* not json */ } throw new Error(m); }
+        const map: Record<string, string> = {};
+        sess?.phases?.forEach((ph: any) => ph.sessions.forEach((x: any) => x.steps.forEach((st: any) => { if (st.in_depth) map[st.request_id] = x.code; })));
+        if (!dead) setState(clean(text, pid, map));
+      } catch (e: any) { if (!dead) setError(e.message); }
+    })();
+    return () => { dead = true; };
+  }, [path, pid, nonce]);
+  return { ...(state || { body: '', toc: [] as TocItem[] }), ready: !!state, error, reload: () => setNonce((n) => n + 1) };
+}
+
+/** The rendered body. Clicking a link inside it navigates without a full page load. */
+export function DocBody({ html }: { html: string }) {
+  const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
+  const memo = useMemo(() => ({ __html: html }), [html]);
+  return (
+    <div ref={ref} className="lv-body" dangerouslySetInnerHTML={memo} onClick={(e) => {
+      const a = (e.target as HTMLElement).closest('a');
+      if (!a) return;
+      const h = a.getAttribute('href') || '';
+      if (h.startsWith('#')) { e.preventDefault(); document.getElementById(h.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      else if (h.startsWith('/p/') || h.startsWith('/products/')) { e.preventDefault(); router.push(h.replace(/^\/p\//, '/products/')); }
+    }} />
+  );
+}

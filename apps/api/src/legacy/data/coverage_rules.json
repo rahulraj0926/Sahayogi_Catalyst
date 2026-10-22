@@ -1,0 +1,1036 @@
+{
+  "_comment": "Coverage rules as DATA (spec 3.8.1). population = selector, requirement = link spec (see engine/query.js). Denominator includes Draft items; numerator counts only 'counted' items (reviewed, verified, not draft). threshold: per priority, with 'default' for items without a priority.",
+  "rules": [
+    {
+      "id": "CR-01",
+      "name": "Insight has captured evidence",
+      "v2Ref": [
+        "3.8.1/CR-01"
+      ],
+      "noun": "insight",
+      "missing": "has no verified captured Evidence",
+      "population": {
+        "type": "Insight"
+      },
+      "requirement": {
+        "link": "evidences",
+        "dir": "out",
+        "toType": "Evidence",
+        "counted": true
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-03",
+      "name": "Persona is complete (job, evidence, segment)",
+      "v2Ref": [
+        "3.8.1/CR-03"
+      ],
+      "noun": "primary persona",
+      "missing": "lacks a job, supporting evidence or a segment",
+      "population": {
+        "type": "Persona",
+        "where": {
+          "primary": true
+        }
+      },
+      "requirement": {
+        "all": [
+          {
+            "link": "has_job",
+            "dir": "out"
+          },
+          {
+            "link": "supported_by",
+            "dir": "out",
+            "counted": true
+          },
+          {
+            "link": "member_of",
+            "dir": "out"
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-05",
+      "name": "Problem is addressed or parked",
+      "v2Ref": [
+        "3.8.1/CR-05"
+      ],
+      "noun": "problem",
+      "missing": "is not addressed by any Opportunity or Feature and not parked",
+      "population": {
+        "type": "Problem",
+        "where": {
+          "parked": false
+        }
+      },
+      "requirement": {
+        "link": "addresses",
+        "dir": "in"
+      },
+      "threshold": {
+        "default": 80
+      }
+    },
+    {
+      "id": "CR-07",
+      "name": "Feature traces to a goal or need",
+      "v2Ref": [
+        "3.8.1/CR-07"
+      ],
+      "noun": "in-scope feature",
+      "missing": "does not support any Objective, Metric, Constraint, Obligation or Opportunity",
+      "population": {
+        "type": "Feature"
+      },
+      "requirement": {
+        "link": "supports",
+        "dir": "out"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-08",
+      "name": "Scope entries are justified",
+      "v2Ref": [
+        "3.8.1/CR-08"
+      ],
+      "noun": "later/out scope entry",
+      "missing": "lacks rationale, exclusion impact or a justification link",
+      "population": {
+        "type": "ScopeEntry",
+        "where": {
+          "kind": "scope",
+          "disposition": [
+            "later",
+            "out"
+          ]
+        }
+      },
+      "requirement": {
+        "all": [
+          {
+            "field": {
+              "rationale": {
+                "exists": true
+              },
+              "exclusion_impact": {
+                "exists": true
+              }
+            }
+          },
+          {
+            "link": "justified_by",
+            "dir": "out"
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-09",
+      "name": "Feature belongs to a Module",
+      "v2Ref": [
+        "3.8.1/CR-09"
+      ],
+      "noun": "in-scope feature",
+      "missing": "has no Module",
+      "population": {
+        "type": "Feature"
+      },
+      "requirement": {
+        "link": "belongs_to",
+        "dir": "out"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-10",
+      "name": "Must work is planned in a Release",
+      "v2Ref": [
+        "3.8.1/CR-10"
+      ],
+      "noun": "Must item",
+      "missing": "is not planned in a Release",
+      "population": {
+        "types": [
+          "Feature",
+          "Story",
+          "Requirement"
+        ],
+        "where": {
+          "priority": "Must"
+        }
+      },
+      "requirement": {
+        "link": "planned_in",
+        "dir": "out"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-11",
+      "name": "Requirement has provenance (no orphans)",
+      "v2Ref": [
+        "3.8.1/CR-11"
+      ],
+      "noun": "requirement",
+      "missing": "has no derives_from link (orphan)",
+      "population": {
+        "types": [
+          "Requirement"
+        ]
+      },
+      "requirement": {
+        "link": "derives_from",
+        "dir": "out"
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-12",
+      "name": "Behaviour is specified by acceptance criteria",
+      "v2Ref": [
+        "3.8.1/CR-12"
+      ],
+      "noun": "functional/interface/data requirement",
+      "missing": "has no reviewed acceptance criterion",
+      "population": {
+        "type": "Requirement",
+        "subtypes": [
+          "functional",
+          "interface",
+          "data"
+        ]
+      },
+      "requirement": {
+        "link": "specifies",
+        "dir": "in",
+        "toType": "AcceptanceCriterion",
+        "counted": true
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-13",
+      "name": "Requirement is carried by a Story",
+      "v2Ref": [
+        "3.8.1/CR-13"
+      ],
+      "noun": "functional requirement",
+      "missing": "is not elaborated by any Story",
+      "population": {
+        "type": "Requirement",
+        "subtype": "functional",
+        "where": {
+          "priority": [
+            "Must",
+            "Should"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "elaborates",
+        "dir": "in",
+        "toType": "Story"
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-14",
+      "name": "NFR is scoped (global or applies_to) and verifiable",
+      "v2Ref": [
+        "3.8.1/CR-14"
+      ],
+      "noun": "NFR",
+      "missing": "is not scoped (no applies_to and not global) or has no threshold/performance AC",
+      "population": {
+        "type": "Requirement",
+        "subtype": "non_functional",
+        "where": {
+          "$or": [
+            {
+              "priority": "Must"
+            },
+            {
+              "contractual": true
+            }
+          ]
+        }
+      },
+      "requirement": {
+        "all": [
+          {
+            "label": "is scoped",
+            "anyOf": [
+              {
+                "field": {
+                  "global": true
+                }
+              },
+              {
+                "link": "applies_to",
+                "dir": "out"
+              }
+            ]
+          },
+          {
+            "label": "has a threshold, performance, security or compliance AC",
+            "link": "specifies",
+            "dir": "in",
+            "toType": "AcceptanceCriterion",
+            "counted": true,
+            "toWhere": {
+              "kind": [
+                "threshold",
+                "performance",
+                "security",
+                "compliance"
+              ]
+            }
+          }
+        ]
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-14S",
+      "name": "NFR is scoped (global or applies_to)",
+      "v2Ref": [
+        "3.8.1/CR-14",
+        "4.15"
+      ],
+      "noun": "NFR",
+      "missing": "has no applies_to link and is not global",
+      "population": {
+        "type": "Requirement",
+        "subtype": "non_functional"
+      },
+      "requirement": {
+        "anyOf": [
+          {
+            "field": {
+              "global": true
+            }
+          },
+          {
+            "link": "applies_to",
+            "dir": "out"
+          }
+        ]
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-15",
+      "name": "Interface requirement is anchored",
+      "v2Ref": [
+        "3.8.1/CR-15"
+      ],
+      "noun": "interface requirement",
+      "missing": "does not integrate with any ExternalSystem",
+      "population": {
+        "type": "Requirement",
+        "subtype": "interface"
+      },
+      "requirement": {
+        "link": "integrates_with",
+        "dir": "out"
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-16",
+      "name": "Data requirement is anchored to an Entity",
+      "v2Ref": [
+        "3.8.1/CR-16"
+      ],
+      "noun": "data requirement",
+      "missing": "does not operate on any Entity",
+      "population": {
+        "type": "Requirement",
+        "subtype": "data"
+      },
+      "requirement": {
+        "link": "operates_on",
+        "dir": "out"
+      },
+      "threshold": {
+        "Must": 100,
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-17",
+      "name": "Regulatory requirement is anchored to an Obligation",
+      "v2Ref": [
+        "3.8.1/CR-17"
+      ],
+      "noun": "regulatory requirement",
+      "missing": "does not satisfy any Obligation",
+      "population": {
+        "type": "Requirement",
+        "subtype": "regulatory"
+      },
+      "requirement": {
+        "link": "satisfies",
+        "dir": "out"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-18",
+      "name": "Business rules are applied and tested",
+      "v2Ref": [
+        "3.8.1/CR-18"
+      ],
+      "noun": "business rule",
+      "missing": "is not applied anywhere or has no reviewed acceptance criterion",
+      "population": {
+        "type": "BusinessRule"
+      },
+      "requirement": {
+        "all": [
+          {
+            "link": "applies",
+            "dir": "out"
+          },
+          {
+            "link": "specifies",
+            "dir": "in",
+            "toType": "AcceptanceCriterion",
+            "counted": true
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-19",
+      "name": "Primary persona has a Story",
+      "v2Ref": [
+        "3.8.1/CR-19"
+      ],
+      "noun": "primary persona",
+      "missing": "has no Story",
+      "population": {
+        "type": "Persona",
+        "where": {
+          "primary": true
+        }
+      },
+      "requirement": {
+        "link": "for_persona",
+        "dir": "in"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-20",
+      "name": "Story is complete (requirement, persona, AC)",
+      "v2Ref": [
+        "3.8.1/CR-20"
+      ],
+      "noun": "story",
+      "missing": "lacks an elaborated requirement, a persona or a reviewed AC",
+      "population": {
+        "type": "Story"
+      },
+      "requirement": {
+        "all": [
+          {
+            "link": "elaborates",
+            "dir": "out"
+          },
+          {
+            "link": "for_persona",
+            "dir": "out"
+          },
+          {
+            "link": "specifies",
+            "dir": "in",
+            "toType": "AcceptanceCriterion",
+            "counted": true
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-22",
+      "name": "Constraint reaches its subjects",
+      "v2Ref": [
+        "3.8.1/CR-22"
+      ],
+      "noun": "confirmed constraint",
+      "missing": "does not constrain any later item",
+      "population": {
+        "type": "Constraint",
+        "where": {
+          "status": "Confirmed",
+          "kind": [
+            "regulatory",
+            "technology",
+            "budget",
+            "date"
+          ]
+        }
+      },
+      "requirement": {
+        "anyOf": [
+          {
+            "link": "constrains",
+            "dir": "out"
+          },
+          {
+            "link": "affects",
+            "dir": "out"
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-24",
+      "name": "High-impact assumption has dependents",
+      "v2Ref": [
+        "3.8.1/CR-24"
+      ],
+      "noun": "high-impact assumption",
+      "missing": "is not assumed by any item (nothing depends on it) and is not validated",
+      "population": {
+        "type": "Assumption",
+        "where": {
+          "impact": {
+            "gte": 4
+          },
+          "status": "Open"
+        }
+      },
+      "requirement": {
+        "anyOf": [
+          {
+            "link": "assumes",
+            "dir": "in"
+          },
+          {
+            "link": "affects",
+            "dir": "out"
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-25",
+      "name": "Applicable obligation is satisfied and tested",
+      "v2Ref": [
+        "3.8.1/CR-25"
+      ],
+      "noun": "applicable obligation",
+      "missing": "has no satisfying requirement with a reviewed AC",
+      "population": {
+        "type": "Obligation",
+        "where": {
+          "applicability": "applicable"
+        }
+      },
+      "requirement": {
+        "link": "satisfies",
+        "dir": "in",
+        "toType": [
+          "Requirement",
+          "BusinessRule"
+        ],
+        "toWhere": {
+          "$hasIn": {
+            "link": "specifies",
+            "counted": true
+          }
+        }
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-26",
+      "name": "Applicable obligation is applied (scoped)",
+      "v2Ref": [
+        "3.8.1/CR-26"
+      ],
+      "noun": "applicable obligation",
+      "missing": "is not applied to any feature, module or product",
+      "population": {
+        "type": "Obligation",
+        "where": {
+          "applicability": "applicable"
+        }
+      },
+      "requirement": {
+        "link": "applies_to",
+        "dir": "out"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-28",
+      "name": "Flow-applicable Must appears in a flow step",
+      "v2Ref": [
+        "3.8.1/CR-28",
+        "4.15"
+      ],
+      "noun": "flow-applicable Must requirement",
+      "missing": "is not covered by any flow step",
+      "population": {
+        "type": "Requirement",
+        "subtypes": [
+          "functional",
+          "interface"
+        ],
+        "where": {
+          "priority": "Must",
+          "$or": [
+            {
+              "flow_applicability": "flow"
+            },
+            {
+              "flow_applicability": null
+            }
+          ]
+        }
+      },
+      "requirement": {
+        "link": "covers",
+        "dir": "in",
+        "toType": "FlowStep"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-29",
+      "name": "Regulatory Must is in a flow or explicitly exempt",
+      "v2Ref": [
+        "3.8.1/CR-29"
+      ],
+      "noun": "regulatory Must requirement",
+      "missing": "is neither covered by a step nor exempt with a reason",
+      "population": {
+        "type": "Requirement",
+        "subtype": "regulatory",
+        "where": {
+          "priority": "Must"
+        }
+      },
+      "requirement": {
+        "anyOf": [
+          {
+            "link": "covers",
+            "dir": "in"
+          },
+          {
+            "field": {
+              "flow_applicability": [
+                "cross_cutting",
+                "not_applicable"
+              ],
+              "flow_reason": {
+                "exists": true
+              }
+            }
+          }
+        ]
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-36",
+      "name": "Steps trace to requirements",
+      "v2Ref": [
+        "3.8.1/CR-36"
+      ],
+      "noun": "task/decision/external step",
+      "missing": "does not cover any requirement or story",
+      "population": {
+        "type": "FlowStep",
+        "where": {
+          "kind": [
+            "task",
+            "decision",
+            "external"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "covers",
+        "dir": "out"
+      },
+      "threshold": {
+        "default": 90
+      }
+    },
+    {
+      "id": "CR-P5-01",
+      "name": "Must story has a screen",
+      "v2Ref": [
+        "LIFECYCLE/P5"
+      ],
+      "noun": "Must story",
+      "missing": "has no screen designed for it",
+      "population": {
+        "type": "Story",
+        "where": {
+          "priority": "Must",
+          "status": [
+            "In review",
+            "Approved",
+            "Ready-for-handoff",
+            "Handed-off"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "designs",
+        "dir": "in",
+        "toType": "Screen",
+        "counted": true
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P5-02",
+      "name": "Screen has a state",
+      "v2Ref": [
+        "LIFECYCLE/P5"
+      ],
+      "noun": "screen",
+      "missing": "has no loading, empty, error or permission state",
+      "population": {
+        "type": "Screen"
+      },
+      "requirement": {
+        "link": "state_of",
+        "dir": "in",
+        "toType": "ScreenState",
+        "counted": true
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P6-01",
+      "name": "Quality target has an architecture answer",
+      "v2Ref": [
+        "LIFECYCLE/P6"
+      ],
+      "noun": "quality target (NFR)",
+      "missing": "has no architecture decision or component that answers it",
+      "population": {
+        "type": "Requirement",
+        "subtype": "non_functional",
+        "where": {
+          "priority": [
+            "Must",
+            "Should"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "answers",
+        "dir": "in",
+        "toType": [
+          "ArchDecision",
+          "ArchComponent"
+        ],
+        "counted": false
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P7-01",
+      "name": "Story has a feature specification",
+      "v2Ref": [
+        "LIFECYCLE/P7"
+      ],
+      "noun": "Must story",
+      "missing": "has no feature specification",
+      "population": {
+        "type": "Story",
+        "where": {
+          "priority": "Must",
+          "status": [
+            "In review",
+            "Approved",
+            "Ready-for-handoff",
+            "Handed-off"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "spec_of",
+        "dir": "in",
+        "toType": "FeatureSpec",
+        "counted": true
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P8-01",
+      "name": "Story has a development work item",
+      "v2Ref": [
+        "LIFECYCLE/P8"
+      ],
+      "noun": "Must story",
+      "missing": "has no work item",
+      "population": {
+        "type": "Story",
+        "where": {
+          "priority": "Must",
+          "status": [
+            "In review",
+            "Approved",
+            "Ready-for-handoff",
+            "Handed-off"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "implements",
+        "dir": "in",
+        "toType": "WorkItem"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P9-01",
+      "name": "Must requirement has a test case",
+      "v2Ref": [
+        "LIFECYCLE/P9"
+      ],
+      "noun": "Must requirement",
+      "missing": "has no test case that verifies it",
+      "population": {
+        "type": "Requirement",
+        "where": {
+          "priority": "Must",
+          "status": [
+            "In review",
+            "Approved"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "verifies",
+        "dir": "in",
+        "toType": "TestCase",
+        "counted": true
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P9-02",
+      "name": "Must story has stakeholder acceptance",
+      "v2Ref": [
+        "LIFECYCLE/P9"
+      ],
+      "noun": "Must story",
+      "missing": "has no accepted UAT sign-off",
+      "population": {
+        "type": "Story",
+        "where": {
+          "priority": "Must",
+          "status": [
+            "In review",
+            "Approved",
+            "Ready-for-handoff",
+            "Handed-off"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "accepts",
+        "dir": "in",
+        "toType": "UatSignoff",
+        "toWhere": {
+          "status": [
+            "Accepted",
+            "Accepted with conditions"
+          ]
+        }
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P10-01",
+      "name": "Must story is shipped by a release",
+      "v2Ref": [
+        "LIFECYCLE/P10"
+      ],
+      "noun": "Must story",
+      "missing": "is not in any release",
+      "population": {
+        "type": "Story",
+        "where": {
+          "priority": "Must",
+          "status": [
+            "In review",
+            "Approved",
+            "Ready-for-handoff",
+            "Handed-off"
+          ]
+        }
+      },
+      "requirement": {
+        "link": "ships",
+        "dir": "in",
+        "toType": "DeployRelease",
+        "toWhere": {
+          "status": [
+            "Approved",
+            "Deployed"
+          ]
+        }
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P11-01",
+      "name": "Quality target has an alert",
+      "v2Ref": [
+        "LIFECYCLE/P11"
+      ],
+      "noun": "quality target (NFR)",
+      "missing": "has no alert watching it",
+      "population": {
+        "type": "Requirement",
+        "subtype": "non_functional",
+        "where": {
+          "priority": "Must"
+        }
+      },
+      "requirement": {
+        "link": "alerts_on",
+        "dir": "in",
+        "toType": "Alert",
+        "toWhere": {
+          "status": "Active"
+        }
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P11-02",
+      "name": "Active alert has a runbook",
+      "v2Ref": [
+        "LIFECYCLE/P11"
+      ],
+      "noun": "active alert",
+      "missing": "has no runbook",
+      "population": {
+        "type": "Alert",
+        "where": {
+          "status": "Active"
+        }
+      },
+      "requirement": {
+        "link": "responds_to",
+        "dir": "in",
+        "toType": "Runbook"
+      },
+      "threshold": {
+        "default": 100
+      }
+    },
+    {
+      "id": "CR-P12-01",
+      "name": "Planned feedback has a change request",
+      "v2Ref": [
+        "LIFECYCLE/P12"
+      ],
+      "noun": "planned feedback",
+      "missing": "has no change request",
+      "population": {
+        "type": "Feedback",
+        "where": {
+          "status": "Planned"
+        }
+      },
+      "requirement": {
+        "link": "raises_change",
+        "dir": "out",
+        "toType": "ChangeRequest"
+      },
+      "threshold": {
+        "default": 100
+      }
+    }
+  ]
+}

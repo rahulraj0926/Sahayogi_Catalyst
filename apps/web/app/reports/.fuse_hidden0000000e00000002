@@ -1,0 +1,29 @@
+'use client';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Badge, Card, ErrorBox, Loading, Page } from '@/components/ui';
+import { Stat } from '@/components/kit';
+import { useApi } from '@/lib/api';
+
+/** Portfolio report: funnel, stuck products, throughput, blockers, time owed. Prototype: reports.js (/reports) */
+export default function Reports() {
+  const [days, setDays] = useState(14);
+  const { data: r, error, loading } = useApi<any>(`/portfolio/report?stuck_days=${days}`);
+  if (loading) return <Loading />;
+  if (error || !r) return <ErrorBox message={error || 'No data'} />;
+  const max = Math.max(1, ...r.funnel.map((f: any) => f.count));
+  return (
+    <Page title="Reports" sub={`All products together, as of ${r.as_of}.`} right={<span className="row"><label className="small muted">Stuck after <input type="number" min={1} value={days} onChange={(e) => setDays(Number(e.target.value) || 14)} style={{ width: 60 }} /> days</label><a className="btn sm" href={`/api/portfolio/report?format=csv&stuck_days=${days}`}>CSV</a><a className="btn sm" target="_blank" href={`/api/portfolio/report?format=html&stuck_days=${days}`}>Printable</a></span>}>
+      <div className="grid g4" style={{ marginBottom: 12 }}><Stat value={r.counts.products} label="products" /><Stat value={r.throughput.gates_passed_30d} label="sign-offs in 30 days" kind="ok" /><Stat value={r.stuck.length} label="stuck products" kind={r.stuck.length ? 'bad' : undefined} /><Stat value={`${r.human_minutes_owed.total} min`} label="of people’s time owed" /></div>
+      <div className="grid g2">
+        <Card title="Where products are"><div>{r.funnel.map((f: any) => <div key={f.stage} className="row" style={{ marginBottom: 4 }}><span style={{ width: 120 }} className="small">{f.label}</span><div style={{ flex: 1 }} className="bar"><i className="ok" style={{ width: `${(f.count / max) * 100}%` }} /></div><b>{f.count}</b></div>)}</div></Card>
+        <Card title="Stuck" sub={`no activity for ${r.stuck_after_days}+ days`}>{r.stuck.length === 0 ? <div className="muted small">Nothing is stuck.</div> : r.stuck.map((s: any) => <div key={s.id} style={{ marginBottom: 8 }}><Link className="strong" href={`/products/${s.id}`}>{s.name}</Link> <Badge kind="bad">{s.days_since_activity} days</Badge><div className="small muted">{s.stage_label}. {s.what_happens_next}</div></div>)}</Card>
+      </div>
+      <div className="grid g2" style={{ marginTop: 14 }}>
+        <Card title="What holds up the most products" flush><table className="tbl compact"><tbody>{r.top_blockers.slice(0, 10).map((b: any) => <tr key={b.criterion}><td className="mono xs">{b.criterion}</td><td>{b.text}<div className="xs muted">{b.todo}</div></td><td><Badge kind="warn">{b.product_count} products</Badge></td></tr>)}</tbody></table></Card>
+        <Card title="Time owed by people" flush><table className="tbl compact"><tbody>{r.human_minutes_owed.by_person.map((p: any) => <tr key={p.person}><td>{p.person}</td><td>{p.minutes} min</td></tr>)}</tbody></table><div className="xs muted" style={{ padding: 8 }}>{r.human_minutes_owed.person_basis}</div></Card>
+      </div>
+      <Card title="Products" flush><table className="tbl compact"><thead><tr><th>Product</th><th>Stage</th><th>Days</th><th>Ready</th><th>Blockers</th><th>Documents</th></tr></thead><tbody>{r.products.map((p: any) => <tr key={p.id}><td><Link href={`/products/${p.id}`} className="strong">{p.name}</Link></td><td>{p.stage_label}</td><td>{p.days_in_stage}</td><td>{p.readiness_percent}%</td><td>{p.blocker_count}</td><td>{p.documents_approved}</td></tr>)}</tbody></table></Card>
+    </Page>
+  );
+}

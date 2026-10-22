@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (types, tests, database, OpenAPI)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sahayogi
+          POSTGRES_PASSWORD: sahayogi
+          POSTGRES_DB: sahayogi
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sahayogi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://sahayogi:sahayogi@localhost:5432/sahayogi?schema=public
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint (errors fail the build, warnings do not)
+        run: npm run lint -- --quiet
+      - name: Apply database migrations
+        run: npm run db:migrate -w apps/api
+      - name: Generated schema is up to date
+        run: |
+          npm run db:generate -w apps/api
+          git diff --exit-code apps/api/prisma || (echo "Run 'npm run db:generate -w apps/api' and commit the result." && exit 1)
+      - name: Type check and unit tests (no database)
+        run: npm run check -w apps/api
+      - name: Seed the demo portfolio (empty database, so no --force needed)
+        run: npm run seed -w apps/api
+      - name: Database round-trip and old-data import tests (leave the seed in place)
+        run: npm run test:db -w apps/api && npm run seed -w apps/api -- --force
+      - name: Restore drill (back up the seeded database, restore it into a scratch database, compare)
+        run: BACKUP_DIR=$RUNNER_TEMP/bk npm run db:backup -w apps/api && BACKUP_DIR=$RUNNER_TEMP/bk npm run db:drill -w apps/api
+      - name: Regression tests against real PostgreSQL
+        run: npm test -w apps/api
+      - name: /api/v1 stays add-only (no breaking change against the target branch)
+        if: github.event_name == 'pull_request'
+        run: |
+          git show origin/${{ github.base_ref }}:docs/api/openapi.v1.json > /tmp/openapi.base.json || { echo "No base contract yet - skipping."; exit 0; }
+          npm run openapi:breaking -w apps/api -- /tmp/openapi.base.json
+      - name: Committed OpenAPI contract is up to date
+        run: |
+          npm run openapi:export -w apps/api
+          git diff --exit-code docs/api/openapi.v1.json docs/api/swagger.html || (echo "docs/api/openapi.v1.json or docs/api/swagger.html is out of date. Run 'npm run openapi:export -w apps/api' and commit it." && exit 1)
+
+  web:
+    name: Web (types and build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit -p apps/web/tsconfig.json
+      - run: npm run build -w apps/web

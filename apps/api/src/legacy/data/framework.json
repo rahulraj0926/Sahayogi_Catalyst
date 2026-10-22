@@ -1,0 +1,2045 @@
+{
+ "_comment": "Sahayogi Sanchalak Lifecycle Framework v4 (13 phases, 70 steps) as data. Text is from the framework PDF. tier = how much a step counts toward its phase (points in \"tiers\"); evidence = the records that show the step is done. Change a tier here or per product from the Lifecycle screen. engine = the phase number this product uses for it.",
+ "version": "v4",
+ "tiers": {
+  "core": {
+   "label": "Biggest",
+   "points": 8,
+   "meaning": "The phase cannot stand without it"
+  },
+  "major": {
+   "label": "Big",
+   "points": 5,
+   "meaning": "A main deliverable of the phase"
+  },
+  "support": {
+   "label": "Medium",
+   "points": 3,
+   "meaning": "Supports or checks the main work"
+  },
+  "light": {
+   "label": "Small",
+   "points": 1,
+   "meaning": "Housekeeping or a quick check"
+  }
+ },
+ "credit": {
+  "approved": 1.0,
+  "draft": 0.5,
+  "note": "A reviewed/approved record counts fully, a draft counts half, a sample or unreviewed drafted record counts nothing."
+ },
+ "phases": [
+  {
+   "n": 0,
+   "engine": 0,
+   "title": "Product Intake & Discovery",
+   "objective": "Capture the idea, establish enough initial context, and decide whether it merits deeper investigation.",
+   "perspectives": {
+    "ceo": "This is the funnel entry — every product idea enters here, and most are filtered out before consuming research resources.",
+    "user": "The suspected user problem is recorded but not yet validated.",
+    "developer": "No technical work begins; developers are not involved.",
+    "application": "No system design exists yet."
+   },
+   "exit": "Exit when required intake information is complete and an authorized screening decision is recorded.",
+   "steps": [
+    {
+     "id": "P0.1",
+     "code": "0.1",
+     "title": "Idea Registration",
+     "tier": "major",
+     "what": "Record the product or working name, a concise idea description, category, proposer, sponsor or known stakeholders, source of the idea, and submission date.",
+     "whyHere": "This is the very first touchpoint. Nothing can be evaluated, researched, or prioritized without a registered record. Registration creates the canonical reference ID that every later phase links back to.",
+     "whyNotElsewhere": "Moving this later would mean ideas exist informally (in emails, chat, meetings) with no single source of truth. There is no earlier phase — this is Phase 0.",
+     "output": "Registered Product Idea",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Idea brief written",
+       "types": [
+        "IntakeBrief"
+       ],
+       "min": 1
+      },
+      {
+       "label": "People involved named",
+       "types": [
+        "Stakeholder"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P0.2",
+     "code": "0.2",
+     "title": "Initial Problem Context",
+     "tier": "core",
+     "what": "Describe the suspected problem, who may be affected, the current situation, and why the idea was raised. This is preliminary context — enough to evaluate whether the idea deserves research, not a full problem analysis.",
+     "whyHere": "Screening (0.3) needs enough context to judge whether the idea is worth investigating. Without a problem statement, screening becomes subjective guessing.",
+     "whyNotElsewhere": "Full user research happens in Phase 1.2. This step captures only what the proposer already knows. If we did full research here, we would waste effort on ideas that get rejected at screening. If we skipped this entirely, screening would have nothing to evaluate.",
+     "output": "Initial Problem Context",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Evidence collected",
+       "types": [
+        "Evidence"
+       ],
+       "min": 2
+      },
+      {
+       "label": "Assumptions listed",
+       "types": [
+        "Assumption"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Open questions listed",
+       "types": [
+        "Question"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P0.3",
+     "code": "0.3",
+     "title": "Intake Completeness & Screening",
+     "tier": "support",
+     "what": "Check whether the idea is understandable, sufficiently described for discovery, aligned with intake rules, and free of obvious duplication. Record any missing information. Do not demand market proof or business cases at this stage.",
+     "whyHere": "This is the quality gate before committing research effort. It catches incomplete, duplicate, or off-strategy ideas before they consume Phase 1 resources.",
+     "whyNotElsewhere": "Screening cannot happen before registration (0.1) and problem context (0.2) because there is nothing to screen. It cannot happen in Phase 1 because Phase 1 is the research itself — screening decides whether research begins.",
+     "output": "Screening Findings and Clarification Requests",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Scope, limits or risks noted",
+       "types": [
+        "ScopeEntry",
+        "Constraint",
+        "Risk"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P0.4",
+     "code": "0.4",
+     "title": "Intake Decision",
+     "tier": "core",
+     "what": "An authorized reviewer records one of three outcomes: Proceed to Research, Return for Clarification, or Reject/Defer. The decision includes rationale, decision owner, date, and next action.",
+     "whyHere": "This is the formal gate between intake and research. Without an explicit decision record, ideas drift into research informally, consuming resources without authorization.",
+     "whyNotElsewhere": "The decision must follow screening (0.3). It cannot be in Phase 1 because Phase 1 should only contain ideas that have been explicitly approved for research.",
+     "output": "Intake Decision Record",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Decision recorded",
+       "types": [
+        "Decision"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Intake signed off",
+       "gate": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 1,
+   "engine": 1,
+   "title": "Product & Market Analysis",
+   "objective": "Build an evidence-based understanding of the market, users, alternatives, competitors, and opportunity.",
+   "perspectives": {
+    "ceo": "This phase answers \"Is there a real market?\" and \"Can we win?\" before committing budget.",
+    "user": "We learn who the users actually are, not who we assume they are.",
+    "developer": "Developers are not involved yet — this is pure research.",
+    "application": "No system design; we are determining whether a product should exist."
+   },
+   "exit": "Exit when findings are source-linked, assumptions and limitations are visible, and a recommendation is recorded.",
+   "steps": [
+    {
+     "id": "P1.1",
+     "code": "1.1",
+     "title": "Market & Category Research",
+     "tier": "support",
+     "what": "Research the market category, relevant trends, demand signals, geography and segments, available market-size estimates, data sources, dates of the data, and research limitations.",
+     "whyHere": "Phase 0 registered an idea; now we need external evidence to evaluate it. Market research is the broadest lens — it tells us whether the category itself has momentum before we invest in userlevel research.",
+     "whyNotElsewhere": "Phase 0 captured only what the proposer already knew. This step uses external sources. It cannot be in Phase 2 because Phase 2 makes product decisions — those decisions need market evidence as input, not as a parallel activity.",
+     "output": "Market Research Findings",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Market evidence collected",
+       "types": [
+        "Evidence"
+       ],
+       "min": 3
+      },
+      {
+       "label": "Problem described",
+       "types": [
+        "Problem"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P1.2",
+     "code": "1.2",
+     "title": "User & Stakeholder Research",
+     "tier": "major",
+     "what": "Investigate user segments, needs, goals, pain points, current workflows and alternatives using available interviews, surveys, reports, or other evidence. Distinguish facts from assumptions. Produce personas or segment definitions.",
+     "whyHere": "After understanding the market (1.1), we zoom into the people who would use the product. User research here produces the raw segments and needs that Phase 2 will use to define scope and Phase 3 will use to build the Actor Catalogue.",
+     "whyNotElsewhere": "Phase 0.2 captured the proposer's assumptions about users. This step validates those assumptions with evidence. This is NOT the Actor Catalogue (which lives in Phase 3.1) — this is research about who users are. The Actor Catalogue is a design artifact that maps roles, permissions, and responsibilities for the product being built. User research here feeds that catalogue but does not replace it.",
+     "output": "User Research Summary and Personas/Segments",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 3.1 creates the canonical Actor Catalogue. Phase 1.2 produces user segments and personas from research. The boundary: Phase 1.2 answers \"who are the users and what do they need?\" Phase 3.1 answers \"what roles, permissions, and responsibilities does our product define for these users?\""
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Customer groups, personas or jobs described",
+       "types": [
+        "Segment",
+        "Persona",
+        "Job"
+       ],
+       "min": 3
+      }
+     ]
+    },
+    {
+     "id": "P1.3",
+     "code": "1.3",
+     "title": "Competitor & Alternative Analysis",
+     "tier": "core",
+     "what": "Identify direct and indirect competitors and non-product alternatives. Compare positioning, features, target users, pricing where available, strengths, gaps, and verification dates for all sources.",
+     "whyHere": "Competitor analysis requires market context (1.1) and user understanding (1.2) to be meaningful. Without knowing the market and users, competitor comparisons are superficial.",
+     "whyNotElsewhere": "This cannot be in Phase 0 (not enough context) or Phase 2 (Phase 2 makes scope decisions that need competitor gaps as input). Competitor data informs differentiation decisions in 1.4 and scope decisions in Phase 2.",
+     "output": "Competitor Landscape and Comparison Matrix",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Competitors recorded",
+       "types": [
+        "Competitor"
+       ],
+       "min": 3
+      },
+      {
+       "label": "Competitor features recorded",
+       "types": [
+        "CompetitorCapability"
+       ],
+       "min": 5
+      }
+     ]
+    },
+    {
+     "id": "P1.4",
+     "code": "1.4",
+     "title": "Opportunity, Differentiation & Market Risks",
+     "tier": "major",
+     "what": "Synthesize all research (1.1–1.3) to identify unmet needs, potential differentiators, adoption barriers, competitive and regulatory risks, confidence level, and unanswered research questions.",
+     "whyHere": "This is the synthesis step — it brings together market, user, and competitor findings into a coherent opportunity assessment. It cannot happen before the research steps that feed it.",
+     "whyNotElsewhere": "Moving this to Phase 2 would mix research synthesis with product decisions. Phase 2 should receive a clear opportunity assessment and decide whether to pursue it, not perform the synthesis itself.",
+     "output": "Opportunity Assessment and Evidence-Linked Risks",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Opportunity described",
+       "types": [
+        "Opportunity"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Market risks listed",
+       "types": [
+        "Risk"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P1.5",
+     "code": "1.5",
+     "title": "Research Synthesis & Recommendation",
+     "tier": "support",
+     "what": "Summarize all findings and limitations. Recommend whether and how to proceed to product definition. This is a research conclusion — it is NOT final scope approval (that happens in Phase 2.5).",
+     "whyHere": "The recommendation closes Phase 1 and provides the decision input for Phase 2. Without an explicit recommendation, research findings sit in separate documents and the transition to Phase 2 is informal.",
+     "whyNotElsewhere": "This cannot be earlier because the research is not yet complete. It should not be in Phase 2 because Phase 2 acts on the recommendation — mixing research conclusions with product decisions creates confusion about what is evidence and what is a decision.",
+     "output": "Research Report and Recommendation",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Insights written down",
+       "types": [
+        "Insight"
+       ],
+       "min": 2
+      },
+      {
+       "label": "Market signed off",
+       "gate": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "engine": 2,
+   "title": "Product Definition & Scope",
+   "objective": "Make explicit product decisions: purpose, outcomes, feature direction, boundaries, and the approved scope baseline.",
+   "perspectives": {
+    "ceo": "This is where the business commits — vision, measurable outcomes, and budget constraints are locked.",
+    "user": "The product's intended value to users is articulated.",
+    "developer": "Scope boundaries tell developers what is and is not their responsibility.",
+    "application": "Platform targets, integration boundaries, and geography are decided."
+   },
+   "exit": "Exit when scope, provisional priorities, and success measures are clear enough to baseline and the required decision is recorded.",
+   "steps": [
+    {
+     "id": "P2.1",
+     "code": "2.1",
+     "title": "Product Vision & Value Proposition",
+     "tier": "support",
+     "what": "Define the product's purpose, intended users, core value, and the problem it addresses. Use Phase 1 findings as evidence — do not repeat the research.",
+     "whyHere": "Phase 1 provided evidence about market, users, and competitors. This step converts evidence into a product direction. Without a vision statement, Phase 2's remaining steps (features, scope, KPIs) have no anchor.",
+     "whyNotElsewhere": "Phase 1 investigates; Phase 2 decides. The vision cannot be written in Phase 1 because research may reveal that the original idea should pivot. It cannot wait until Phase 3 because flows and requirements need a product direction to work from.",
+     "output": "Product Vision and Value Proposition",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Product goal written",
+       "types": [
+        "Objective"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P2.2",
+     "code": "2.2",
+     "title": "Objectives & Success Measures",
+     "tier": "major",
+     "what": "Set measurable business and user outcomes. Define each KPI's meaning, calculation method, baseline, target, and measurement owner where known. Mark unknowns — especially data source — as pending, because the data model (Phase 6.4) does not exist yet.",
+     "whyHere": "KPIs need a product vision (2.1) to be meaningful. They must be set before scope (2.4) because scope decisions should be evaluated against measurable outcomes.",
+     "whyNotElsewhere": "Moving KPIs to Phase 1 would mix research with product decisions. Moving them to Phase 6 or later would mean scope and feature decisions are made without success criteria. The data-source column will be validated in Phase 7 after the data model exists — this step defines WHAT to measure and WHY, not HOW to collect the data.",
+     "output": "Objectives and KPI Definition Register",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 7 will validate KPI data sources against the schema and API contracts. Phase 2.2 owns the KPI definition; Phase 7 owns the technical feasibility of measuring them."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Objectives set",
+       "types": [
+        "Objective"
+       ],
+       "min": 2
+      },
+      {
+       "label": "Success measures set",
+       "types": [
+        "Metric"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P2.3",
+     "code": "2.3",
+     "title": "Draft Feature Catalogue",
+     "tier": "core",
+     "what": "List proposed capabilities with concise descriptions, user/business value, known dependencies, and release grouping. Priority and dependencies are marked as provisional — they will be validated after flows (Phase 3) and requirements (Phase 4) reveal actual complexity and dependency chains.",
+     "whyHere": "A feature list is needed to define scope boundaries (2.4) and constraints (2.5). But at this stage, we do not have flows or requirements, so priorities are educated guesses based on Phase 1 evidence, not engineering analysis.",
+     "whyNotElsewhere": "If we waited until after Phase 4 (requirements) to list features, we could not define scope in this phase. The compromise: list features now with provisional priority, then revalidate priority after requirements are complete. The output is explicitly called \"Draft\" to signal that re-prioritization will happen.",
+     "output": "Draft Feature Catalogue (provisional priorities)",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.1 (Functional Requirements) will reference features by ID from this catalogue. Phase 3.2 (Use Cases) will link journeys to features. Neither phase redefines the feature list — they add detail to it."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Modules listed",
+       "types": [
+        "Module"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Features listed",
+       "types": [
+        "Feature"
+       ],
+       "min": 5
+      }
+     ]
+    },
+    {
+     "id": "P2.4",
+     "code": "2.4",
+     "title": "Scope & Boundaries",
+     "tier": "major",
+     "what": "State what is in scope and explicitly out of scope: supported platforms, user groups, integrations, geography, and product boundaries.",
+     "whyHere": "Scope boundaries require the vision (2.1), success criteria (2.2), and feature direction (2.3) as inputs. Without explicit boundaries, every downstream phase risks working on features that were never approved.",
+     "whyNotElsewhere": "Scope cannot be defined in Phase 1 (research does not make product decisions). It cannot wait until Phase 3 because flows need to know which user groups and platforms are in scope.",
+     "output": "Scope Statement and Exclusions",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "In-scope / out-of-scope entries",
+       "types": [
+        "ScopeEntry"
+       ],
+       "min": 3
+      }
+     ]
+    },
+    {
+     "id": "P2.5",
+     "code": "2.5",
+     "title": "Constraints, Assumptions & Scope Baseline",
+     "tier": "major",
+     "what": "Consolidate budget, time, and resource constraints. Document assumptions relevant to scope. Identify unresolved decisions and risks. Approve and version the scope baseline. Define the change-control approach that governs all future scope modifications, including changes routed from Phase 12 (Feedback).",
+     "whyHere": "This step closes Phase 2 by baselining everything decided so far. The change-control approach defined here applies to all downstream phases — if Phase 12 feedback expands scope, it must pass through this change-control gate.",
+     "whyNotElsewhere": "Baselining cannot happen before scope is defined (2.4). It should not be in Phase 3 because Phase 3 works within the approved scope, not alongside it.",
+     "output": "Approved Scope Baseline, Assumptions, Decision Log, and Change-Control Approach",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Constraints noted",
+       "types": [
+        "Constraint"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Assumptions noted",
+       "types": [
+        "Assumption"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Scope signed off",
+       "gate": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "engine": 4,
+   "title": "User & Business Flows",
+   "objective": "Describe how actors achieve goals through the product, including permissions, handoffs, decisions, and exception paths. It comes before Requirements (Phase 4) because system responses and role-specific requirements cannot be written without first knowing the journeys those roles take.",
+   "perspectives": {
+    "ceo": "Flows reveal the real complexity of delivering value — how many handoffs, approvals, and edge cases exist between a user's intent and a completed action.",
+    "user": "This is where we walk in the user's shoes, mapping every journey from goal to outcome.",
+    "developer": "Flows become the blueprint that requirements formalize.",
+    "application": "System interactions, external dependencies, and process boundaries become visible."
+   },
+   "exit": "Exit when priority journeys and relevant exception paths are documented and linked to features from Phase 2.3.",
+   "steps": [
+    {
+     "id": "P3.1",
+     "code": "3.1",
+     "title": "Actors, Roles & Responsibilities",
+     "tier": "major",
+     "what": "Identify all user types, business roles, external systems, their responsibilities, approval authority, access boundaries, and separation-of-duty needs. This produces the canonical Actor Catalogue — the single source of truth for all role references across the lifecycle. Detailed security mechanisms (encryption, token handling) remain in Phase 6.",
+     "whyHere": "Flows (3.2–3.4) cannot be mapped without knowing who the actors are, what they are permitted to do, and where handoffs occur. The Actor Catalogue must exist before any journey or process is drawn.",
+     "whyNotElsewhere": "Phase 1.2 produced user research segments — those are research findings about real people. This step converts research into product design: named roles with defined permissions and responsibilities. Moving this to Phase 4 (Requirements) would mean writing requirements that reference roles not yet formally defined. Moving it to Phase 5 (UX) would mean designing screens without knowing who uses them.",
+     "output": "Actor Catalogue and Role-Permission Matrix",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 1.2 owns user research (who users are). Phase 3.1 owns the Actor Catalogue (what roles the product defines). Phase 6.6 owns security mechanisms (how access is enforced). No two phases define the same thing."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "People and systems (actors) defined",
+       "types": [
+        "Actor"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P3.2",
+     "code": "3.2",
+     "title": "User Journeys & Use Cases",
+     "tier": "core",
+     "what": "Map user goals, entry conditions, actions, system responses, and successful outcomes for priority journeys. Link to Phase 2.3 features by ID instead of restating feature descriptions.",
+     "whyHere": "Actors are now defined (3.1). Journeys are the core of product design — every requirement, screen, and API endpoint ultimately exists to serve a user journey. This must happen before requirements (Phase 4) because requirements formalize what journeys describe.",
+     "whyNotElsewhere": "Without actors (3.1), we do not know who takes each journey. Without scope (Phase 2.4), we do not know which journeys are in scope. Moving journeys to Phase 4 would force requirements to be written without journey context, producing abstract rules disconnected from user reality. Moving to Phase 5 (UX) would mean designing screens without knowing the journeys they support.",
+     "output": "User Journey Maps and Use Cases",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "User journeys mapped",
+       "types": [
+        "Flow"
+       ],
+       "min": 2,
+       "where": {
+        "kind": "journey"
+       }
+      },
+      {
+       "label": "Journey steps written",
+       "types": [
+        "FlowStep"
+       ],
+       "min": 6
+      }
+     ]
+    },
+    {
+     "id": "P3.3",
+     "code": "3.3",
+     "title": "Business Process & Handoff Flows",
+     "tier": "major",
+     "what": "Map triggers, sequence, decision points, ownership, approvals, dependencies, handoffs, and completion conditions across the business process.",
+     "whyHere": "User journeys (3.2) show individual user paths. Business processes show how the organization operates around the product — multi-actor workflows, approval chains, and cross-team handoffs. Both are needed before requirements because business rules in Phase 4 must reference actual process steps.",
+     "whyNotElsewhere": "Business processes depend on actors (3.1) and journeys (3.2). Moving this to Phase 4 would mean writing business rules before the process those rules govern is documented.",
+     "output": "Business Process Diagrams",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Business processes mapped",
+       "types": [
+        "Flow"
+       ],
+       "min": 2,
+       "where": {
+        "kind": [
+         "process",
+         "workflow",
+         "cross_module"
+        ]
+       }
+      },
+      {
+       "label": "Things handed over (entities)",
+       "types": [
+        "Entity"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P3.4",
+     "code": "3.4",
+     "title": "Alternate, Exception & Recovery Paths",
+     "tier": "major",
+     "what": "Define relevant invalid-input, missing-data, permission-denied, rejection, cancellation, retry, integration-failure, and recovery paths. Include expected user-visible outcomes for each exception.",
+     "whyHere": "Happy paths are mapped in 3.2 and 3.3. Exception paths must be mapped in the same phase because they are part of the same flows. If we defer exceptions to a later phase, requirements (Phase 4) will only cover happy paths, and developers will discover edge cases during implementation — the most expensive time to find them.",
+     "whyNotElsewhere": "Exceptions depend on the journeys and processes they interrupt (3.2, 3.3). They cannot be earlier. Moving them to Phase 4 would mix flow documentation with requirements specification.",
+     "output": "Exception and Alternate-Flow Catalogue",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Exception / failure paths mapped",
+       "types": [
+        "Flow"
+       ],
+       "min": 2,
+       "where": {
+        "kind": "exception"
+       }
+      },
+      {
+       "label": "Transitions defined",
+       "types": [
+        "Transition"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P3.5",
+     "code": "3.5",
+     "title": "Flow Coverage Check",
+     "tier": "support",
+     "what": "Check that important requirements-relevant flows and roles are represented, transitions are coherent, and no critical journey is missing. Record unresolved flow decisions. Do not add a generic approval gate if no formal decision is needed.",
+     "whyHere": "This is the quality gate for flows before they are formalized into requirements. Incomplete flows produce incomplete requirements.",
+     "whyNotElsewhere": "Coverage cannot be checked before flows exist (3.2–3.4). It should not be in Phase 4 because Phase 4 should receive complete flows, not discover gaps while writing requirements.",
+     "output": "Flow Coverage and Open-Issue Record",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "States defined",
+       "types": [
+        "State"
+       ],
+       "min": 2
+      },
+      {
+       "label": "Flows signed off",
+       "gate": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "engine": 3,
+   "title": "Requirements Engineering",
+   "objective": "Specify what the product must do, its quality and security obligations, and how requirement fulfilment will be judged. Requirements are now grounded in the flows mapped in Phase 3.",
+   "perspectives": {
+    "ceo": "Requirements translate business intent into contractual obligations — what the product must deliver.",
+    "user": "User needs from Phase 1 and journeys from Phase 3 become formal, testable statements.",
+    "developer": "Requirements are the primary input for architecture and implementation decisions.",
+    "application": "Performance, security, and compliance expectations are set."
+   },
+   "exit": "Exit when requirements are sufficiently clear, prioritized, and traceable, and the Feature Catalogue has passed the 4.6 gate; unresolved items are explicitly marked.",
+   "steps": [
+    {
+     "id": "P4.1",
+     "code": "4.1",
+     "title": "Functional Requirements",
+     "tier": "core",
+     "what": "Define system capabilities, inputs/outputs, business rules, expected system responses, role-specific behaviour, priorities, and stable requirement IDs. Every requirement references the Actor Catalogue (Phase 3.1) for role behaviour and Use Cases (Phase 3.2) for system responses.",
+     "whyHere": "Flows (Phase 3) are now complete. We know every journey, every actor, every handoff, and every exception path. Functional requirements formalize what the flows describe — they turn narrative journeys into precise, testable statements.",
+     "whyNotElsewhere": "Writing requirements before flows forces teams to specify system responses without knowing the journeys those responses belong to. This produces abstract, incomplete requirements. Moving requirements to Phase 5 would delay formal specification until UX design begins, creating a gap between \"what we need\" and \"what we are designing.\"",
+     "output": "Functional Requirements Catalogue",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 3.2 describes user journeys (narrative). Phase 4.1 formalizes them as requirements (testable statements). The boundary: journeys say \"the user does X and the system responds with Y.\" Requirements say \"REQ-042: When [condition], the system shall [response], verified by [criterion].\" Requirements reference flows by ID, never restate them."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Functional requirements written",
+       "types": [
+        "Requirement"
+       ],
+       "min": 5,
+       "subtype": "functional"
+      }
+     ]
+    },
+    {
+     "id": "P4.2",
+     "code": "4.2",
+     "title": "Non-Functional Requirements",
+     "tier": "major",
+     "what": "Define measurable expectations for performance, availability, reliability, scalability, usability, accessibility, compatibility, maintainability, and recovery targets. Data-retention obligations are owned by 4.3.",
+     "whyHere": "Non-functional requirements depend on understanding the product's scope (Phase 2), user expectations (Phase 1), and the volume and complexity implied by flows (Phase 3). A chat application with 1,000 users has different performance requirements than one with 10 million.",
+     "whyNotElsewhere": "Moving earlier would mean guessing at scale and complexity. Moving to Phase 6 (Architecture) would mean making technology choices without knowing quality targets. Architecture decisions (Phase 6) depend on non-functional requirements.",
+     "output": "Non-Functional Requirements Register",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Quality requirements (speed, uptime...)",
+       "types": [
+        "Requirement"
+       ],
+       "min": 3,
+       "subtype": "non_functional"
+      }
+     ]
+    },
+    {
+     "id": "P4.3",
+     "code": "4.3",
+     "title": "Security, Privacy & Compliance Requirements",
+     "tier": "major",
+     "what": "Specify authentication and authorization needs, sensitive-data handling, auditability, privacy requirements, data retention obligations, applicable legal and compliance requirements, and open compliance questions. This step defines WHAT must be protected and WHAT obligations apply — not HOW (mechanisms belong in Phase 6.6).",
+     "whyHere": "Security requirements depend on knowing the actors (Phase 3.1), the data they handle (flows), and the sensitivity of operations. The Role-Permission Matrix from Phase 3.1 provides the access boundaries; this step formalizes them as requirements.",
+     "whyNotElsewhere": "Phase 3.1 defines access boundaries at the flow level. Phase 4.3 formalizes them as requirements. Phase 6.6 specifies the security architecture (encryption, token handling, audit mechanisms). Phase 9.3 plans verification. Each phase owns a distinct layer.",
+     "output": "Security, Privacy and Compliance Requirements",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 3.1 = role-based access in flows. Phase 4.3 = what must be protected (requirements). Phase 6.6 = how to protect it (mechanisms). Phase 9.3 = how to verify it (test plan). Four phases, four distinct responsibilities."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Security / privacy / legal requirements",
+       "types": [
+        "Requirement"
+       ],
+       "min": 1,
+       "subtype": "regulatory"
+      },
+      {
+       "label": "Obligations noted",
+       "types": [
+        "Obligation"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P4.4",
+     "code": "4.4",
+     "title": "Business Rules, Data Needs & Validation Requirements",
+     "tier": "major",
+     "what": "Define domain rules, required information, field-level validation needs, calculations, lifecycle rules, and data quality expectations. Do not decide database schema or API implementation — those belong in Phase 6. This step defines WHAT rules exist, not HOW they are implemented.",
+     "whyHere": "Business rules emerge from flows (Phase 3) and functional requirements (4.1). A discount calculation, a state-transition rule, or a field-validation rule can only be fully specified after the journeys and processes that trigger it are documented.",
+     "whyNotElsewhere": "Phase 3.4 defines exception paths (what happens when things go wrong). Phase 4.4 defines the rules that determine right from wrong. Phase 7.3 adds implementation detail (exact formulas, regex patterns, state machine definitions). The boundary: Phase 4.4 says \"the system validates email format.\" Phase 7.3 says \"validate using RFC 5322 pattern, return error code E-201.\"",
+     "output": "Business Rules and Logical Data Needs",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.4 owns the WHAT (this rule exists, this data is needed). Phase 7.3 owns the HOW (implementable detail). Phase 7.3 references Phase 4.4 rule IDs."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Business rules written",
+       "types": [
+        "BusinessRule"
+       ],
+       "min": 2
+      },
+      {
+       "label": "Data needs written",
+       "types": [
+        "Requirement"
+       ],
+       "min": 1,
+       "subtype": "data"
+      }
+     ]
+    },
+    {
+     "id": "P4.5",
+     "code": "4.5",
+     "title": "Acceptance Criteria & Traceability",
+     "tier": "core",
+     "what": "Write testable conditions for important requirements. Link requirements to features (Phase 2.3), user flows (Phase 3.2), and planned design/test artifacts. Identify conflicts, gaps, and duplicates across all requirements.",
+     "whyHere": "Acceptance criteria can only be written after the requirements they verify (4.1–4.4). Traceability links requirements to flows and features, ensuring nothing is orphaned.",
+     "whyNotElsewhere": "Phase 7.4 will add feature-level acceptance conditions that go beyond individual requirements (integration scenarios, cross-feature interactions). Phase 9.2 will derive test cases from both Phase 4.5 criteria and Phase 7.4 conditions. The boundary: Phase 4.5 = requirement-level acceptance (canonical). Phase 7.4 = feature-integration acceptance. Phase 9.2 = test cases.",
+     "output": "Acceptance Criteria and Traceability Matrix",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.5 acceptance criteria are canonical — they are the source of truth. Phase 7.4 does not rewrite them; it adds feature-integration conditions not coverable at requirement level. Phase 9.2 derives test cases from both."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Acceptance criteria written",
+       "types": [
+        "AcceptanceCriterion"
+       ],
+       "min": 5
+      },
+      {
+       "label": "User stories written",
+       "types": [
+        "Story"
+       ],
+       "min": 3
+      }
+     ]
+    },
+    {
+     "id": "P4.6",
+     "code": "4.6",
+     "title": "Feature Catalogue Re-Prioritization Gate",
+     "tier": "support",
+     "what": "Revisit the Draft Feature Catalogue from Phase 2.3. Now that flows and requirements reveal actual complexity, dependencies, and edge cases, update priority, effort estimates, and dependency chains. Mark the catalogue as validated.",
+     "whyHere": "Phase 2.3 set provisional priorities based on market evidence. Phases 3 and 4 revealed the true complexity. This is the natural moment to re-prioritize before UX design begins.",
+     "whyNotElsewhere": "Re-prioritizing in Phase 2 is premature (flows and requirements do not exist). Re-prioritizing in Phase 5 is too late (UX design should work from validated priorities).",
+     "output": "Validated Feature Catalogue (the Phase 2.3 catalogue, updated in place and re-versioned; not a new artifact)",
+     "notes": [
+      {
+       "label": "Owner",
+       "text": "Product Owner is accountable. Development lead and design lead are consulted on effort and dependencies."
+      },
+      {
+       "label": "Completion criteria",
+       "text": "Every feature has a confirmed priority, effort estimate, and dependency chain based on Phase 3 flows and Phase 4 requirements. The catalogue is re-versioned and marked validated."
+      },
+      {
+       "label": "Change control",
+       "text": "If re-prioritization adds, removes, or defers features beyond the Phase 2.5 scope baseline, the change goes through the Phase 2.5 change-control approach before the catalogue is marked validated."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Requirements signed off",
+       "gate": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "engine": 5,
+   "title": "UX/UI Design",
+   "objective": "Turn approved user needs, flows, and requirements into a coherent navigation model, screen set, interaction design, and reusable visual system.",
+   "perspectives": {
+    "ceo": "The product becomes tangible — stakeholders can see and react to what is being built.",
+    "user": "Every screen, interaction, and state is designed from the user's perspective, grounded in real journeys from Phase 3.",
+    "developer": "Wireframes, components, and layout specs become the visual contract for implementation.",
+    "application": "Screen inventory determines frontend scope; state handling reveals application complexity."
+   },
+   "exit": "Exit when the required screens, navigation, interactions, and design assumptions are documented; approval is recorded where required. The baseline is marked provisional pending architecture validation.",
+   "steps": [
+    {
+     "id": "P5.1",
+     "code": "5.1",
+     "title": "Information Architecture & Navigation",
+     "tier": "major",
+     "what": "Define the navigation hierarchy, page relationships, global versus product-specific areas, labels, and a single primary destination for each capability.",
+     "whyHere": "Navigation depends on the validated Feature Catalogue (Phase 4.6), user journeys (Phase 3.2), and requirements (Phase 4). Without these inputs, navigation is guesswork. Navigation must be designed before individual screens (5.2) because screens live inside the navigation structure.",
+     "whyNotElsewhere": "IA cannot be in Phase 3 because Phase 3 maps flows, not navigation. Flows describe what users do; IA describes where they go. It cannot be in Phase 6 because architecture follows design, not the reverse — the navigation model tells architects what the frontend needs.",
+     "output": "Information Architecture and Navigation Map",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Navigation / structure reviewed",
+       "types": [
+        "DesignReview"
+       ],
+       "min": 1,
+       "where": {
+        "scope": "information_architecture"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P5.2",
+     "code": "5.2",
+     "title": "Screen Inventory & Information Needs",
+     "tier": "major",
+     "what": "Derive screens from priority use cases (Phase 3.2). For each screen, record user purpose, entry point, key actions, information to display or capture, roles, and links to requirements. Screen counts come from use cases, not from API endpoints.",
+     "whyHere": "IA (5.1) gives us the navigation shell. Use cases (Phase 3.2) and requirements (Phase 4) tell us what each screen needs to do. This step connects the two.",
+     "whyNotElsewhere": "Screens cannot be inventoried before IA exists (5.1). They cannot be delayed until Phase 6 because the data model and API contracts need to know what screens will display and capture.",
+     "output": "Screen Inventory and Screen-to-Use-Case Mapping",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Screens listed",
+       "types": [
+        "Screen"
+       ],
+       "min": 5
+      },
+      {
+       "label": "Screen states (empty, error...) listed",
+       "types": [
+        "ScreenState"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P5.3",
+     "code": "5.3",
+     "title": "Wireframes & Layout Behaviour",
+     "tier": "core",
+     "what": "Design page structure, forms, tables, cards, detail views, empty/loading/error/success/ restricted states, and responsive behaviour. Use provisional sample data where the final schema is not yet approved.",
+     "whyHere": "Wireframes translate the screen inventory (5.2) into visual layouts. They must exist before the visual design system (5.4) because the system should be built to serve the layouts, not the reverse.",
+     "whyNotElsewhere": "Wireframes depend on the screen inventory (5.2). Moving them to Phase 6 would mean architects design data models without knowing what the UI displays. Moving earlier would skip the navigation and screen inventory steps.",
+     "output": "Wireframes and Layout Specifications",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Screens with a linked design",
+       "types": [
+        "Screen"
+       ],
+       "min": 3,
+       "has": [
+        "design_link"
+       ]
+      },
+      {
+       "label": "Wireframes reviewed",
+       "types": [
+        "DesignReview"
+       ],
+       "min": 1,
+       "where": {
+        "scope": "wireframes"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P5.4",
+     "code": "5.4",
+     "title": "Visual Design System & Components",
+     "tier": "support",
+     "what": "Define typography, colours, spacing, tokens, reusable components, interaction states, accessibility rules, and contrast requirements.",
+     "whyHere": "The design system is built to serve the wireframes (5.3) and the screens they define. Components are identified by the patterns that repeat across wireframes.",
+     "whyNotElsewhere": "A design system created before wireframes is theoretical. One created after implementation has started creates inconsistency. This is the correct moment.",
+     "output": "Design System and Component Catalogue",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Visual style / design system reviewed",
+       "types": [
+        "DesignReview"
+       ],
+       "min": 1,
+       "where": {
+        "scope": [
+         "design_system",
+         "ui_design"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "id": "P5.5",
+     "code": "5.5",
+     "title": "Prototype & Usability Evaluation",
+     "tier": "support",
+     "what": "Prototype critical journeys, evaluate usability with intended users or stakeholders where feasible, record findings, and prioritize design changes.",
+     "whyHere": "Prototypes test the designs from 5.3–5.4 against real user behaviour. Findings inform the design baseline (5.6) — catching usability issues before architecture begins saves orders of magnitude of rework.",
+     "whyNotElsewhere": "Prototyping before wireframes and design system (5.3–5.4) means building incomplete prototypes. Prototyping after architecture (Phase 6) means architectural decisions are already locked when usability issues surface.",
+     "output": "Prototype and Usability Findings",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Usability / accessibility reviewed",
+       "types": [
+        "DesignReview"
+       ],
+       "min": 1,
+       "where": {
+        "scope": "accessibility"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P5.6",
+     "code": "5.6",
+     "title": "Provisional Design Baseline & Handoff",
+     "tier": "support",
+     "what": "Resolve high-impact design issues found in usability testing. Link screens to requirements and flows. Version the approved designs. Flag assumptions that depend on schema/API decisions from Phase 6. This baseline is explicitly PROVISIONAL — it will be re-validated against the Phase 6.7 Consistency Report and finalized in Phase 6.8 (Design Re-Baseline).",
+     "whyHere": "This step packages design work for the architecture phase. The baseline is provisional because the data model and API contracts (Phase 6) may reveal data that screens need but do not yet display, or UI actions that the API cannot support.",
+     "whyNotElsewhere": "The provisional baseline must exist before Phase 6 so architects know what they are designing for. Final baseline happens after Phase 6.8 (Design Re-Baseline).",
+     "output": "Provisional Design Baseline and Handoff Notes",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Design signed off",
+       "gate": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "engine": 6,
+   "title": "System & Technical Architecture",
+   "objective": "Design the intended technical structure, data model, API contracts, and security controls — then cross-validate against the UI design and re-baseline affected screens.",
+   "perspectives": {
+    "ceo": "Technology choices have cost, timeline, and hiring implications. Architecture decisions here determine long-term maintainability.",
+    "user": "Users do not see architecture directly, but its quality determines performance, reliability, and security they experience.",
+    "developer": "This is the developer's primary design phase — stack, components, schema, and API contracts.",
+    "application": "The system's technical identity is defined here."
+   },
+   "exit": "Exit when major architecture choices, schema, and API contracts are documented; cross-layer conflicts are resolved or tracked; and the design baseline is revalidated.",
+   "steps": [
+    {
+     "id": "P6.1",
+     "code": "6.1",
+     "title": "Technical Constraints & Options",
+     "tier": "support",
+     "what": "Derive architecture drivers from requirements (Phase 4). Compare viable technology, hosting, storage, and integration options against team skills, cost, licensing, security, scale, and maintainability.",
+     "whyHere": "Architecture options depend on non-functional requirements (Phase 4.2), security requirements (Phase 4.3), and the screen and data complexity revealed by Phase 5. Evaluating options earlier would be guesswork.",
+     "whyNotElsewhere": "Phase 4 defines what the system must achieve. Phase 6 decides how. Moving this earlier mixes requirements with implementation. Moving it later means technology decisions are made under time pressure.",
+     "output": "Technology Evaluation Matrix",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Technical decisions recorded",
+       "types": [
+        "ArchDecision"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P6.2",
+     "code": "6.2",
+     "title": "Tech Stack Decision",
+     "tier": "major",
+     "what": "Document the proposed or selected frontend, backend, database, storage, and supporting technologies. Record trade-offs, decision owner, and unresolved choices.",
+     "whyHere": "The evaluation (6.1) provides the comparison. This step records the decision. All subsequent architecture steps (schema, API, security) depend on knowing the stack.",
+     "whyNotElsewhere": "The tech stack cannot be chosen before options are evaluated (6.1). It cannot wait until Phase 7 because schema and API design in this phase depend on it.",
+     "output": "Tech Stack Decision Record",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Technology chosen for parts",
+       "types": [
+        "ArchComponent"
+       ],
+       "min": 3,
+       "has": [
+        "technology"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P6.3",
+     "code": "6.3",
+     "title": "System Boundaries & Component Architecture",
+     "tier": "core",
+     "what": "Define components, their responsibilities, trust boundaries, external systems, communication patterns, and high-level data flows.",
+     "whyHere": "Component boundaries depend on the tech stack (6.2) and the requirements they serve (Phase 4). This step establishes the system's skeleton before detailed schema and API work.",
+     "whyNotElsewhere": "Components cannot be defined before the stack is chosen. They must be defined before the schema (6.4) and APIs (6.5) because data and API design follow component boundaries.",
+     "output": "System Context, Component and Data-Flow Diagrams",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "System parts (components) described",
+       "types": [
+        "ArchComponent"
+       ],
+       "min": 5
+      }
+     ]
+    },
+    {
+     "id": "P6.4",
+     "code": "6.4",
+     "title": "Data Model & Schema Design",
+     "tier": "major",
+     "what": "Define domain entities, fields, types, identifiers, keys, constraints, relationships, lifecycle, ownership, and retention. Produce a conceptual/logical model, ER diagram, and data dictionary. Distinguish confirmed fields from assumptions.",
+     "whyHere": "The data model depends on business rules (Phase 4.4), functional requirements (Phase 4.1), and component boundaries (6.3). It cannot be designed without knowing what the product must store and which component owns each entity.",
+     "whyNotElsewhere": "Designing the schema before requirements (Phase 4) means guessing at data needs. Designing it after Phase 7 (Dev Spec) is too late — dev specs reference schema entities. This is the earliest point where all inputs are available.",
+     "output": "Data Model, Schema Definition, and Data Dictionary",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.4 defines logical data needs (what data is needed). Phase 6.4 defines the schema (how data is structured). The boundary: Phase 4.4 says \"the system needs a user's email, role, and creation date.\" Phase 6.4 says \"users table: id UUID PK, email VARCHAR(255) UNIQUE NOT NULL, role_id FK, created_at TIMESTAMP.\""
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Data model entities",
+       "types": [
+        "Entity"
+       ],
+       "min": 3
+      },
+      {
+       "label": "Database part described",
+       "types": [
+        "ArchComponent"
+       ],
+       "min": 1,
+       "where": {
+        "kind": "database"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P6.5",
+     "code": "6.5",
+     "title": "API & Integration Contract Design",
+     "tier": "major",
+     "what": "Define API boundaries, endpoint/resource purpose, methods, request/response structures, validation, errors, authentication needs, pagination/filtering, versioning, and external integration contracts.",
+     "whyHere": "APIs connect the frontend (designed in Phase 5) to the backend data (designed in 6.4). They depend on the component architecture (6.3), the schema (6.4), and the functional requirements (Phase 4.1).",
+     "whyNotElsewhere": "APIs cannot be designed before the data model (6.4) because they expose that data. They cannot wait until Phase 7 because dev specs reference API contracts. Phase 5 screen designs inform what APIs need to support, but the actual API structure is an architecture decision.",
+     "output": "API Contract Catalogue and Integration Specifications",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Interface contracts (APIs) written",
+       "types": [
+        "ApiContract"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P6.6",
+     "code": "6.6",
+     "title": "Security, Resilience & Architecture Decisions",
+     "tier": "major",
+     "what": "Specify the authorization model, encryption approach, secrets handling, audit logging, backup/recovery architecture, failure handling, and resilience patterns. Record Architecture Decision Records (ADRs), risks, and required decisions.",
+     "whyHere": "Security mechanisms implement the security requirements from Phase 4.3. They depend on the tech stack (6.2), component boundaries (6.3), and data model (6.4). Backup/recovery architecture is decided here; operational backup procedures will be documented in Phase 11.4.",
+     "whyNotElsewhere": "Phase 4.3 defines WHAT must be protected. Phase 6.6 defines HOW. Phase 9.3 plans verification. Phase 11.4 defines operational procedures. Each owns a distinct layer.",
+     "output": "Security Architecture, Resilience Requirements, and ADRs",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.3 = security requirements. Phase 6.6 = security architecture and backup/ recovery decisions. Phase 11.4 = operational backup/recovery procedures (references Phase 6.6 objectives)."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Architecture decisions recorded",
+       "types": [
+        "ArchDecision"
+       ],
+       "min": 3
+      },
+      {
+       "label": "Security part described",
+       "types": [
+        "ArchComponent"
+       ],
+       "min": 1,
+       "where": {
+        "kind": "security"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P6.7",
+     "code": "6.7",
+     "title": "Architecture-to-Design Validation",
+     "tier": "light",
+     "what": "Cross-check the schema (6.4) and API contracts (6.5) against Phase 5 screen fields and actions and Phase 4 requirements. Identify missing data, unsupported UI actions, unnecessary fields, and affected designs. Route changes back to the relevant artifact.",
+     "whyHere": "This is the first moment where UI designs, data models, and API contracts all exist. Crosschecking them reveals mismatches that would otherwise surface during implementation.",
+     "whyNotElsewhere": "This check cannot happen earlier because the schema and APIs do not exist yet. It cannot wait until Phase 7 because Phase 7 builds on the assumption that UI, schema, and API are consistent.",
+     "output": "UI–Schema–API Consistency Report",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Check decision recorded",
+       "types": [
+        "Decision"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P6.8",
+     "code": "6.8",
+     "title": "Design Re-Baseline",
+     "tier": "support",
+     "what": "Consume the Consistency Report from 6.7. Update affected screens, wireframes, and design specifications to reflect schema/API realities. Re-version the design baseline. The provisional baseline from Phase 5.6 becomes the final design baseline.",
+     "whyHere": "Phase 6.7 found mismatches. This step resolves them. Without it, the design baseline from Phase 5.6 remains incorrect, and Phase 7 builds on inconsistent foundations.",
+     "whyNotElsewhere": "This step cannot exist before 6.7 (there is nothing to fix). It cannot be in Phase 7 because Phase 7 should work from a validated, consistent design.",
+     "output": "Final Design Baseline (re-versioned)",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Architecture signed off",
+       "gate": 6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 7,
+   "engine": 7,
+   "title": "Detailed Development Specification",
+   "objective": "Create the implementation-ready reference pack by resolving how features, screens, data, and APIs work together at implementable detail.",
+   "perspectives": {
+    "ceo": "This is the last planning phase before development work is broken into tasks. The specification pack is the contract between product and engineering.",
+    "user": "Users are not directly involved, but the quality of specifications determines whether the built product matches intended user experience.",
+    "developer": "This is the developer's implementation blueprint — every question a developer might ask should be answered here.",
+    "application": "The system's complete behaviour specification is finalized."
+   },
+   "exit": "Exit when implementation specifications are consistent, versioned, and ready for developer handoff.",
+   "steps": [
+    {
+     "id": "P7.1",
+     "code": "7.1",
+     "title": "Feature & Module Specifications",
+     "tier": "core",
+     "what": "Break the approved scope into modules and features. Document behaviour, ownership boundaries, priorities, and links to requirement IDs from Phase 4.",
+     "whyHere": "All upstream artifacts — scope (Phase 2), flows (Phase 3), requirements (Phase 4), designs (Phase 5), schema and APIs (Phase 6) — are now complete and validated. This step weaves them into developer-facing specifications.",
+     "whyNotElsewhere": "Module specs cannot be written before architecture (Phase 6) because module boundaries follow component boundaries. They cannot be in Phase 8 (Dev Planning) because Phase 8 plans the work; Phase 7 defines the work.",
+     "output": "Feature and Module Specifications",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Feature specifications written",
+       "types": [
+        "FeatureSpec"
+       ],
+       "min": 3
+      }
+     ]
+    },
+    {
+     "id": "P7.2",
+     "code": "7.2",
+     "title": "UI–Data–API Mapping",
+     "tier": "major",
+     "what": "For each relevant screen and action, map fields to schema entities and API operations. Document read/write behaviour, source of truth, and permission requirements. When mismatches are found, produce a Design/Architecture Change Request.",
+     "whyHere": "The final design baseline (Phase 6.8), the schema (Phase 6.4), and the API contracts (Phase 6.5) are all locked. This step maps the connections between them at field level.",
+     "whyNotElsewhere": "This mapping cannot exist before Phase 6 because the schema and APIs do not exist. It cannot be delayed to Phase 8 because development tasks reference these mappings.",
+     "output": "UI–Data–API Mapping Matrix (and Change Requests if mismatches found)",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 6.7 owns the architectural review (are the required data and capabilities present at all?) and Phase 6.8 resolves its findings. Phase 7.2 starts from the 6.7 Consistency Report and the final design baseline and produces only the field-level mapping; it does not repeat the 6.7 review. A mismatch found here that 6.7 missed is treated as a defect: raise a Design/ Architecture Change Request and log it against 6.7."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Specs with screen and server needs",
+       "types": [
+        "FeatureSpec"
+       ],
+       "min": 3,
+       "has": [
+        "ui_needs",
+        "backend_needs"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P7.3",
+     "code": "7.3",
+     "title": "Business Logic, Validation & State Rules",
+     "tier": "major",
+     "what": "Specify calculations, workflows, state transitions, field validation patterns, search/filter/ sort behaviour, error codes, permission checks, and edge cases at implementable detail. Reference Phase 4.4 rule IDs for every rule.",
+     "whyHere": "Phase 4.4 defined WHAT rules exist. This step defines HOW they are implemented — exact formulas, regex patterns, state machine definitions, and error responses.",
+     "whyNotElsewhere": "Implementation detail cannot be written before the schema (Phase 6.4) and APIs (Phase 6.5) exist, because validation patterns reference data types and API error codes reference API contracts.",
+     "output": "Detailed Behaviour and Business Rules Specification",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.4 owns the WHAT (this rule exists). Phase 7.3 owns the HOW (implementable detail). Phase 7.3 references Phase 4.4 rule IDs — it does not redefine the rules."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Specs with business rules",
+       "types": [
+        "FeatureSpec"
+       ],
+       "min": 3,
+       "has": [
+        "business_rules"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P7.4",
+     "code": "7.4",
+     "title": "Feature Acceptance & Verification References",
+     "tier": "support",
+     "what": "Ensure feature-level acceptance criteria are testable and carry verification references; the test cases themselves are designed in Phase 9.2. Add feature-integration conditions (crossfeature interactions, end-to-end scenarios) that are NOT already covered by Phase 4.5 requirementlevel acceptance criteria. Do not duplicate the complete test strategy from Phase 9.",
+     "whyHere": "Feature-level acceptance goes beyond individual requirements — it tests how features work together. This can only be specified after modules and mappings (7.1–7.3) are complete.",
+     "whyNotElsewhere": "Phase 4.5 owns requirement-level acceptance (canonical). Phase 7.4 adds feature-integration conditions not coverable at requirement level. Phase 9.2 derives test cases from both. Phase 7.4 never rewrites Phase 4.5 criteria.",
+     "output": "Feature Acceptance Specification and Verification Links",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.5 = requirement-level acceptance (source of truth). Phase 7.4 = featureintegration acceptance (additive). Phase 9.2 = test case design (derived from both)."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Specs with testing needs",
+       "types": [
+        "FeatureSpec"
+       ],
+       "min": 3,
+       "has": [
+        "testing_requirements"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P7.5",
+     "code": "7.5",
+     "title": "KPI Data Source Validation",
+     "tier": "light",
+     "what": "Revisit the KPI Definition Register from Phase 2.2. Now that the schema (Phase 6.4) and API contracts (Phase 6.5) exist, validate that every KPI can actually be measured. Fill in data source, calculation method, and baseline for KPIs that were marked pending. Flag KPIs that cannot be measured with the current schema and propose schema changes or analytics instrumentation.",
+     "whyHere": "Phase 2.2 defined WHAT to measure and WHY but could not specify HOW because the data model did not exist. The schema now exists. This is the first moment where KPI feasibility can be assessed.",
+     "whyNotElsewhere": "Earlier phases lack a data model. Later phases assume KPIs are measurable. This step closes the gap.",
+     "output": "Validated KPI Register (data sources confirmed or change requests raised)",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Success measures defined",
+       "types": [
+        "Metric"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P7.6",
+     "code": "7.6",
+     "title": "Cross-Artifact Consistency & Handoff",
+     "tier": "support",
+     "what": "Resolve inconsistencies among scope, requirements, flows, UI, schema, and API contracts. Version the reference pack. List remaining decisions explicitly. Route any Design/ Architecture Change Requests from 7.2 through change control.",
+     "whyHere": "This is the quality gate before development planning. Every artifact must be consistent, or developers will find contradictions during implementation.",
+     "whyNotElsewhere": "Consistency checking cannot happen before all artifacts exist. It must happen before Phase 8 breaks work into tasks.",
+     "output": "Approved Development Specification Pack",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Specification signed off",
+       "gate": 7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "engine": 8,
+   "title": "Development Planning",
+   "objective": "Plan and coordinate implementation work. Sanchalak does not write or execute code.",
+   "perspectives": {
+    "ceo": "Sprint plans and milestones set delivery expectations.",
+    "user": "Users are not directly involved; planning quality determines whether promised features arrive on time.",
+    "developer": "This is the primary planning phase for developers — clear tasks, dependencies, and acceptance criteria.",
+    "application": "The development workflow defines how the application will be built."
+   },
+   "exit": "Exit when work is assigned and planned, dependencies and acceptance criteria are clear, and readiness issues are recorded.",
+   "steps": [
+    {
+     "id": "P8.1",
+     "code": "8.1",
+     "title": "Work Breakdown & Traceability",
+     "tier": "core",
+     "what": "Create development tasks from the approved specification pack (Phase 7). Link each task to features, requirements, and deliverables.",
+     "whyHere": "The spec pack (Phase 7) is complete and consistent. Tasks can now be derived with clear scope, acceptance criteria, and traceability to upstream artifacts.",
+     "whyNotElsewhere": "Tasks cannot be created before specs exist. Creating them in Phase 7 would mix specification with planning concerns (estimates, assignments, sprints).",
+     "output": "Traceable Development Backlog",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Work items created",
+       "types": [
+        "WorkItem"
+       ],
+       "min": 5,
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P8.2",
+     "code": "8.2",
+     "title": "Dependencies, Priorities & Milestones",
+     "tier": "major",
+     "what": "Order tasks, record dependencies, set priority, estimates, and milestone targets with assumptions.",
+     "whyHere": "Dependencies emerge from the task breakdown (8.1) and the module/API structure (Phase 7). Milestones align tasks with business timelines from Phase 2.",
+     "whyNotElsewhere": "Ordering cannot happen before tasks exist (8.1). Milestone targets depend on knowing the full task landscape.",
+     "output": "Dependency Map and Milestone Plan",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Release or milestone planned",
+       "types": [
+        "Release"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Work items created",
+       "types": [
+        "WorkItem"
+       ],
+       "min": 5,
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P8.3",
+     "code": "8.3",
+     "title": "Sprint, Ownership & Capacity Planning",
+     "tier": "major",
+     "what": "Group work into sprints or releases. Assign proposed owners and roles. Identify capacity and skill constraints. Account for the test effort estimated in the Draft Test Strategy (Phase 9.1) — sprint capacity must include verification work, not just development tasks.",
+     "whyHere": "Sprint planning depends on the ordered backlog (8.2) and Draft Test Strategy scope (Phase 9.1). Without factoring test effort, sprints will be over-committed.",
+     "whyNotElsewhere": "Sprint planning before the backlog is ordered (8.2) produces unbalanced sprints. Waiting until Phase 9 to plan sprints means development starts without a plan.",
+     "output": "Sprint Plan and Ownership Matrix",
+     "notes": [
+      {
+       "label": "Dependency note",
+       "text": "Only the Draft Test Strategy (Phase 9.1) is required before 8.3. Draft 9.1 runs in parallel with 8.1–8.2; Final 9.1 is confirmed after 8.3. The two overlap by design, and no step waits on the other's final output, so there is no circular unlock."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Work items with an owner",
+       "types": [
+        "WorkItem"
+       ],
+       "min": 3,
+       "has": [
+        "assignee"
+       ],
+       "live": true
+      },
+      {
+       "label": "Team capacity noted",
+       "types": [
+        "Capacity"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P8.4",
+     "code": "8.4",
+     "title": "Development Workflow & Definition of Done",
+     "tier": "support",
+     "what": "Document branch/PR/review conventions, task states, coding and review expectations, documentation rules, and definition of done. Note developer-tooling needs only; environment specifications are owned by Phase 10.2.",
+     "whyHere": "The workflow governs how the backlog (8.1) is executed. It must be agreed before development starts.",
+     "whyNotElsewhere": "Workflow conventions cannot be finalized before the tech stack (Phase 6.2) and module boundaries (7.1) are known. Defining them in Phase 9 is too late — development starts after Phase 8.",
+     "output": "Development Workflow Guide",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Specs with a definition of done",
+       "types": [
+        "FeatureSpec"
+       ],
+       "min": 1,
+       "has": [
+        "definition_of_done"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P8.5",
+     "code": "8.5",
+     "title": "Delivery Readiness & Blocker Handling",
+     "tier": "support",
+     "what": "Check task clarity, ownership, dependencies, and acceptance criteria. Define blocker reporting, escalation, and change/delay impact handling.",
+     "whyHere": "This is the readiness gate before development begins. It catches missing information, unclear tasks, and unresolved blockers.",
+     "whyNotElsewhere": "Readiness cannot be checked before tasks, sprints, and workflows are defined (8.1–8.4). It should not be in Phase 9 because development readiness and test readiness are separate concerns.",
+     "output": "Readiness Record and Blocker Protocol",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Delivery signed off",
+       "gate": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "engine": 9,
+   "title": "QA, Testing, Security & Acceptance Planning",
+   "objective": "Plan verification and acceptance. Sanchalak records plans but does not execute tests.",
+   "perspectives": {
+    "ceo": "Test planning determines whether quality meets release standards.",
+    "user": "Test plans verify that the product works as users expect, including edge cases and error states.",
+    "developer": "Test cases and defect workflows define how developers verify their work.",
+    "application": "Performance, security, and reliability verification is planned."
+   },
+   "exit": "Exit when the verification approach, cases, defect workflow, and acceptance rules are documented. 10 Deployment & Release Planning",
+   "steps": [
+    {
+     "id": "P9.1",
+     "code": "9.1",
+     "title": "Test Strategy & Coverage Model",
+     "tier": "major",
+     "what": "Define test levels and types, scope, roles, test-environment requirements (specified in Phase 10.2), test-data needs, entry and exit conditions, and coverage goals.",
+     "whyHere": "The Draft Test Strategy depends only on the specification pack (Phase 7), the architecture (Phase 6), and the non-functional requirements (4.2), not on the development plan. It can therefore be produced while Phase 8 is under way and give Phase 8.3 its test-effort estimate. The Final Test Strategy is confirmed after the sprint plan (8.3) exists, because milestones, environments, and capacity can change coverage goals and entry/exit conditions.",
+     "whyNotElsewhere": "Test strategy before Phase 7 lacks specifications to test. Moving it to after Phase 8 completely is too late — sprint plans should already account for test effort.",
+     "output": "Test Strategy and Coverage Plan",
+     "notes": [
+      {
+       "label": "Dependency note",
+       "text": "One step ID, two states. Draft: starts once Phase 7 specifications are mature, runs in parallel with 8.1–8.3, and unlocks 8.3. Final: confirmed after 8.3 and unlocks 9.2. Phase 8.3 requires the Draft only; Final requires 8.3. Detailed test case design (9.2) depends on the Final strategy and the finalized specifications (7.6)."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Test plan written",
+       "types": [
+        "TestPlan"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P9.2",
+     "code": "9.2",
+     "title": "Test Scenario & Case Design",
+     "tier": "core",
+     "what": "Derive positive, negative, boundary, and role-based test cases from requirements (Phase 4) and feature acceptance criteria (Phase 4.5 and Phase 7.4). Define expected results and traceability.",
+     "whyHere": "Test cases are derived from acceptance criteria (Phase 4.5 and Phase 7.4) the specification pack (Phase 7), and the Final Test Strategy (Phase 9.1). All inputs are now available.",
+     "whyNotElsewhere": "Writing test cases before specifications (Phase 7) means testing against incomplete definitions. Phase 4.5 acceptance criteria and Phase 7.4 feature acceptance are both inputs — Phase 9.2 derives test cases from both but does not rewrite either.",
+     "output": "Test Scenario and Case Catalogue",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.5 = requirement-level acceptance criteria (what \"done\" means). Phase 7.4 = feature-integration acceptance (cross-feature conditions). Phase 9.2 = test cases (how to verify both). Phase 9.2 never rewrites acceptance criteria — it designs tests that verify them."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Test cases written",
+       "types": [
+        "TestCase"
+       ],
+       "min": 10
+      }
+     ]
+    },
+    {
+     "id": "P9.3",
+     "code": "9.3",
+     "title": "Security, Performance & Quality Assessment Plan",
+     "tier": "major",
+     "what": "Specify planned security checks, threat scenarios, performance testing, accessibility verification, reliability checks, and regression planning. Record applicable standards and scope.",
+     "whyHere": "Security assessment verifies the security architecture (Phase 6.6) against the security requirements (Phase 4.3). Performance testing verifies non-functional requirements (Phase 4.2). Both need the complete architecture and specifications as inputs.",
+     "whyNotElsewhere": "Phase 4.3 defines WHAT must be protected. Phase 6.6 defines HOW. Phase 9.3 plans HOW TO VERIFY. Each is a distinct responsibility.",
+     "output": "Security and Quality Assessment Plan",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 4.3 = security requirements. Phase 6.6 = security mechanisms. Phase 9.3 = security verification plan. Three phases, three layers."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Security tests written",
+       "types": [
+        "TestCase"
+       ],
+       "min": 1,
+       "where": {
+        "kind": "security"
+       }
+      },
+      {
+       "label": "Speed tests written",
+       "types": [
+        "TestCase"
+       ],
+       "min": 1,
+       "where": {
+        "kind": "performance"
+       }
+      },
+      {
+       "label": "Security findings reviewed",
+       "types": [
+        "SecurityFinding"
+       ],
+       "min": 1,
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P9.4",
+     "code": "9.4",
+     "title": "Defect, Evidence & Retest Workflow",
+     "tier": "major",
+     "what": "Define defect fields, severity levels, priority, owner, evidence requirements, retest process, closure criteria, and risk-acceptance process.",
+     "whyHere": "The defect workflow must be agreed before testing begins. It depends on the development workflow (Phase 8.4) for integration (how defects flow back to developers).",
+     "whyNotElsewhere": "Defect workflows cannot be defined before development workflow conventions (Phase 8.4). They should not be in Phase 8 because defect management is a QA concern, not a development planning concern.",
+     "output": "Defect and Evidence Workflow",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Test runs recorded",
+       "types": [
+        "TestRun"
+       ],
+       "min": 3,
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P9.5",
+     "code": "9.5",
+     "title": "Acceptance & Sign-off Rules",
+     "tier": "core",
+     "what": "Define acceptance thresholds, required reports and evidence, authorized decisionmakers, and outcomes (pass, conditional acceptance, or rejection).",
+     "whyHere": "Sign-off rules depend on the test strategy (9.1), test cases (9.2), and defect workflow (9.4). They define the gate between testing and release.",
+     "whyNotElsewhere": "Acceptance rules before the test strategy is defined are abstract. Moving them to Phase 10 (Release) would mix verification governance with deployment logistics.",
+     "output": "Acceptance and Sign-off Plan",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Customer / sponsor acceptance",
+       "types": [
+        "UatSignoff"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Testing signed off",
+       "gate": 9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 10,
+   "engine": 10,
+   "title": "Deployment & Release Planning",
+   "objective": "Prepare a controlled release, including environments, migration, verification, and rollback — without deploying.",
+   "perspectives": {
+    "ceo": "Release planning determines go-to-market timing and risk.",
+    "user": "Users experience the release through communication, onboarding, and availability.",
+    "developer": "Environment specs and deployment sequences define how code reaches production.",
+    "application": "Infrastructure, migration, and rollback procedures are specified."
+   },
+   "exit": "Exit when release prerequisites, verification, rollback, operationalreadiness prerequisites, and the go/no-go decision process are documented.",
+   "steps": [
+    {
+     "id": "P10.1",
+     "code": "10.1",
+     "title": "Release Scope & Version",
+     "tier": "major",
+     "what": "Identify release version, included features, target dates, owners, dependencies, limitations, and communication needs.",
+     "whyHere": "The development backlog (Phase 8) and test plans (Phase 9) define what will be built and verified. This step packages them into a release.",
+     "whyNotElsewhere": "Release scope cannot be defined before development and test planning. It should not be in Phase 11 (Operations) because release and operations are distinct concerns — release is a one-time event; operations is ongoing.",
+     "output": "Release Definition",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Release planned",
+       "types": [
+        "Release"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Release notes written",
+       "types": [
+        "DeployRelease"
+       ],
+       "min": 1,
+       "has": [
+        "release_notes"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P10.2",
+     "code": "10.2",
+     "title": "Environment & Infrastructure Plan",
+     "tier": "support",
+     "what": "Specify development, staging, and production environment needs: hosting, compute, storage, network, access, secrets, capacity, and cost assumptions.",
+     "whyHere": "Environment specs depend on the architecture (Phase 6) and the release scope (10.1). They define WHERE the application runs.",
+     "whyNotElsewhere": "Phase 6 defines the system architecture. Phase 10.2 specifies the concrete environments that host it for this release. Phase 11 specifies ongoing operational monitoring of those environments. The boundary: Phase 10.2 = setup. Phase 11 = ongoing management.",
+     "output": "Environment and Infrastructure Specification",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Staging release prepared",
+       "types": [
+        "DeployRelease"
+       ],
+       "min": 1,
+       "where": {
+        "environment": "staging"
+       }
+      },
+      {
+       "label": "Infrastructure part described",
+       "types": [
+        "ArchComponent"
+       ],
+       "min": 1,
+       "where": {
+        "kind": "infrastructure"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P10.3",
+     "code": "10.3",
+     "title": "Deployment, Migration & Rollback Plan",
+     "tier": "core",
+     "what": "Document deployment sequence, prerequisites, compatibility requirements, migration steps, rollback triggers, recovery actions, and owners.",
+     "whyHere": "Deployment planning depends on the environment spec (10.2), the schema (Phase 6.4), and the release scope (10.1). Migration steps reference the data model.",
+     "whyNotElsewhere": "Deployment cannot be planned before environments are specified (10.2). It should not be in Phase 11 because deployment is a release activity; operations begins after deployment.",
+     "output": "Deployment, Migration, and Rollback Plan",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Deployment with a rollback plan",
+       "types": [
+        "DeployRelease"
+       ],
+       "min": 1,
+       "has": [
+        "rollback_plan"
+       ]
+      },
+      {
+       "label": "Migration recorded",
+       "types": [
+        "DeployRelease"
+       ],
+       "min": 1,
+       "has": [
+        "migration_record"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P10.4",
+     "code": "10.4",
+     "title": "Release Verification & Communication",
+     "tier": "support",
+     "what": "Plan smoke and critical checks post-deployment, evidence capture, release-status updates, stakeholder communication, and failure escalation.",
+     "whyHere": "Verification planning depends on the test strategy (Phase 9) and the deployment plan (10.3). Communication planning depends on the release scope (10.1).",
+     "whyNotElsewhere": "Post-deployment checks cannot be planned before the deployment sequence is known. Stakeholder communication cannot be planned before the release scope is defined.",
+     "output": "Release Verification and Communication Plan",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Smoke test passed",
+       "types": [
+        "DeployRelease"
+       ],
+       "min": 1,
+       "where": {
+        "smoke_result": "pass"
+       }
+      }
+     ]
+    },
+    {
+     "id": "P10.5",
+     "code": "10.5",
+     "title": "Release Readiness Decision",
+     "tier": "core",
+     "what": "Confirm test and acceptance status, known defects, prerequisites, rollback readiness, release-critical operational readiness (11.1–11.4), and required approvals. Record a go, no-go, or conditional decision.",
+     "whyHere": "This is the final gate before deployment. All planning (10.1–10.4) and all testing (Phase 9) must be complete. Release-critical operational readiness must also exist: the support model (11.1), alert specification (11.2), incident response plan (11.3), and backup/recovery procedures (11.4) must be approved at least to release-minimum level. Phase 11.5 stays the final handoff record and does not gate this decision.",
+     "whyNotElsewhere": "The readiness decision cannot precede the planning it evaluates. It should not be in Phase 11 because operations begins after the release is approved.",
+     "output": "Release Readiness Decision",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Release signed off",
+       "gate": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 11,
+   "engine": 11,
+   "title": "Operations & Observability Planning",
+   "objective": "Define future support, monitoring, incident response, maintenance, and recovery responsibilities.",
+   "perspectives": {
+    "ceo": "Operations planning determines ongoing cost, reliability, and customer trust.",
+    "user": "Users experience operations through uptime, response times, and support quality.",
+    "developer": "On-call, maintenance, and runbook responsibilities are defined.",
+    "application": "The system's health monitoring, alerting, and recovery mechanisms are planned."
+   },
+   "exit": "Exit when operational ownership, observability, incident, and recovery plans are documented for handoff. 12 Feedback & Iteration",
+   "steps": [
+    {
+     "id": "P11.1",
+     "code": "11.1",
+     "title": "Service Ownership & Support Model",
+     "tier": "support",
+     "what": "Define operational owners, support roles, coverage expectations, vendor dependencies, handoffs, and escalation contacts.",
+     "whyHere": "The product is about to be (or has been) deployed. Operational ownership must be established before incidents occur.",
+     "whyNotElsewhere": "Ownership cannot be meaningfully defined before the system architecture (Phase 6) and team structure (Phase 8.3) are known. It should not be in Phase 10 because Phase 10 handles the release event; Phase 11 handles ongoing operations.",
+     "output": "Service Ownership and Support Model",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Runbooks with an owner",
+       "types": [
+        "Runbook"
+       ],
+       "min": 1,
+       "has": [
+        "owner"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "P11.2",
+     "code": "11.2",
+     "title": "Observability & Alert Specification",
+     "tier": "core",
+     "what": "Specify service-level indicators, logs, metrics, traces, dashboards, alert thresholds, notification routing, retention, and sensitive-data handling.",
+     "whyHere": "Observability depends on the architecture (Phase 6), the data model (Phase 6.4), and the non-functional requirements (Phase 4.2) that define what \"healthy\" means.",
+     "whyNotElsewhere": "Phase 10.2 specifies the infrastructure. Phase 11.2 specifies how to monitor it. The boundary: Phase 10.2 = what exists. Phase 11.2 = how to watch it.",
+     "output": "Monitoring and Alert Specification",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Alerts defined",
+       "types": [
+        "Alert"
+       ],
+       "min": 3
+      }
+     ]
+    },
+    {
+     "id": "P11.3",
+     "code": "11.3",
+     "title": "Incident Response & Communication",
+     "tier": "major",
+     "what": "Define incident categories and severity levels, response roles, reporting channels, escalation procedures, communication protocols, and post-incident review process.",
+     "whyHere": "Incident response depends on the observability spec (11.2) and the ownership model (11.1). It cannot be planned before knowing what alerts exist and who is responsible.",
+     "whyNotElsewhere": "Phase 10.4 handles release-specific failure escalation. Phase 11.3 handles ongoing incident response. The boundary: Phase 10 = release events. Phase 11 = ongoing operations.",
+     "output": "Incident Response Plan",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Runbooks written",
+       "types": [
+        "Runbook"
+       ],
+       "min": 2
+      }
+     ]
+    },
+    {
+     "id": "P11.4",
+     "code": "11.4",
+     "title": "Maintenance, Backup & Recovery",
+     "tier": "support",
+     "what": "Define maintenance and change practices, backup procedures, backup retention schedules, runbooks, and continuity expectations against the recovery objectives (RPO, RTO) set in Phase 6.6. Reference Phase 6.6 backup/recovery architecture decisions — this step defines operational procedures, not architecture.",
+     "whyHere": "Operational backup procedures depend on the recovery architecture (Phase 6.6) and the infrastructure spec (Phase 10.2). This step translates architecture decisions into operational runbooks.",
+     "whyNotElsewhere": "Phase 6.6 owns backup/recovery architecture decisions (RPO, RTO, strategy). Phase 11.4 owns operational procedures (how backups are performed, tested, and restored). The boundary: Phase 6.6 = architecture. Phase 11.4 = operations.",
+     "output": "Maintenance and Recovery Plan",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 6.6 = backup/recovery architecture (RPO, RTO, strategy decisions). Phase 10.2 = environment infrastructure. Phase 11.4 = operational backup/recovery procedures (runbooks, schedules, testing). Three phases, three distinct responsibilities."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Runbook document linked",
+       "types": [
+        "Runbook"
+       ],
+       "min": 1,
+       "has": [
+        "doc_link"
+       ]
+      },
+      {
+       "label": "Health review done",
+       "types": [
+        "HealthReview"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P11.5",
+     "code": "11.5",
+     "title": "Operational Readiness Handoff",
+     "tier": "major",
+     "what": "Check support, observability, incident, and recovery documentation. Record unresolved operational risks, owners, and readiness decision.",
+     "whyHere": "This is the quality gate for operational readiness. All operational planning (11.1–11.4) must be complete. The release-critical subset of 11.1–11.4 is already a prerequisite for the Phase 10.5 go decision; 11.5 records the final handoff and any residual operational risks accepted at release.",
+     "whyNotElsewhere": "Readiness cannot be checked before the planning it evaluates. It should not be in Phase 12 because Phase 12 handles feedback and iteration, not operational readiness.",
+     "output": "Operational Readiness Record and Support Handoff",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Operations signed off",
+       "gate": 11
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "n": 12,
+   "engine": 12,
+   "title": "Feedback & Iteration",
+   "objective": "Turn feedback and observed outcomes into prioritized, traceable changes routed back to the appropriate lifecycle phase.",
+   "perspectives": {
+    "ceo": "This phase closes the business loop — did we achieve the outcomes we committed to?",
+    "user": "User feedback drives the next iteration of the product.",
+    "developer": "Defects, enhancements, and technical debt are prioritized and routed back into the development cycle.",
+    "application": "System performance data and operational findings feed back into architecture and design decisions."
+   },
+   "exit": "Exit when feedback is triaged, impacts and decisions are traceable, and approved changes have a clear route into the lifecycle.",
+   "steps": [
+    {
+     "id": "P12.1",
+     "code": "12.1",
+     "title": "Feedback Intake & Linking",
+     "tier": "major",
+     "what": "Capture feedback source, date, context, affected feature, and supporting evidence where available. Link to existing product, task, and requirement records.",
+     "whyHere": "Feedback arrives after the product is deployed (Phase 10) and operational (Phase 11). This step ensures feedback enters the lifecycle as traceable records, not informal notes.",
+     "whyNotElsewhere": "Feedback cannot be collected before the product exists. It should not be processed in Phase 11 because operational monitoring and user feedback are different inputs — Phase 11 handles system health; Phase 12 handles product direction.",
+     "output": "Feedback Register",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Feedback collected",
+       "types": [
+        "Feedback"
+       ],
+       "min": 3,
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P12.2",
+     "code": "12.2",
+     "title": "Impact & Pattern Analysis",
+     "tier": "support",
+     "what": "Group recurring issues and assess user and business impact using available evidence. Separate observed facts from hypotheses and root-cause questions.",
+     "whyHere": "Raw feedback (12.1) must be analyzed before decisions are made. Pattern analysis requires enough feedback to identify trends.",
+     "whyNotElsewhere": "Analysis cannot happen before feedback is collected (12.1). It should not be skipped — deciding on individual feedback items without analyzing patterns leads to reactive, incoherent changes.",
+     "output": "Impact Analysis and Findings",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Feedback looked at (triaged)",
+       "types": [
+        "Feedback"
+       ],
+       "min": 2,
+       "where": {
+        "status": [
+         "Triaged",
+         "Planned",
+         "Done",
+         "Rejected"
+        ]
+       },
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P12.3",
+     "code": "12.3",
+     "title": "Prioritization & Disposition",
+     "tier": "core",
+     "what": "Rank defects, enhancements, and new ideas by value, urgency, effort, risk, and dependencies. Decide whether to fix, defer, investigate further, or reject.",
+     "whyHere": "Prioritization depends on impact analysis (12.2). Disposition decisions determine what enters the next iteration.",
+     "whyNotElsewhere": "Prioritizing before analysis (12.2) is reactive. Deferring prioritization to Phase 2 of the next iteration would delay action on critical defects.",
+     "output": "Prioritized Improvement Backlog and Disposition",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Feedback decided on",
+       "types": [
+        "Feedback"
+       ],
+       "min": 2,
+       "where": {
+        "status": [
+         "Planned",
+         "Done",
+         "Rejected"
+        ]
+       },
+       "live": true
+      }
+     ]
+    },
+    {
+     "id": "P12.4",
+     "code": "12.4",
+     "title": "Change Impact & Routing",
+     "tier": "major",
+     "what": "Identify affected scope, requirements, flows, screens, schema, APIs, tests, and release plans. Route each approved change to the earliest relevant phase and follow change control. Scopeimpacting changes MUST go through the Phase 2.5 change-control process before routing to implementation phases.",
+     "whyHere": "Routing requires understanding which lifecycle artifacts are affected. This step ensures changes enter the lifecycle at the right point rather than being informally patched.",
+     "whyNotElsewhere": "Routing cannot happen before disposition (12.3) determines what is approved. It should not be done informally — without explicit routing, changes bypass the lifecycle and create inconsistencies.",
+     "output": "Change Impact Assessment and Phase Routing",
+     "notes": [
+      {
+       "label": "Overlap guard",
+       "text": "Phase 12 does not create new requirements, tasks, documents, or competitor records. It links to canonical records in their owning phases. Changes routed to Phase 4 produce new requirement entries in Phase 4's catalogue, not duplicate entries in Phase 12."
+      }
+     ],
+     "evidence": [
+      {
+       "label": "Change requests raised",
+       "types": [
+        "ChangeRequest"
+       ],
+       "min": 1
+      }
+     ]
+    },
+    {
+     "id": "P12.5",
+     "code": "12.5",
+     "title": "Outcome Review & Next Iteration",
+     "tier": "core",
+     "what": "Compare intended outcomes (Phase 2.2 KPIs) with available measurements (Phase 7.5 validated KPI data sources). Record lessons learned and deferred items. Approve next iteration priorities without repeating original research unnecessarily.",
+     "whyHere": "Outcome review can only happen after the product has been in use long enough to generate data. It closes the loop from Phase 2 (objectives) through Phase 12 (results).",
+     "whyNotElsewhere": "Outcome review before sufficient data exists is premature. It should not be in Phase 2 of the next iteration because it evaluates the current iteration, not the next one.",
+     "output": "Iteration Plan and Outcome Review",
+     "notes": [],
+     "evidence": [
+      {
+       "label": "Lessons written",
+       "types": [
+        "Lesson"
+       ],
+       "min": 1
+      },
+      {
+       "label": "Improvement signed off",
+       "gate": 12
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

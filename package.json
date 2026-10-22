@@ -1,0 +1,27 @@
+{
+  "name": "sahayogi-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sahayogi product lifecycle platform: NestJS API + Next.js web, 13-phase lifecycle (Phase 0-12)",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "seed": "npm run seed -w apps/api",
+    "test": "npm test -w apps/api",
+    "check": "npm run check -w apps/api && npx tsc --noEmit -p apps/web/tsconfig.json",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" --log-level warn"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "typescript-eslint": "^8.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0"
+  }
+}

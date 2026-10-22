@@ -1,0 +1,85 @@
+'use client';
+/** Small pieces of the file screens: paste-the-text, paid-assistant cost bar and estimate, "use as evidence". Prototype: files.js (SDF) + fileviewer.js */
+import { useState } from 'react';
+import { Field, Modal, useAction, useConfirm } from '@/components/kit';
+import { api, useApi } from '@/lib/api';
+
+export const needsPaste = (a: any, v: any) => !v.pasted && (v.extraction_status !== 'ok' || (v.warnings || []).length > 0 || a.extracted_text_status !== 'ok');
+
+export function PasteBox({ pid, id, again, onSaved }: { pid: string; id: string; again?: boolean; onSaved: () => void }) {
+  const [text, setText] = useState('');
+  const act = useAction();
+  return (
+    <div>
+      <div className="strong">{again ? 'Paste the text again' : 'Paste the text instead'}</div>
+      <p className="small muted">Open the file yourself, copy the words you need (or type them), and paste them here. The assistant can then read them. It will always be shown as pasted by you, not read from the file.</p>
+      <textarea rows={8} aria-label="Paste the text of the file here" value={text} placeholder="Paste the words of the file here, for example: Pro plan: Rs 2,998 per user per month" onChange={(e) => setText(e.target.value)} style={{ width: '100%' }} />
+      {act.box}
+      <div style={{ marginTop: 8 }}>
+        <button className="btn primary" disabled={act.busy || !text.trim()} onClick={() => act.run(async () => { await api(`/attachments/${id}/paste-text`, { method: 'POST', body: { text }, product: pid }); setText(''); onSaved(); })}>{again ? 'Replace the pasted text' : 'Save the pasted text'}</button>
+      </div>
+    </div>
+  );
+}
+
+/** This month's paid-assistant spend with a way to change the limit. Renders nothing outside live mode. */
+export function CostBar({ pid }: { pid: string }) {
+  const { data: u, reload } = useApi<any>('/assistant/usage', pid);
+  const [edit, setEdit] = useState(false);
+  const [cap, setCap] = useState('0');
+  const act = useAction();
+  if (!u || !u.live) return null;
+  return (
+    <div className={`callout ${u.cap_reached ? 'bad' : 'warn'}`} style={{ margin: '10px 0' }}>
+      <b>Paid assistant, this month: </b>Rs {u.month.spent_inr} in {u.month.calls} {u.month.calls === 1 ? 'run' : 'runs'} (estimates unless the service reported exact figures). {u.cap_inr > 0 ? `Monthly limit: Rs ${u.cap_inr}${u.cap_reached ? ', reached: no more paid runs until next month or a higher limit.' : '.'}` : 'No monthly limit is set.'}{' '}
+      <button className="btn xs" onClick={() => { setCap(String(u.cap_inr || 0)); setEdit(true); }}>Change the limit</button>
+      {edit && (
+        <Modal title="Monthly limit for the paid assistant" onClose={() => setEdit(false)}>
+          <p>When this month&apos;s cost reaches the limit, the assistant refuses to run. Use 0 for no limit.</p>
+          <Field label="Limit in rupees per month"><input type="number" min={0} step="any" value={cap} onChange={(e) => setCap(e.target.value)} /></Field>
+          {act.box}
+          <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => { await api('/assistant/usage', { method: 'POST', body: { cap_inr: Number(cap) || 0 }, product: pid }); setEdit(false); reload(); })}>Save</button>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/** Ask for the estimate, ask the person, then run. Returns the result, or null if they cancelled. */
+export function useAssist(pid: string) {
+  const [ask, dialog] = useConfirm();
+  const run = async (attId: string, body: any) => {
+    let est: any = null;
+    try { est = await api(`/attachments/${attId}/assist/estimate`, { method: 'POST', body, product: pid }); } catch { est = null; }
+    if (est?.live) {
+      if (est.cap_reached || est.would_pass_cap) throw new Error(`The monthly limit for the paid assistant (Rs ${est.cap_inr}) ${est.cap_reached ? 'has been reached' : 'would be passed by this run'}. Nothing was sent. Raise the limit or wait until next month.`);
+      const e = est.estimate || {};
+      const ok = await ask(`${est.file}: the assistant will send this file's text to a paid online service. About Rs ${e.cost_inr} (about ${Number(e.tokens_in || 0).toLocaleString('en-IN')} tokens in, ${Number(e.tokens_out || 0).toLocaleString('en-IN')} out). ${e.basis || ''} These are estimates, not a bill. This month so far: Rs ${est.month?.spent_inr} in ${est.month?.calls} runs.${est.truncated ? ' The file is long, so only the first part of its text is sent.' : ''}`, `Yes, run it (about Rs ${e.cost_inr})`);
+      if (!ok) return null;
+      body = { ...body, confirm_cost: true };
+    }
+    return api<any>(`/attachments/${attId}/assist`, { method: 'POST', body, product: pid });
+  };
+  return { run, dialog };
+}
+
+/** "Use as evidence": keep a quote from the file and optionally attach it to an existing item. */
+export function EvidenceModal({ pid, attId, locator, quote, filename, onClose, onDone }: { pid: string; attId: string; locator: any; quote: string; filename: string; onClose: () => void; onDone: (r: any) => void }) {
+  const items = useApi<any>('/items?limit=3000', pid);
+  const [target, setTarget] = useState('');
+  const [q, setQ] = useState('');
+  const act = useAction();
+  const list = ((items.data?.items as any[]) || []).filter((i) => i.type !== 'Pointer' && i.type !== 'Attachment' && (!q || `${i.id} ${i.title}`.toLowerCase().includes(q.toLowerCase()))).slice(0, 60);
+  return (
+    <Modal title="Use this as evidence" onClose={onClose}>
+      <div className="small muted">in {filename}</div>
+      <blockquote style={{ margin: '6px 0 10px', padding: '6px 10px', borderLeft: '3px solid var(--sd-accent)' }}>“{quote}”</blockquote>
+      <Field label="Which item does it support?" help="Leave it empty to keep the quote as a note on this file."><input type="text" placeholder="Search id or title" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: '100%', marginBottom: 6 }} />
+        <select size={7} value={target} onChange={(e) => setTarget(e.target.value)} style={{ width: '100%' }}>{list.map((i) => <option key={i.id} value={i.id}>{i.id}  {i.title}  [{i.type}]</option>)}</select></Field>
+      {act.box}
+      <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => { const r = await api<any>('/pointers', { method: 'POST', body: { attachment: attId, locator, quote, status: 'confirmed', ...(target ? { target } : {}) }, product: pid }); onDone(r); })}>{target ? `Save as evidence for ${target}` : 'Keep as a note on this file'}</button>
+    </Modal>
+  );
+}
+
+export const fileUrl = (pid: string, id: string, what: string) => `/api/v1/attachments/${id}/${what}?product=${encodeURIComponent(pid)}`;

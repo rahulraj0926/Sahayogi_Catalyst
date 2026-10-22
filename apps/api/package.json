@@ -1,0 +1,60 @@
+{
+  "name": "@sahayogi/api",
+  "version": "0.1.0",
+  "private": true,
+  
+  "scripts": {
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "db:migrate": "prisma migrate deploy",
+    "seed": "ts-node --transpile-only src/seed.ts",
+    "test": "ts-node --transpile-only src/tests/run.ts",
+    "test:unit": "ts-node --transpile-only src/tests/mapper.test.ts && ts-node --transpile-only src/tests/home.test.ts && ts-node --transpile-only src/tests/safety.test.ts && ts-node --transpile-only src/tests/engine.test.ts && ts-node --transpile-only src/tests/competitor-import.test.ts && ts-node --transpile-only src/tests/framework.test.ts && ts-node --transpile-only src/tests/observability.test.ts && ts-node --transpile-only src/tests/hostile.test.ts",
+    "test:db": "ts-node --transpile-only src/tests/db.test.ts && ts-node --transpile-only src/tests/legacy-import.test.ts && ts-node --transpile-only src/tests/backup.test.ts",
+    "test:safety": "ts-node --transpile-only src/tests/safety.test.ts && ts-node --transpile-only src/tests/engine.test.ts",
+    "test:load": "ts-node --transpile-only src/tests/load.test.ts",
+    "test:docs": "ts-node --transpile-only src/tests/docs-conform.test.ts",
+    "test:contract": "ts-node --transpile-only src/tests/api-contract.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm run test:unit && npm run test:contract && npm run test:breaking && npm run test:docs",
+    "db:generate": "ts-node --transpile-only src/db/generate.ts",
+    "db:import-legacy": "ts-node --transpile-only src/db/import-legacy.ts",
+    "db:drop-legacy": "ts-node --transpile-only src/db/drop-legacy.ts",
+    "db:apply": "ts-node --transpile-only src/db/apply.ts",
+    "db:backup": "ts-node --transpile-only src/db/backup.ts",
+    "db:restore": "ts-node --transpile-only src/db/restore.ts",
+    "db:audit-archive": "ts-node --transpile-only src/db/audit-archive.ts",
+    "db:drill": "ts-node --transpile-only src/db/restore-drill.ts",
+    "db:setup": "npm run db:apply && npm run seed",
+    "openapi:export": "node scripts/run-with-swagger-plugin.js src/openapi-export.ts && ts-node --transpile-only src/openapi-html.ts",
+    "openapi:breaking": "ts-node --transpile-only src/openapi-breaking.ts",
+    "test:breaking": "ts-node --transpile-only src/tests/openapi-breaking.test.ts",
+    "openapi:html": "ts-node --transpile-only src/openapi-html.ts"
+  },
+
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/swagger": "^11.4.7",
+    "@nestjs/throttler": "^6.7.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "helmet": "^8.3.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^4.6.7"
+  },
+
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "prisma": "^6.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
