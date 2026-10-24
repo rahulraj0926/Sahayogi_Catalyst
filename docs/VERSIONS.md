@@ -2,6 +2,10 @@
 
 One page that says exactly which versions the project runs on, so every computer, every pull request and GitHub's automatic checks behave the same.
 
+## The rule: nothing updates by itself
+
+This project is frozen on the versions below. **Nothing upgrades automatically**: no bot opens upgrade pull requests, `package-lock.json` is committed, and the GitHub checks use fixed Node, npm, runner and action versions. Someone who clones the repository next month, or in six months, gets exactly this set, even though newer versions of Node and the packages exist by then. A newer major version (a new Node, Next.js, NestJS, React and so on) can stop the code from working, so a version moves only when the team decides to move it, in one pull request of its own (see "How a version changes").
+
 ## The tools
 
 <!-- versions:tools -->
@@ -12,7 +16,7 @@ One page that says exactly which versions the project runs on, so every computer
 | PostgreSQL | **16** (Docker image `postgres:16`) |
 <!-- /versions:tools -->
 
-`.npmrc` has `engine-strict=true`, so `npm install` stops with a clear message if your Node or npm is different.
+`.npmrc` has `engine-strict=true`, and `engines` names the exact Node and npm, so `npm install` stops with a clear message if yours is different, even by a patch release. GitHub's checks install the same npm (`packageManager` in `package.json`), run on `ubuntu-24.04`, and use `actions/checkout` and `actions/setup-node` pinned to a full commit code.
 
 ## The packages (exact versions)
 
@@ -103,9 +107,10 @@ A version changes only through its own pull request, so the whole team moves tog
 
 To add a brand-new package: `npm install <package>@<exact version> -w apps/web` (or `-w apps/api`), then add the same name and version to `versions.json` and run `npm run versions:sync`.
 
-GitHub's Dependabot opens weekly pull requests for newer versions. Its pull request changes `package.json` but not the catalog, so the version check fails on purpose. On that branch, run `npm run versions:set -- <package> <the new version>`, commit the result, and the check passes. Merge Dependabot pull requests one at a time.
+Security warnings are separate from upgrades. If GitHub shows a security alert for a package, the team decides whether and when to upgrade that one package, using the steps above. Nothing is changed for you.
 
 ## Known gaps
 
 - `@types/node` is still on version 22 although Node is 24. It compiles fine; move it to 24 in a pull request of its own.
 - GitHub's checks used Node 22 until now and switch to 24.20.0 with this change. The first push shows whether everything passes on Node 24.
+- The Postgres image is pinned to the major version (`postgres:16`), so patch releases of 16 can still arrive. To pin it exactly, run `docker compose exec db postgres --version`, then `npm run versions:set -- postgres <that version, for example 16.10>`.

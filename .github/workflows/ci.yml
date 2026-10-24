@@ -12,7 +12,7 @@ concurrency:
 jobs:
   api:
     name: API (types, tests, database, OpenAPI)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16
@@ -30,13 +30,15 @@ jobs:
       DATABASE_URL: postgresql://sahayogi:sahayogi@localhost:5432/sahayogi?schema=public
       NODE_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Use the exact npm version named in package.json
+        run: npm install -g "npm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
       - name: Version catalog (every package.json, the lock file, Node and Postgres agree with versions.json)
         run: npm run versions:check
       - run: npm ci
@@ -70,13 +72,15 @@ jobs:
 
   web:
     name: Web (types and build)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Use the exact npm version named in package.json
+        run: npm install -g "npm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
       - run: npm ci
       - run: npx tsc --noEmit -p apps/web/tsconfig.json
       - run: npm run build -w apps/web

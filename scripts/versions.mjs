@@ -33,7 +33,8 @@ function usage() {
   return u;
 }
 const partOf = (ms) => { const p = new Set(ms.map((m) => m.part)); return p.has('API') && p.has('Web app') ? 'Both' : [...p][0]; };
-const engines = (c) => ({ node: `>=${c.node} <${major(c.node) + 1}`, npm: `>=${c.npm} <${major(c.npm) + 1}` });
+/** exact, not a range: a different Node or npm stops `npm install`, even a newer patch release */
+const engines = (c) => ({ node: c.node, npm: c.npm });
 
 /** the tables inside docs/VERSIONS.md, written from the catalog so they can never drift */
 function tables(c) {
@@ -74,15 +75,19 @@ function check() {
 
   // 3. Node, npm
   for (const f of ['.nvmrc', '.node-version']) if (read(f).trim() !== c.node) bad.push(`${f} says ${read(f).trim()}, the catalog says ${c.node}`);
-  const root = JSON.parse(read('package.json'));
+  const rootPkg = JSON.parse(read('package.json'));
   const e = engines(c);
-  if (root.engines?.node !== e.node) bad.push(`package.json engines.node is "${root.engines?.node}", expected "${e.node}"`);
-  if (root.engines?.npm !== e.npm) bad.push(`package.json engines.npm is "${root.engines?.npm}", expected "${e.npm}"`);
-  if (root.packageManager !== `npm@${c.npm}`) bad.push(`package.json packageManager is "${root.packageManager}", expected "npm@${c.npm}"`);
+  if (rootPkg.engines?.node !== e.node) bad.push(`package.json engines.node is "${rootPkg.engines?.node}", expected "${e.node}"`);
+  if (rootPkg.engines?.npm !== e.npm) bad.push(`package.json engines.npm is "${rootPkg.engines?.npm}", expected "${e.npm}"`);
+  if (rootPkg.packageManager !== `npm@${c.npm}`) bad.push(`package.json packageManager is "${rootPkg.packageManager}", expected "npm@${c.npm}"`);
   if (!/^engine-strict=true$/m.test(read('.npmrc'))) bad.push('.npmrc must contain engine-strict=true');
 
   // 4. GitHub checks and Docker
   const ci = read('.github/workflows/ci.yml');
+  for (const m of ci.matchAll(/^\s*runs-on:\s*(\S+)/gm)) if (/latest/.test(m[1])) bad.push(`ci.yml runs on "${m[1]}", which changes by itself. Name a fixed one, for example ubuntu-24.04`);
+  for (const m of ci.matchAll(/^\s*-?\s*uses:\s*(\S+)@(\S+)/gm)) if (!/^[0-9a-f]{40}$/.test(m[2])) bad.push(`ci.yml uses ${m[1]}@${m[2]}: pin it to the full commit code (with the tag in a comment), a tag can move`);
+  if (!/npm install -g "npm@\$\(node -p/.test(ci)) bad.push('ci.yml must install the npm version named in package.json');
+  if (fs.existsSync(path.join(root, '.github/dependabot.yml'))) bad.push('.github/dependabot.yml must not exist: versions change only when the team decides (docs/VERSIONS.md)');
   if (/^\s*node-version:/m.test(ci) || !/node-version-file: \.nvmrc/.test(ci)) bad.push('.github/workflows/ci.yml must read Node from .nvmrc (node-version-file: .nvmrc), not a typed number');
   for (const f of ['docker-compose.yml', '.github/workflows/ci.yml']) {
     for (const m of read(f).matchAll(/image:\s*postgres:(\S+)/g)) if (m[1] !== c.postgres) bad.push(`${f} uses postgres:${m[1]}, the catalog says ${c.postgres}`);
