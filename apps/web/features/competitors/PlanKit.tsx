@@ -159,7 +159,7 @@ export function CopyBar({ plans, msg, news, onCopy, onUndo, onPick }: { plans: {
 function FilterButton({ mode, plan, onChange }: { mode?: 'in' | 'out'; plan: string; onChange: (v: 'in' | 'out' | undefined) => void }) {
   const next = mode === undefined ? 'in' : mode === 'in' ? 'out' : undefined;
   const title = next === 'in' ? `Show only features ${plan} has` : next === 'out' ? `Show only features ${plan} does not have` : 'Show all features again';
-  const look = mode === 'in' ? 'border-[var(--ok)] text-[var(--ok)]' : mode === 'out' ? 'border-[var(--warn)] text-[var(--warn)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-heading)]';
+  const look = mode === 'in' ? 'border-[var(--ok)] text-[var(--ok)]' : mode === 'out' ? 'border-[var(--warn)] text-[var(--warn)]' : 'border-transparent text-[var(--text-muted)] opacity-0 transition-opacity hover:text-[var(--text-heading)] focus-visible:opacity-100 group-hover/col:opacity-100 [@media(hover:none)]:opacity-100';
   return (
     <button type="button" title={title} aria-label={title} className={`mx-auto mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${look}`} onClick={() => onChange(next)}>
       {mode === 'in' ? <><Check size={12} />Has it</> : mode === 'out' ? <><X size={12} />Lacks it</> : <><ListFilter size={12} />Filter</>}
@@ -196,7 +196,7 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
             {cols.map((c) => {
               const n = rows.filter((x) => has(x, c.key)).length;
               return (
-                <th key={c.key} style={{ ...STICKY, minWidth: 96, textAlign: 'center', ...(role(c.key) ? { background: (() => { const t = c.key === hl?.from ? 'color-mix(in srgb, var(--sd-accent) 16%, transparent)' : 'color-mix(in srgb, var(--ok) 16%, transparent)'; return `linear-gradient(${t}, ${t}), var(--bg)`; })() } : {}) }}>
+                <th key={c.key} className="group/col" style={{ ...STICKY, minWidth: 96, textAlign: 'center', ...(role(c.key) ? { background: (() => { const t = c.key === hl?.from ? 'color-mix(in srgb, var(--sd-accent) 16%, transparent)' : 'color-mix(in srgb, var(--ok) 16%, transparent)'; return `linear-gradient(${t}, ${t}), var(--bg)`; })() } : {}) }}>
                   <label className="flex w-full cursor-pointer flex-col items-center gap-1">
                     {role(c.key) && <span className={`text-[11px] font-semibold ${c.key === hl?.from ? 'text-[var(--sd-accent)]' : 'text-[var(--ok)]'}`}>{role(c.key)}</span>}
                     <span className={role(c.key) ? 'font-bold text-[var(--text-heading)]' : ''}>{c.label}</span>

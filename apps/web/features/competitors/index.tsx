@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { Effort, Queue, Sources } from './Experts';
 import Dashboard from './Dashboard';
 import Profile from './Profile';
@@ -23,6 +24,7 @@ export default function Competitors({ pid, args, query }: FeatureProps) {
   const isView = VIEWS.includes(view) || view === 'dashboard' || view === 'grid';
   const [scope, setScope] = useScope(pid);
   const [adding, setAdding] = useState(false);
+  const [addingPlan, setAddingPlan] = useState(false);
   const [rev, setRev] = useState(0);
   const scopes = useApi<any>(isView ? '/competitors/scopes' : null, pid);
   if (!isView) return <Profile pid={pid} id={args[0]} query={query} />;
@@ -39,6 +41,7 @@ export default function Competitors({ pid, args, query }: FeatureProps) {
             <option value="">Whole product</option>{(scopes.data?.scopes || []).map((s: any) => <option key={s.name} value={s.name}>{s.name}{s.competitors ? ` (${s.competitors})` : ''}</option>)}
           </select></label>)}
       {['dashboard', 'list', 'grid'].includes(view) && <button className="btn primary" onClick={() => setAdding(true)}>Add a competitor</button>}
+      {view === 'planner' && <button className="btn primary inline-flex items-center gap-1" onClick={() => setAddingPlan(true)}><Plus size={14} />Add a plan</button>}
     </span>
   );
   return (
@@ -46,7 +49,7 @@ export default function Competitors({ pid, args, query }: FeatureProps) {
       <div key={rev}>
         {['dashboard', 'list', 'grid'].includes(view) && <Dashboard pid={pid} scope={scope} onScope={setScope} onAdd={() => setAdding(true)} />}
         {view === 'plans' && <Plans pid={pid} scope={scope} initial={query.get('c') || undefined} />}
-        {view === 'planner' && <Planner pid={pid} scope={scope} />}
+        {view === 'planner' && <Planner pid={pid} scope={scope} adding={addingPlan} setAdding={setAddingPlan} />}
         {view === 'catalog' && <Catalog pid={pid} />}
         {view === 'prices' && <Prices pid={pid} />}
         {view === 'compare' && <Compare pid={pid} />}

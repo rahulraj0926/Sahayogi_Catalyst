@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorBox, Loading } from '@/components/ui';
 import { Field, Modal, useAction } from '@/components/kit';
-import { Plus } from 'lucide-react';
 import { api, useApi } from '@/lib/api';
 import { PlanCard, PlanRow } from './PlanKit';
 
@@ -125,9 +124,8 @@ function AddFeature({ pid, plan, plans, all, onClose, onDone }: { pid: string; p
 }
 
 /** Our own plans: what each plan costs and which of our features it includes. Same plan card and feature list as a competitor's plans. */
-export default function Planner({ pid }: { pid: string; scope?: string }) {
+export default function Planner({ pid, adding, setAdding }: { pid: string; scope?: string; adding: boolean; setAdding: (v: boolean) => void }) {
   const { data, error, loading, reload } = useApi<any>('/competitors/our-plans', pid, { keep: true });
-  const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [addingTo, setAddingTo] = useState<any>(null);
   const act = useAction();
@@ -140,9 +138,6 @@ export default function Planner({ pid }: { pid: string; scope?: string }) {
   return (
     <div className="flex flex-col gap-6">
       {act.box}
-      <div className="flex justify-end">
-        <button className="btn primary inline-flex items-center gap-1" onClick={() => setAdding(true)}><Plus size={14} />Add a plan</button>
-      </div>
       {plans.length === 0 ? <Empty>No plans yet. Add the first one, for example Starter, Business or Enterprise. Then add features to each plan.</Empty> : (
         <PlanRow>
           {plans.map((p) => (

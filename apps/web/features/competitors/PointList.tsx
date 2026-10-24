@@ -5,6 +5,7 @@
  * Stored as plain text with one point per line, written "Heading: details". A line with no heading is just details.
  */
 import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useAction } from '@/components/kit';
 
 export type Point = { head: string; text: string };
@@ -68,9 +69,9 @@ export default function PointList({ title, tone, one, points, onChange }: Props)
                   {p.head && <div className="text-[15px] font-bold leading-6 text-[var(--text-heading)]">{p.head}</div>}
                   <div className={p.head ? 'text-[14px] leading-snug text-[var(--text-secondary)]' : 'text-[14px] leading-6 text-[var(--text-heading)]'}>{p.text.charAt(0).toUpperCase() + p.text.slice(1)}</div>
                 </div>
-                <span className="flex shrink-0 gap-3 text-[13px] leading-6">
-                  <button type="button" className="text-[var(--text-muted)] hover:text-[var(--text-heading)]" aria-label={`Edit ${one} ${i + 1}`} onClick={() => open(i)}>Edit</button>
-                  <button type="button" className="text-[var(--text-muted)] hover:text-[var(--status-critical-fg)]" aria-label={`Remove ${one} ${i + 1}`} disabled={act.busy} onClick={() => run(points.filter((_, j) => j !== i), close)}>Remove</button>
+                <span className="flex shrink-0 gap-2 leading-6">
+                  <button type="button" className="grid h-6 w-6 place-items-center text-[var(--text-muted)] hover:text-[var(--text-heading)]" aria-label={`Edit ${one} ${i + 1}`} title="Edit" onClick={() => open(i)}><Pencil size={14} /></button>
+                  <button type="button" className="grid h-6 w-6 place-items-center text-[var(--text-muted)] hover:text-[var(--status-critical-fg)]" aria-label={`Remove ${one} ${i + 1}`} title="Remove" disabled={act.busy} onClick={() => run(points.filter((_, j) => j !== i), close)}><Trash2 size={14} /></button>
                 </span>
               </div>
             )}
