@@ -7,7 +7,6 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 
-export const LEVEL_LABEL: Record<string, string> = { free: 'Free', entry: 'Entry', mid: 'Mid', top: 'Top', enterprise: 'Enterprise' };
 export const CHUNK = 200;
 /** The top row of a long list: solid, so the rows scrolling under it never show through (set inline so no table style can override it). */
 export const STICKY: CSSProperties = { position: 'sticky', top: 0, zIndex: 3, background: 'var(--bg)', boxShadow: 'inset 0 -1px 0 var(--divider)' };
@@ -59,9 +58,7 @@ export interface PlanCardProps {
   /** what it costs: one line per billing period */
   terms?: { id: string; label: string; value: string }[];
   note?: string | null;
-  level: string;
-  onLevel: (v: string) => void;
-  /** anything extra under the level (for example who checked the prices) */
+  /** anything extra under the price (for example who checked the prices) */
   extra?: ReactNode;
   features: { key: string; name: string }[];
   onRemoveFeature: (key: string) => void;
@@ -71,7 +68,7 @@ export interface PlanCardProps {
   busy?: boolean;
 }
 
-/** One plan: name, price, level, the features it includes (with a × to take one out) and Delete. The same card for a competitor's plan and for ours. */
+/** One plan: name, price, the features it includes (with a × to take one out) and Delete. The same card for a competitor's plan and for ours. */
 export function PlanCard(p: PlanCardProps) {
   return (
     <div className="flex w-[260px] shrink-0 flex-col gap-3 rounded-xl border border-[var(--divider)] p-4">
@@ -88,9 +85,6 @@ export function PlanCard(p: PlanCardProps) {
         </div>
       )}
       {p.note && <div className="text-xs text-[var(--text-muted)]">{p.note}</div>}
-      <select value={p.level} onChange={(e) => p.onLevel(e.target.value)} aria-label={`Level of ${p.title}`} style={SMALL_SELECT}>
-        <option value="">Level: not set</option>{Object.entries(LEVEL_LABEL).map(([k, l]) => <option key={k} value={k}>Level: {l}</option>)}
-      </select>
       {p.extra}
       <div className="border-t border-[var(--divider)] pt-3">
         <div className="mb-1.5 flex items-center justify-between gap-2 text-xs text-[var(--text-muted)]">

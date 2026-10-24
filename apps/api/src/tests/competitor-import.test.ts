@@ -43,7 +43,7 @@ async function main() {
     assert.equal(pre.error_count, 0);
   });
 
-  await ok('commit creates competitors, plans with levels and users, and plan features; running it again adds nothing', () => {
+  await ok('commit creates competitors, plans with users, and plan features; running it again adds nothing', () => {
     const t = template('plans');
     const a = importCompetitors(store, { filename: t.filename, buffer: file(t.body) }, { commit: true, actor: 'Test' });
     assert.equal(a.committed, true);
@@ -53,11 +53,11 @@ async function main() {
     assert.deepEqual(zoho.scopes, ['Accounting']);
     const std = store.list('PricePoint').filter((p) => p.plan === 'Standard' && p.currency === 'INR');
     assert.equal(std.length, 2, 'monthly and yearly are two terms of one plan');
-    assert.equal(std[0].tier_tag, 'entry'); assert.equal(std[0].seat_model, 'multi_user'); assert.equal(std[0].max_users, 3);
+    assert.equal(std[0].tier_tag, undefined, 'plans carry no level'); assert.equal(std[0].seat_model, 'multi_user'); assert.equal(std[0].max_users, 3);
     const silver = store.list('PricePoint').find((p) => p.plan === 'Silver');
     assert.equal(silver.seat_model, 'single_user'); assert.equal(silver.billing_model, 'one_time'); assert.equal(silver.amount, 22500);
     const ent = store.list('PricePoint').find((p) => p.plan === 'Enterprise');
-    assert.equal(ent.price_type, 'quote'); assert.equal(ent.tier_tag, 'enterprise');
+    assert.equal(ent.price_type, 'quote'); assert.equal(ent.tier_tag, undefined);
     const prices = store.list('PricePoint').length, caps = store.list('Capability').length, ratings = store.list('CompetitorCapability').length;
     const b = importCompetitors(store, { filename: t.filename, buffer: file(t.body) }, { commit: true, actor: 'Test' });
     assert.equal(b.competitors.created, 0); assert.equal(b.prices.created, 0); assert.equal(b.features.plan_links, 0);
@@ -76,16 +76,16 @@ async function main() {
     const csv = 'Competitor,Feature,Silver,Gold\nTally Prime,Multi-currency,,yes\nTally Prime,Accounting,yes,yes\n';
     const r = importCompetitors(store, { filename: 'grid.csv', buffer: file(csv) }, { commit: true });
     assert.ok(r.features.plan_links >= 1, 'Multi-currency is new on Gold; Accounting was already there');
-    assert.equal(r.warnings.filter((w) => /no level/.test(w)).length, 0, 'plans that already exist are not nagged about');
+    assert.equal(r.warnings.filter((w) => /level/i.test(w)).length, 0, 'no level warnings any more');
     const gold = store.list('PricePoint').find((p) => p.plan === 'Gold');
     const names = store.out(gold.id, 'includes_capability').map((l) => store.get(l.target).capability_tag);
     assert.ok(names.includes('Multi-currency') && names.includes('Accounting'));
   });
 
-  await ok('rows typed in the dialog take the same road, and the plan name guesses its level', () => {
+  await ok('rows typed in the dialog take the same road, with no level asked for', () => {
     const r = importCompetitors(store, { rows: [{ Competitor: 'Khatabook', Tier: 'Tier 3', Plan: 'Premium', 'Monthly price': '₹299', Features: 'Invoicing; Reminders' }] }, { commit: true });
-    assert.equal(r.plan_rows[0].level, 'mid'); assert.equal(r.plan_rows[0].level_guessed, true);
-    assert.ok(r.warnings.some((w) => /guessed/.test(w)));
+    assert.equal(r.plan_rows[0].level, undefined); assert.equal(r.plan_rows[0].level_guessed, undefined);
+    assert.ok(!r.warnings.some((w) => /level|guessed/i.test(w)));
   });
 
   await ok('the dashboard counts analysed competitors, lists common features with their share, and prices the recommendation', () => {
@@ -184,7 +184,7 @@ async function main() {
     // export gives back a file the importer reads without adding anything
     const comp = st3.list('Competitor', (c) => c.title === 'Reqly')[0];
     const out = exportPlans(st3, { id: comp.id });
-    assert.match(out.body, /Competitor,Tier,Module,Product,Plan,Level/); assert.equal(out.filename, 'Reqly-plans.csv');
+    assert.match(out.body, /Competitor,Tier,Module,Product,Plan,Licence/); assert.equal(out.filename, 'Reqly-plans.csv');
     const again: any = importCompetitors(st3, { filename: out.filename, buffer: Buffer.from(out.body, 'utf8') }, { commit: false });
     assert.equal(again.prices.created, 0); assert.equal(again.plan_rows.length, 5); assert.ok(again.plan_rows.every((p: any) => p.state === 'already there'));
   });
@@ -207,25 +207,25 @@ async function main() {
     assert.ok(o2.common.bands.must >= o.common.bands.must);
   });
 
-  await ok('our plans can be changed and removed; a company with no free plan is compared by its entry plan', () => {
+  await ok('our plans can be changed and removed; a company with no free plan is compared by its cheapest paid plan', () => {
     const pf6: any = seedPortfolio(fs.mkdtempSync(path.join(os.tmpdir(), 'sd-cimp6-')));
     const st6 = pf6.store(pf6.list().find((p: any) => p.name === 'Sahayogi Developer').id);
     importSample(st6, { commit: true });
     const plan = st6.create('PricingPlan', { title: 'Starter', amount: 0, is_free: true, billing_period: 'monthly' }, { actor: 't' });
-    st6.update(plan.id, { title: 'Starter plus', amount: 199, is_free: false, tier_tag: 'entry' }, { actor: 't' });
+    st6.update(plan.id, { title: 'Starter plus', amount: 199, is_free: false }, { actor: 't' });
     assert.equal(ourPlans(st6).plans.find((p: any) => p.id === plan.id).title, 'Starter plus');
     st6.setStatus(plan.id, 'Deprecated', { actor: 't' });
     assert.ok(!ourPlans(st6).plans.some((p: any) => p.id === plan.id));
-    // every sample company has a free plan, so retag one: it then has no free plan and shows by its entry plan
+    // every sample company has a free plan, so price one: it then has no free plan and shows by its cheapest paid plan
     const c = st6.list('Competitor', (x) => x.title === 'NoteStack')[0];
-    const free = comparePlans(st6, { level: 'free', fallback: 'entry' });
-    assert.equal(free.fallback_used, 0);
-    for (const pp of cellsOf(st6, c).filter((x: any) => x.type === 'PricePoint' && x.plan === 'Starter')) st6.update(pp.id, { tier_tag: 'entry' }, { actor: 't' });
-    const after = comparePlans(st6, { level: 'free', fallback: 'entry' });
-    assert.equal(after.fallback_used, 1);
-    assert.ok(after.columns.some((x: any) => x.competitor.title === 'NoteStack' && x.shown_as === 'entry'));
-    assert.equal(comparePlans(st6, { level: 'free' }).without_plan.some((x: any) => x.title === 'NoteStack'), true); // without the fallback it is only listed as having no free plan
-    assert.equal(comparePlans(st6, { level: 'free' }).fallback, null);
+    const free = comparePlans(st6, { position: 'free', fallback: 'cheapest' });
+    assert.ok(!free.columns.some((x: any) => x.competitor.title === 'NoteStack' && x.shown_as), 'NoteStack has a free plan, so it is shown by it');
+    for (const pp of cellsOf(st6, c).filter((x: any) => x.type === 'PricePoint' && x.plan === 'Starter')) st6.update(pp.id, { amount: 99 }, { actor: 't' });
+    const after = comparePlans(st6, { position: 'free', fallback: 'cheapest' });
+    assert.equal(after.fallback_used, free.fallback_used + 1);
+    assert.ok(after.columns.some((x: any) => x.competitor.title === 'NoteStack' && x.shown_as === 'cheapest'));
+    assert.equal(comparePlans(st6, { position: 'free' }).without_plan.some((x: any) => x.title === 'NoteStack'), true); // without the fallback it is only listed as having no free plan
+    assert.equal(comparePlans(st6, { position: 'free' }).fallback, null);
   });
 
   await ok('a product that is a single product has no modules; a suite does; older products follow their competitors', () => {
@@ -298,8 +298,8 @@ async function main() {
     assert.equal(pickFeatures(st9, { competitor: c2.id, q: 'zeta' }).total, 1, 'only one competitor');
     assert.equal(pickFeatures(st9, { q: 'zeta', limit: 1, offset: 1 }).features.length, 1, 'paging');
     assert.ok((pickFeatures(st9, { q: 'zeta', names_only: '1' }) as any).names.length === 2, 'every matching name');
-    assert.equal(pickFeatures(st9, { tier: 'free', q: 'zeta' }).total, 0, 'ratings tied to no plan of that level do not show under a level');
-    assert.throws(() => pickFeatures(st9, { tier: 'gold' }), /tier must be one of/);
+    assert.equal(pickFeatures(st9, { position: 'free', q: 'zeta' }).total, 0, 'ratings tied to no plan in that position do not show under a position');
+    assert.throws(() => pickFeatures(st9, { position: 'gold' }), /position must be one of/);
     // once added to our list under that name, it is no longer offered
     addOurFeatures(st9, { features: [{ name: 'Zeta pick two' }] }, 't');
     assert.equal(pickFeatures(st9, { q: 'pick two' }).total, 0);

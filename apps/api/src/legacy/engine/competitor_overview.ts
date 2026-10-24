@@ -3,12 +3,12 @@
  *
  * How much has been analysed, who sits in which tier, which features most competitors offer (with the share of competitors), the
  * features we recommend building (offered by at least `threshold`% of competitors), and what that recommendation costs on average:
- * the price ladder per plan level, and the typical price of a plan that holds most of the recommended features.
+ * the price ladder per plan position (free, cheapest paid, most expensive), and the typical price of a plan that holds most of the recommended features.
  * Nothing is stored here. Everything can be limited to one scope (a module or area of our product) with ?scope=.
  */
 import { cellsOf, hasModules, liveCompetitors, scopeKey, scopeNames } from './competitor_owner';
-import { groupsOf, featureKey, catalogIndex, recommended, LEVELS, LEVEL_NAME } from './competitor_plans';
-import { completeness, normalizedPricing, provides } from './competitors';
+import { groupsOf, featureKey, catalogIndex, recommended, positionMap } from './competitor_plans';
+import { completeness, normalizedPricing, provides, POSITIONS, POSITION_NAME } from './competitors';
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const round = (n: number) => Math.round(n);
@@ -38,7 +38,8 @@ export function overview(store, query: any = {}) {
   const n = comps.length;
   const idx = catalogIndex(store);
   const compl = new Map<string, any>((completeness(store) as any[]).map((x) => [x.id, x]));
-  const perComp = comps.map((c) => ({ c, groups: groupsOf(store, c, idx) }));
+  const pos = positionMap(store, scope);
+  const perComp = comps.map((c) => ({ c, groups: groupsOf(store, c, idx, pos) }));
 
   // ---- who has been analysed
   const cards = perComp.map(({ c, groups }) => ({
@@ -52,13 +53,12 @@ export function overview(store, query: any = {}) {
     plans: cards.reduce((s, x) => s + x.plans, 0), avg_completeness: avg(cards.map((x) => x.completeness)),
   };
 
-  // ---- plans by level, across all competitors
+  // ---- plans by position (free / cheapest paid / most expensive, worked out from prices), across all competitors
   const allGroups = perComp.flatMap((p) => p.groups.map((g) => ({ g, comp: p.c.id })));
-  const plan_levels = LEVELS.map((l) => {
-    const gs = allGroups.filter((x) => x.g.tier_tag === l);
-    return { tier_tag: l, label: LEVEL_NAME[l], plans: gs.length, competitors: new Set(gs.map((x) => x.comp)).size };
+  const plan_positions = POSITIONS.map((l) => {
+    const gs = allGroups.filter((x) => x.g.position === l);
+    return { position: l, label: POSITION_NAME[l], plans: gs.length, competitors: new Set(gs.map((x) => x.comp)).size };
   }).filter((l) => l.plans > 0);
-  const untagged_plans = allGroups.filter((x) => !x.g.tier_tag).length;
 
   // ---- features and the share of competitors that offer each
   const offered = new Map<string, any>();
@@ -90,14 +90,14 @@ export function overview(store, query: any = {}) {
   // ---- what we recommend, and what it costs
   const recFeatures = features.filter((f) => f.pct >= threshold);
   const recKeys = new Set(recFeatures.map((f) => f.key));
-  const rec: any = n ? recommended(store, { threshold: String(threshold), users: String(users), scope }) : { levels: [] };
-  const ladder = rec.levels.map((l) => ({ tier_tag: l.tier_tag, label: l.label, plans: l.plans, competitors: l.competitors, price: l.price, feature_count: l.features.length, new_features: l.new_features }));
+  const rec: any = n ? recommended(store, { threshold: String(threshold), users: String(users), scope }) : { positions: [] };
+  const ladder = rec.positions.map((l) => ({ position: l.position, label: l.label, plans: l.plans, competitors: l.competitors, price: l.price, feature_count: l.features.length, new_features: l.new_features }));
 
   /** The typical price of a plan holding most of the recommended features, for a given number of users. */
   const bundleAt = (u: number) => {
-    const priced: any = n ? normalizedPricing(store, { users: String(u), scope }) : { tiers: [] };
+    const priced: any = n ? normalizedPricing(store, { users: String(u), scope }) : { rows: [] };
     const rowOfPrice = new Map<string, any>();
-    for (const t of priced.tiers) for (const row of t.rows) for (const term of row.terms) rowOfPrice.set(term.id, row);
+    for (const row of priced.rows) for (const term of row.terms) rowOfPrice.set(term.id, row);
     const contributors: any[] = [];
     if (recKeys.size) {
       for (const { c, groups } of perComp) {
@@ -110,7 +110,7 @@ export function overview(store, query: any = {}) {
           const row = g.price_ids.map((id) => rowOfPrice.get(id)).find(Boolean);
           const yearly = row ? row.yearly_inr : null;
           if (yearly === null || yearly === undefined) continue;
-          if (!best || yearly < best.yearly_inr) best = { competitor: { id: c.id, title: c.title }, plan: g.plan, product: g.product, tier_tag: g.tier_tag, coverage: cov, yearly_inr: yearly };
+          if (!best || yearly < best.yearly_inr) best = { competitor: { id: c.id, title: c.title }, plan: g.plan, product: g.product, position: g.position, coverage: cov, yearly_inr: yearly };
         }
         if (best) contributors.push(best);
       }
@@ -130,7 +130,6 @@ export function overview(store, query: any = {}) {
   const hints: string[] = [];
   if (n && n < 3) hints.push(`Only ${n} competitor${n === 1 ? ' is' : 's are'} analysed. Shares such as "offered by 50%" need at least 3 to mean much.`);
   if (n && analysed.with_features < n) hints.push(`${n - analysed.with_features} competitor${n - analysed.with_features === 1 ? ' has' : 's have'} no plan with features ticked, so ${n - analysed.with_features === 1 ? 'it is' : 'they are'} left out of the shares below until features are added.`);
-  if (untagged_plans) hints.push(`${untagged_plans} plan${untagged_plans === 1 ? ' has' : 's have'} no level (Free, Entry, Mid, Top, Enterprise), so ${untagged_plans === 1 ? 'it is' : 'they are'} left out of the price ladder.`);
   if (unassigned.length) hints.push(`${unassigned.length} competitor${unassigned.length === 1 ? ' has' : 's have'} no tier yet.`);
 
   // ---- module by module: who competes in each part of our product, and what the cheapest plan of each costs
@@ -138,7 +137,7 @@ export function overview(store, query: any = {}) {
   const cheapest = new Map<string, number>();
   if (allLive.length) {
     const all1: any = normalizedPricing(store, { users: '1' });
-    for (const t of all1.tiers) for (const row of t.rows) if (row.yearly_inr !== null && row.yearly_inr !== undefined && row.competitor) cheapest.set(row.competitor.id, Math.min(cheapest.get(row.competitor.id) ?? Infinity, row.yearly_inr));
+    for (const row of all1.rows) if (row.yearly_inr !== null && row.yearly_inr !== undefined && row.competitor) cheapest.set(row.competitor.id, Math.min(cheapest.get(row.competitor.id) ?? Infinity, row.yearly_inr));
   }
   const planCount = new Map<string, number>(allLive.map((c) => [c.id, groupsOf(store, c, idx).length]));
   const moduleRows = scopeNames(store).map((sc) => {
@@ -151,7 +150,7 @@ export function overview(store, query: any = {}) {
   const modules = { rows: moduleRows, whole_product: allLive.filter((c) => !(Array.isArray(c.scopes) && c.scopes.length)).length };
 
   return {
-    scope: scope || null, has_modules: hasModules(store), scopes: scopeNames(store), modules, threshold, users, coverage, analysed, tiers, unassigned, plan_levels, untagged_plans,
+    scope: scope || null, has_modules: hasModules(store), scopes: scopeNames(store), modules, threshold, users, coverage, analysed, tiers, unassigned, plan_positions,
     common: { competitor_count: nf, competitors_total: n, features, bands, categories, not_offered, cut_offs: { must: MUST, common: COMMON } },
     recommended: { threshold, count: recFeatures.length, ladder, bundle, by_users },
     hints,

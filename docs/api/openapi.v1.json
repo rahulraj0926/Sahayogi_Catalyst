@@ -11429,8 +11429,8 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Competitor plans compared by plan level",
-        "description": "Plans tagged free, entry, mid, top or enterprise, costed over 12 months in INR excluding GST for one usage scenario. A plan sold for several terms is one row: its cheapest recurring term per year, and its one-time (lifetime) price. Single-user licences are bought once per user; multi-user licences cover up to max_users. Also answers at its old address /api/competitors/normalized-prices, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Competitor plans compared by price position",
+        "description": "Plans grouped by where they sit in their own company's price list (free, cheapest paid, most expensive; worked out from the prices, not stored), costed over 12 months in INR excluding GST for one usage scenario. A plan sold for several terms is one row: its cheapest recurring term per year, and its one-time (lifetime) price. Single-user licences are bought once per user; multi-user licences cover up to max_users. Also answers at its old address /api/competitors/normalized-prices, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -11845,7 +11845,7 @@
           "Competitors"
         ],
         "x-engine": true,
-        "description": "How many competitors are analysed and how complete they are; the competitors by tier; plans by level; every feature at least one competitor offers with the share of competitors that offer it (and who does not); the recommended features (offered by at least threshold percent); the average price per plan level; and the typical yearly price of a plan that holds most of the recommended features (coverage percent). Nothing is stored. Also answers at its old address /api/competitors/overview, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "How many competitors are analysed and how complete they are; the competitors by tier; plans by price position (free, cheapest, most expensive); every feature at least one competitor offers with the share of competitors that offer it (and who does not); the recommended features (offered by at least threshold percent); the average price per plan position; and the typical yearly price of a plan that holds most of the recommended features (coverage percent). Nothing is stored. Also answers at its old address /api/competitors/overview, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12043,7 +12043,7 @@
         ],
         "x-engine": true,
         "summary": "Add common features for every competitor",
-        "description": "Puts each feature on our list (if it is not there) and gives every active competitor an unrated row for it (level unknown). Nothing is rated. Features and rows that already exist are skipped. At most 60 features per call. Also answers at its old address /api/competitors/catalog/common, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Puts each feature on our list (if it is not there) and gives every active competitor an unrated row for it (rating unknown). Nothing is rated. Features and rows that already exist are skipped. At most 60 features per call. Also answers at its old address /api/competitors/catalog/common, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12263,9 +12263,9 @@
         "x-documented": true
       }
     },
-    "/api/v1/competitors/plan-level-features": {
+    "/api/v1/competitors/plan-position-features": {
       "get": {
-        "operationId": "CompetitorsController_planLevelFeatures",
+        "operationId": "CompetitorsController_planPositionFeatures",
         "parameters": [
           {
             "name": "product",
@@ -12352,8 +12352,8 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Which features competitors include at each plan level",
-        "description": "For each level (free, entry, mid, top, enterprise): how many plans list their features and, per feature, how many of them include it. Also answers at its old address /api/competitors/plan-level-features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Which features competitors include at each plan position",
+        "description": "For each position (free, cheapest paid plan, most expensive plan): how many plans list their features and, per feature, how many of them include it. Also answers at its old address /api/competitors/plan-position-features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12464,8 +12464,8 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Recommended plan for each level, from the competitors' plans",
-        "description": "For each plan level (free, entry, mid, top, enterprise) with competitor plans: the average yearly price in INR excluding GST for the given number of users, and the features that at least the given share of those plans include. new_features is what the level adds over the one below it. Also answers at its old address /api/competitors/recommended, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Recommended plan for each position, from the competitors' plans",
+        "description": "For each plan position (free, cheapest, top) with competitor plans: the average yearly price in INR excluding GST for the given number of users, and the features that at least the given share of those plans include. new_features is what the position adds over the one before it. Also answers at its old address /api/competitors/recommended, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12492,18 +12492,16 @@
             }
           },
           {
-            "name": "level",
+            "name": "position",
             "required": false,
             "in": "query",
-            "description": "free, entry, mid, top or enterprise. Required.",
+            "description": "free, cheapest or top. Required.",
             "schema": {
               "type": "string",
               "enum": [
                 "free",
-                "entry",
-                "mid",
+                "cheapest",
                 "top",
-                "enterprise",
                 ""
               ]
             }
@@ -12512,15 +12510,13 @@
             "name": "fallback",
             "required": false,
             "in": "query",
-            "description": "A level to show for a competitor that has no plan at `level`.",
+            "description": "A position to show for a competitor that has no plan in `position`.",
             "schema": {
               "type": "string",
               "enum": [
                 "free",
-                "entry",
-                "mid",
+                "cheapest",
                 "top",
-                "enterprise",
                 ""
               ]
             }
@@ -12566,7 +12562,7 @@
             }
           },
           "422": {
-            "description": "Unknown level, or users is not a number of 1 or more.",
+            "description": "Unknown position, or users is not a number of 1 or more.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12600,8 +12596,8 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Compare competitors' plans at one level",
-        "description": "One column per competitor plan at the level (for example everyone's Entry plan), with its yearly price and the features it includes, plus the competitors that have no plan at that level. Also answers at its old address /api/competitors/compare-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Compare competitors' plans in one position",
+        "description": "One column per competitor plan in the position (for example everyone's free plan), with its yearly price and the features it includes, plus the competitors that have no plan in that position. Also answers at its old address /api/competitors/compare-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12686,7 +12682,7 @@
         ],
         "x-engine": true,
         "summary": "Our plans and the features each includes",
-        "description": "Our plans, and our features as rows with the plans that include them. Each plan has price_monthly and price_yearly (empty when not sold that way), seat_model and max_users (how many users it covers), and its level. Also answers at its old address /api/competitors/our-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Our plans, and our features as rows with the plans that include them. Each plan has price_monthly and price_yearly (empty when not sold that way), seat_model and and max_users (how many users it covers). Also answers at its old address /api/competitors/our-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12722,18 +12718,16 @@
             }
           },
           {
-            "name": "tier",
+            "name": "position",
             "required": false,
             "in": "query",
-            "description": "Only features offered in plans of this level.",
+            "description": "Only features offered in plans in this position: free, cheapest (cheapest paid plan) or top (most expensive plan).",
             "schema": {
               "type": "string",
               "enum": [
                 "free",
-                "entry",
-                "mid",
+                "cheapest",
                 "top",
-                "enterprise",
                 ""
               ]
             }
@@ -12806,7 +12800,7 @@
             }
           },
           "422": {
-            "description": "Unknown level.",
+            "description": "Unknown position.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13239,7 +13233,7 @@
         ],
         "x-engine": true,
         "summary": "Check or save competitors, plans and plan features from a CSV or Excel file",
-        "description": "The body is the file itself (.csv or .xlsx, up to 25 MB), not JSON. Columns are matched by meaning (Competitor, Tier, Module, Product, Plan, Level, Licence, Max users, Monthly / Yearly / Lifetime price, Currency, GST included, Features, Feature, Included), so most exported sheets work as they are. With commit=0 nothing is saved and the answer lists what would be created, what already exists, what was assumed and which rows were skipped. With commit=1 it is saved. Names are matched to existing ones ignoring case and punctuation, so importing twice adds nothing twice. Existing values are only filled in when blank, unless overwrite=1. Title lines above the column names are skipped; a plan name ending in a term (\"Silver - 3 Month\", \"Gold - Lifetime\") becomes one plan with several prices; a CSV saved by Excel on Windows (Windows-1252) is read correctly; a table with Tier 1/2/3 headings and a Modules column records which module each competitor competes in. Also answers at its old address /api/competitors/import, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "The body is the file itself (.csv or .xlsx, up to 25 MB), not JSON. Columns are matched by meaning (Competitor, Tier, Module, Product, Plan, Licence, Max users, Monthly / Yearly / Lifetime price, Currency, GST included, Features, Feature, Included), so most exported sheets work as they are. With commit=0 nothing is saved and the answer lists what would be created, what already exists, what was assumed and which rows were skipped. With commit=1 it is saved. Names are matched to existing ones ignoring case and punctuation, so importing twice adds nothing twice. Existing values are only filled in when blank, unless overwrite=1. Title lines above the column names are skipped; a plan name ending in a term (\"Silver - 3 Month\", \"Gold - Lifetime\") becomes one plan with several prices; a CSV saved by Excel on Windows (Windows-1252) is read correctly; a table with Tier 1/2/3 headings and a Modules column records which module each competitor competes in. Also answers at its old address /api/competitors/import, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -13455,7 +13449,7 @@
           "Competitors"
         ],
         "x-engine": true,
-        "description": "Same rules as the file import. Each row is an object whose keys are column names such as Competitor, Tier, Plan, Level, Monthly price, Yearly price, Features. Also answers at its old address /api/competitors/bulk, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Same rules as the file import. Each row is an object whose keys are column names such as Competitor, Tier, Plan, Monthly price, Yearly price, Features. Also answers at its old address /api/competitors/bulk, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -13558,7 +13552,7 @@
           "Competitors"
         ],
         "x-engine": true,
-        "description": "One row per plan: competitor, tier, module, product, plan, level, licence, most users, a price column for each billing period, currency, GST, and the features of the plan. The file can be imported again unchanged. Without id, every competitor (or only those for one module) is included. Also answers at its old address /api/competitors/export, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "One row per plan: competitor, tier, module, product, plan, licence, most users, a price column for each billing period, currency, GST, and the features of the plan. The file can be imported again unchanged. Without id, every competitor (or only those for one module) is included. Also answers at its old address /api/competitors/export, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },

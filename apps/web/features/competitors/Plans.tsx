@@ -6,7 +6,6 @@ import { Field, Modal, useAction } from '@/components/kit';
 import { api, useApi } from '@/lib/api';
 import { CopyBar, FeatureBar, FeatureGrid, PlanCard, PlanRow, useBulkTicks, type Show } from './PlanKit';
 
-export { LEVEL_LABEL } from './PlanKit';
 export const SEAT_LABEL: Record<string, string> = { single_user: 'One user per licence', multi_user: 'Several users share one', per_user: 'Per user', unlimited_users: 'No user limit' };
 const PERIOD: Record<string, string> = { month: 'month', quarter: '3 months', year: 'year', one_time: 'lifetime' };
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? '' : `${c === 'INR' ? '₹' : c + ' '}${Number(a).toLocaleString('en-IN')}`);
@@ -39,11 +38,10 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
   const act = useAction();
   const plans: any[] = d?.plans || [];
 
-  // names and levels changed on this screen show at once, before the server answers
+  // names changed on this screen show at once, before the server answers
   const [names, setNames] = useState<Record<string, string>>({});
-  const [levels, setLevels] = useState<Record<string, string>>({});
   const sig = d ? `${d.competitor?.id}|${plans.map((p: any) => p.key).join(',')}` : '';
-  useEffect(() => { setNames({}); setLevels({}); }, [sig]);
+  useEffect(() => { setNames({}); }, [sig]);
   const nameOf = (key: string) => names[key] ?? plans.find((p) => p.key === key)?.plan ?? '';
 
   const bulk = useBulkTicks({
@@ -79,10 +77,6 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
     if (!(await act.ask(`Delete the plan “${p.plan}” with all of its prices? It is kept in history but no longer counted.`, 'Delete'))) return;
     for (const pidn of p.price_ids) await api(`/items/${pidn}/status`, { product: pid, method: 'POST', body: { status: 'Retired' } });
     onChanged?.(); det.reload(); list.reload();
-  });
-  const setLevel = (p: any, tier_tag: string) => act.run(async () => {
-    setLevels((l) => ({ ...l, [p.key]: tier_tag }));
-    for (const pidn of p.price_ids) await api(`/items/${pidn}`, { product: pid, method: 'PATCH', body: { fields: { tier_tag: tier_tag || null } } });
   });
   /** Who checked the saved prices behind a plan, with a button to check them. */
   const checkLine = (p: any) => {
@@ -125,8 +119,6 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
                 action={{ label: 'Rename', onClick: () => setRename(p) }}
                 terms={p.terms.map((t: any) => ({ id: t.id, label: PERIOD[t.period] || t.period, value: t.price_type === 'quote' ? 'On request' : money(t.amount, t.currency) }))}
                 note={`${p.seat_model ? SEAT_LABEL[p.seat_model] : 'Users not stated'}${p.max_users ? `, up to ${p.max_users}` : ''}`}
-                level={levels[p.key] ?? p.tier_tag ?? ''}
-                onLevel={(v) => setLevel(p, v)}
                 extra={checkLine(p)}
                 features={feats.filter((f) => bulk.has(f, p.key)).map((f) => ({ key: f.key, name: f.name }))}
                 onRemoveFeature={(k) => { const f = feats.find((x) => x.key === k); if (f) bulk.apply(p.key, [f], false); }}

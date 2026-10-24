@@ -7,7 +7,8 @@ const NumberText = () => applyDecorators(IsOptional(), Matches(/^-?\d*\.?\d*$/, 
 /** 1/0 or true/false written in a web address. */
 const FlagText = () => applyDecorators(IsOptional(), IsIn(['1', '0', 'true', 'false', '']));
 
-export const PLAN_LEVELS = ['free', 'entry', 'mid', 'top', 'enterprise'];
+/** Where a plan sits among its own company's plans, worked out from prices (nothing is stored). */
+export const PLAN_POSITIONS = ['free', 'cheapest', 'top'];
 
 // ---- addresses: what each GET under /competitors accepts. `product` is read by the engine itself.
 export class CompetitorQueryDto {
@@ -26,8 +27,8 @@ export class PlansQueryDto extends ScopeQueryDto {
 }
 
 export class PickFeaturesQueryDto extends PlansQueryDto {
-  /** Only features offered in plans of this level. */
-  @IsOptional() @IsIn([...PLAN_LEVELS, '']) tier?: string;
+  /** Only features offered in plans in this position: free, cheapest (cheapest paid plan) or top (most expensive plan). */
+  @IsOptional() @IsIn([...PLAN_POSITIONS, '']) position?: string;
   /** Words the feature name must contain. */
   @IsOptional() @IsString() q?: string;
   /** Any value: return just the names (at most 5000), for "pick all". */
@@ -45,10 +46,10 @@ export class RecommendedQueryDto extends ScopeQueryDto {
 }
 
 export class ComparePlansQueryDto extends ScopeQueryDto {
-  /** free, entry, mid, top or enterprise. Required. */
-  @IsOptional() @IsIn([...PLAN_LEVELS, '']) level?: string;
-  /** A level to show for a competitor that has no plan at `level`. */
-  @IsOptional() @IsIn([...PLAN_LEVELS, '']) fallback?: string;
+  /** free, cheapest or top. Required. */
+  @IsOptional() @IsIn([...PLAN_POSITIONS, '']) position?: string;
+  /** A position to show for a competitor that has no plan in `position`. */
+  @IsOptional() @IsIn([...PLAN_POSITIONS, '']) fallback?: string;
   @NumberText() users?: string;
 }
 

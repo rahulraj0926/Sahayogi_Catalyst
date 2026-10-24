@@ -30,13 +30,13 @@ export function sampleCsv(): string {
   const rows: string[][] = [EXPORT_HEADERS];
   for (const [name, tier, feats, [entry, top]] of SAMPLE) {
     const cut = (share: number) => feats.slice(0, Math.max(2, Math.round(feats.length * share))).map((i) => SAMPLE_FEATURES[i]).join('; ');
-    const plans: [string, string, string, number, string][] = [
-      ['Starter', 'free', '5', 0, cut(0.3)],
-      ['Team', 'entry', '', entry, cut(0.7)],
-      ['Business', 'top', '', top, cut(1)],
+    const plans: [string, string, number, string][] = [
+      ['Starter', '5', 0, cut(0.3)],
+      ['Team', '', entry, cut(0.7)],
+      ['Business', '', top, cut(1)],
     ];
-    plans.forEach(([plan, level, max, monthly, f], i) => rows.push([
-      name, i === 0 ? tier : '', '', '', plan, level, 'per user', max,
+    plans.forEach(([plan, max, monthly, f], i) => rows.push([
+      name, i === 0 ? tier : '', '', '', plan, 'per user', max,
       String(monthly), '', monthly ? String(Math.round(monthly * 12 * 0.85)) : '0', '', 'INR', 'no', f,
     ]));
   }

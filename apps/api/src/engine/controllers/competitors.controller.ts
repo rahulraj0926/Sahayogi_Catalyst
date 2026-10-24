@@ -51,7 +51,7 @@ export class CompetitorsController {
   // ---- plans
   @Get('plans') @EngineRoute() plans(@Ctx() c: EngineCtx, @Query() q: PlansQueryDto) { return competitorPlans.plans(c.store, q); }
   @Post('plans/features') @EngineRoute() setPlanFeature(@Ctx() c: EngineCtx, @Body() dto: SetPlanFeatureDto) { return competitorPlans.setPlanFeature(c.store, dto, c.actor); }
-  @Get('plan-level-features') @EngineRoute() planLevelFeatures(@Ctx() c: EngineCtx, @Query() q: ScopeQueryDto) { return competitorPlans.planLevelFeatures(c.store, q.scope); }
+  @Get('plan-position-features') @EngineRoute() planPositionFeatures(@Ctx() c: EngineCtx, @Query() q: ScopeQueryDto) { return competitorPlans.planPositionFeatures(c.store, q.scope); }
   @Get('recommended') @EngineRoute() recommended(@Ctx() c: EngineCtx, @Query() q: RecommendedQueryDto) { return competitorPlans.recommended(c.store, q); }
   @Get('compare-plans') @EngineRoute() comparePlans(@Ctx() c: EngineCtx, @Query() q: ComparePlansQueryDto) { return competitorPlans.comparePlans(c.store, q); }
   @Get('our-plans') @EngineRoute() ourPlans(@Ctx() c: EngineCtx, @Query() _q: CompetitorQueryDto) { return competitorPlans.ourPlans(c.store); }

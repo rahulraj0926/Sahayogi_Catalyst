@@ -38,8 +38,8 @@ async function main() {
 
     await ok('every reading address answers 200, with the options the web app uses', async () => {
       const paths = ['/tiers', '/tiers?scope=Accounting', '/grid', '/prices', '/sources', '/effort', '/product-lines', '/completeness', '/normalized-prices?users=25&scope=', '/plan-capabilities', '/catalog',
-        '/plans', `/plans?competitor=${comp.id}`, '/plans?scope=Accounting', '/plan-level-features', '/recommended?threshold=60&users=1', '/compare-plans?level=mid&users=5&fallback=entry', '/our-plans',
-        '/our-plans/pick-features?q=pay&limit=6', '/our-plans/pick-features?names_only=1&tier=mid', '/must-have?threshold=80', '/scopes', '/overview?threshold=60&users=1&coverage=50&must=80&common=60&compare_users=1',
+        '/plans', `/plans?competitor=${comp.id}`, '/plans?scope=Accounting', '/plan-position-features', '/recommended?threshold=60&users=1', '/compare-plans?position=cheapest&users=5&fallback=top', '/our-plans',
+        '/our-plans/pick-features?q=pay&limit=6', '/our-plans/pick-features?names_only=1&position=cheapest', '/must-have?threshold=80', '/scopes', '/overview?threshold=60&users=1&coverage=50&must=80&common=60&compare_users=1',
         `/export?id=${comp.id}`, '/export', '/import/template?kind=plans'];
       for (const u of paths) { const r = await call(u); assert.equal(r.status, 200, `${u} gave ${r.status}: ${JSON.stringify(r.body).slice(0, 200)}`); }
     });
@@ -49,7 +49,7 @@ async function main() {
       assert.equal(r.status, 400); assert.equal(r.body.code, 'validation_failed');
       assert.equal((await call('/plans?users=abc')).status, 400);
       assert.equal((await call('/recommended?users=abc')).status, 400);
-      assert.equal((await call('/compare-plans?level=gold')).status, 400);
+      assert.equal((await call('/compare-plans?position=gold')).status, 400);
     });
 
     await ok('adding common features: wrong shape is 400, a good request is saved, and repeating it adds nothing', async () => {

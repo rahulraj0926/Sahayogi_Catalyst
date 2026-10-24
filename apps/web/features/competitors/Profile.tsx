@@ -38,11 +38,10 @@ function RenameCompetitor({ c, onClose, onDone }: { c: any; onClose: () => void;
   );
 }
 
-const TIER_TAGS: [string, string][] = [['', 'Not tagged'], ['free', 'Free'], ['entry', 'Entry'], ['mid', 'Mid'], ['top', 'Top'], ['enterprise', 'Enterprise']];
 
 function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lines: any[]; onClose: () => void; onDone: () => void }) {
   const units = useApi<any>('/price-units', pid);
-  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst', tier_tag: '', line: '', seat_model: '', max_users: '' });
+  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst', line: '', seat_model: '', max_users: '' });
   const act = useAction();
   const choices: any[] = (units.data?.choices || []).filter((x: any) => !x.usage || units.data?.sells_usage !== false);
   const set = (k: string, x: any) => setV({ ...v, [k]: x });
@@ -54,7 +53,6 @@ function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lin
       {lines.length > 0 && <Field label="Which product is this plan of?" help="Product lines keep one company's different products apart."><select value={v.line} onChange={(e) => set('line', e.target.value)}><option value="">The company in general</option>{lines.map((l) => <option key={l.id} value={l.id}>{l.product_name}</option>)}</select></Field>}
       <Field label="Who does one licence cover?" help="Many vendors sell a single-user licence and a dearer multi-user one. This decides how the cost grows with the number of users."><select value={v.seat_model} onChange={(e) => set('seat_model', e.target.value)}><option value="">Not stated</option><option value="single_user">One user (or PC) per licence</option><option value="multi_user">Several users share one licence</option><option value="per_user">Priced for each user</option><option value="unlimited_users">No limit on users</option></select></Field>
       {v.seat_model === 'multi_user' && <Field label="Most users it covers (if stated)"><input type="number" min={1} value={v.max_users} onChange={(e) => set('max_users', e.target.value)} /></Field>}
-      <Field label="Plan level" help="Lets plans of different companies be compared: Free, Entry, Mid, Top or Enterprise."><select value={v.tier_tag} onChange={(e) => set('tier_tag', e.target.value)}>{TIER_TAGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="What kind of price is it?"><select value={v.price_type} onChange={(e) => set('price_type', e.target.value)}>{['list', 'mrp', 'street', 'dealer', 'distributor', 'oem', 'quote', 'tender_award', 'promo'].map((x) => <option key={x} value={x}>{sp(x)}</option>)}</select></Field>
       <Field label="Does that price include GST?"><select value={v.tax_basis} onChange={(e) => set('tax_basis', e.target.value)}><option value="incl_gst">Includes GST</option><option value="excl_gst">Excludes GST</option><option value="not_applicable">No GST applies</option></select></Field>
       {act.box}
@@ -62,7 +60,7 @@ function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lin
         const f = choices.find((x) => x.v === v.for);
         const miss = [v.amount === '' && 'the amount', !f && 'what the price is for'].filter(Boolean);
         if (miss.length) throw new Error(`Please fill in ${miss.join(' and ')}.`);
-        const fields = { title: `${c.title} ${v.plan || f.label}`, plan: v.plan, amount: Number(v.amount), currency: v.currency, price_type: v.price_type, tax_basis: v.tax_basis, captured_on: today(), ...(v.tier_tag ? { tier_tag: v.tier_tag } : {}), ...(v.seat_model ? { seat_model: v.seat_model } : {}), ...(v.seat_model === 'multi_user' && v.max_users !== '' ? { max_users: Number(v.max_users) } : {}), ...f.f };
+        const fields = { title: `${c.title} ${v.plan || f.label}`, plan: v.plan, amount: Number(v.amount), currency: v.currency, price_type: v.price_type, tax_basis: v.tax_basis, captured_on: today(), ...(v.seat_model ? { seat_model: v.seat_model } : {}), ...(v.seat_model === 'multi_user' && v.max_users !== '' ? { max_users: Number(v.max_users) } : {}), ...f.f };
         const r = await api<any>('/items', { method: 'POST', body: { type: 'PricePoint', fields } });
         await api('/links', { method: 'POST', body: { type: 'contains', source: v.line || c.id, target: r.item.id } });
         onDone();
@@ -266,7 +264,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
               <button className="btn" onClick={() => setFromFile(true)} title="Fill in plans from an Excel / CSV file">Import from a file</button>
               <button className="btn primary" onClick={() => setAddPrice(true)}>Add a plan</button>
             </div>
-            <Plans key={myPrices.map((p) => `${p.id}${p.tier_tag || ''}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
+            <Plans key={myPrices.map((p) => `${p.id}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
             {myPrices.length === 0 && <Card title="Why are there no prices?">
               <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="For example: price on request only" />
               <button className="btn sm" style={{ marginTop: 6 }} onClick={() => patch(id, { pricing_na_reason: (naWhy ?? c.pricing_na_reason ?? '').trim() })}>Save</button>

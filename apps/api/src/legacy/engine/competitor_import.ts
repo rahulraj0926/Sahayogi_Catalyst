@@ -5,7 +5,7 @@
  *
  * What a file may hold (one sheet each, or all in one):
  *   - a list of competitors: Competitor, Tier, Website, Module ...      - or tiers side by side: columns "Tier 1", "Tier 2", "Tier 3"
- *   - plans: Competitor, Product, Plan, Level, Users, Monthly / Yearly / Lifetime price, Currency, GST included, Features
+ *   - plans: Competitor, Product, Plan, Users, Monthly / Yearly / Lifetime price, Currency, GST included, Features
  *   - features: Competitor, Plan, Feature, Included    - or a ticked grid: one row per feature, one column per plan
  * Headers are matched by meaning, not by exact spelling, so a sheet exported from someone else's tool usually just works.
  * Names are matched to what is already stored (ignoring case, spaces and punctuation), so importing twice adds nothing twice.
@@ -16,7 +16,6 @@ import { featureKey, catalogIndex } from './competitor_plans';
 
 const httpErr = (status: number, message: string) => Object.assign(new Error(message), { status });
 const MAX_ROWS = 5000;
-const LEVELS = ['free', 'entry', 'mid', 'top', 'enterprise'];
 const nkey = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const canon = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const str = (v: unknown) => (v === undefined || v === null ? '' : String(v).trim());
@@ -120,24 +119,6 @@ export function parseTier(v: unknown): string | null { const c = canon(v); for (
 const KINDS = ['direct', 'indirect', 'alternative', 'in_house', 'adjacent_entrant', 'open_source', 'aspirational'];
 const parseKind = (v: unknown): string | null => { const k = canon(v).replace(/ /g, '_'); return KINDS.includes(k) ? k : null; };
 
-const LEVEL_WORDS: [string, RegExp][] = [
-  ['free', /\b(free|freemium|trial|community|forever free)\b/],
-  ['enterprise', /\b(enterprise|ent|corporate|custom|contact sales|contact us|on request)\b/],
-  ['top', /\b(top|ultimate|ultra|platinum|elite|max|maximum|complete|all access|premier|diamond|unlimited)\b/],
-  ['entry', /\b(entry|basic|starter|lite|essential|essentials|solo|personal|individual|bronze|silver|launch|small|mini)\b/],
-  ['mid', /\b(mid|standard|plus|professional|pro|business|team|teams|growth|advanced|premium|gold|medium|scale)\b/],
-];
-/** Level written by a person: only an exact meaning is accepted. */
-export function parseLevel(v: unknown): string | null { const c = canon(v); if (!c) return null; if (LEVELS.includes(c)) return c; if (/^(freemium|free plan|trial)$/.test(c)) return 'free'; return null; }
-/** Level guessed from a plan's name (and from the plan having no public price). Always flagged to the person. */
-export function guessLevel(name: string, quote: boolean, amount: number | null): string | null {
-  const c = canon(name);
-  if (amount === 0) return 'free';
-  for (const [lvl, re] of LEVEL_WORDS) if (re.test(c)) return lvl;
-  if (quote) return 'enterprise';
-  return null;
-}
-
 function parseSeat(v: unknown): { model: string | null; max: number | null } {
   const c = canon(v); if (!c) return { model: null, max: null };
   if (/\b(unlimited|no limit)\b/.test(c)) return { model: 'unlimited_users', max: null };
@@ -195,7 +176,7 @@ function titleName(pre: string[][]): string {
 
 // ------------------------------------------------------------------ the model
 interface Term { period: string; amount: number | null; currency: string; tax: string; quote: boolean }
-interface PlanM { product: string; plan: string; level: string | null; level_guessed: boolean; seat_model: string | null; max_users: number | null; terms: Map<string, Term>; features: Map<string, string>; rows: number[] }
+interface PlanM { product: string; plan: string; seat_model: string | null; max_users: number | null; terms: Map<string, Term>; features: Map<string, string>; rows: number[] }
 interface FeatM { name: string; their: string; category: string; included: boolean }
 interface CompM { name: string; tier?: string; kind?: string; website?: string; positioning?: string; scopes: string[]; plans: Map<string, PlanM>; feats: Map<string, FeatM>; rows: number[] }
 interface Hints { competitor?: string; tier?: string | null; scope?: string }
@@ -213,7 +194,7 @@ function compOf(m: Model, name: string, row: number): CompM {
 function planOf(c: CompM, product: string, plan: string, seat: string | null, row: number): PlanM {
   const k = [nkey(product), nkey(plan), seat || ''].join('|');
   let p = c.plans.get(k);
-  if (!p) { p = { product: product.trim(), plan: plan.trim(), level: null, level_guessed: false, seat_model: seat, max_users: null, terms: new Map(), features: new Map(), rows: [] }; c.plans.set(k, p); }
+  if (!p) { p = { product: product.trim(), plan: plan.trim(), seat_model: seat, max_users: null, terms: new Map(), features: new Map(), rows: [] }; c.plans.set(k, p); }
   p.rows.push(row);
   return p;
 }
@@ -228,7 +209,7 @@ function addFeature(c: CompM, p: PlanM | null, name: string, o: { included?: boo
 
 function readCompetitorFields(m: Model, c: CompM, get: (k: string) => string, sheet: string, row: number) {
   const tierRaw = get('tier');
-  if (tierRaw) { const t = parseTier(tierRaw); if (t) c.tier = c.tier || t; else if (!parseLevel(tierRaw)) m.warnings.push(`${sheet} row ${row}: "${tierRaw}" is not a tier (use Tier 1, 2, 3 or Substitute).`); }
+  if (tierRaw) { const t = parseTier(tierRaw); if (t) c.tier = c.tier || t; else m.warnings.push(`${sheet} row ${row}: "${tierRaw}" is not a tier (use Tier 1, 2, 3 or Substitute).`); }
   const kind = parseKind(get('kind')); if (kind) c.kind = c.kind || kind;
   if (get('website')) c.website = c.website || get('website');
   if (get('positioning')) c.positioning = c.positioning || get('positioning');
@@ -369,11 +350,6 @@ function readTable(m: Model, t: Table): string {
       const p = planOf(c, product, planName, seat.model, row);
       if (seat.max && !p.max_users) p.max_users = seat.max;
 
-      const lvlRaw = get('plan_level') || (parseTier(get('tier')) ? '' : get('tier'));
-      const level = parseLevel(lvlRaw);
-      if (lvlRaw && !level) m.warnings.push(`${t.name} row ${row}: "${lvlRaw}" is not a plan level (Free, Entry, Mid, Top or Enterprise). It was worked out from the plan name instead.`);
-      if (level) p.level = p.level || level;
-
       for (const tm of terms) {
         let cur = tm.mo.currency || parseCurrency(get('currency'));
         if (!cur) { assume(m, 'A price with no currency given was taken as rupees (INR).'); cur = 'INR'; }
@@ -383,11 +359,6 @@ function readTable(m: Model, t: Table): string {
         const old = p.terms.get(tm.period);
         if (old) { if (old.amount !== tm.mo.amount) m.warnings.push(`${t.name} row ${row}: ${planName} has two different ${tm.period} prices. The first one was kept.`); continue; }
         p.terms.set(tm.period, { period: tm.period, amount: tm.mo.amount, currency: cur, tax, quote: tm.mo.quote });
-      }
-      if (!p.level) {
-        const firstAmt = [...p.terms.values()].find((x) => x.amount !== null);
-        const g = guessLevel(planName, [...p.terms.values()].some((x) => x.quote), firstAmt ? firstAmt.amount : null);
-        if (g) { p.level = g; p.level_guessed = true; }
       }
       if (get('features')) for (const f of splitFeatures(get('features'))) addFeature(c, p, f, { included: true });
       info.used++;
@@ -521,7 +492,7 @@ function apply(store, model: Model, o: { commit: boolean; overwrite: boolean; ac
       let madeAny = false;
       for (const tm of pm.terms.values()) {
         const dup = prices.find((x) => (x.billing_model === 'one_time' ? 'one_time' : (x.billing_period || 'month')) === tm.period);
-        if (dup) { res.prices.existing++; if (!dup.tier_tag && pm.level) patch(dup.id, { tier_tag: pm.level }); continue; }
+        if (dup) { res.prices.existing++; continue; }
         const perUser = pm.seat_model === 'per_user';
         const fields: any = {
           title: `${comp.title} ${pm.plan}${pm.product ? ` (${pm.product})` : ''} ${PERIOD_LABEL[tm.period] || tm.period}`,
@@ -530,7 +501,6 @@ function apply(store, model: Model, o: { commit: boolean; overwrite: boolean; ac
           value_metric: perUser ? 'user' : 'plan', unit: tm.period === 'one_time' ? (perUser ? 'user' : 'once') : `${perUser ? 'user' : 'plan'}/${tm.period}`,
           captured_on: today, observed_basis: 'published',
         };
-        if (pm.level) fields.tier_tag = pm.level;
         if (pm.seat_model) fields.seat_model = pm.seat_model;
         if (pm.max_users) fields.max_users = pm.max_users;
         const pp = create('PricePoint', fields);
@@ -550,7 +520,7 @@ function apply(store, model: Model, o: { commit: boolean; overwrite: boolean; ac
         }
       }
       res.plan_rows.push({
-        competitor: cm.name, product: pm.product || null, plan: pm.plan, level: pm.level, level_guessed: pm.level_guessed, seat_model: pm.seat_model, max_users: pm.max_users,
+        competitor: cm.name, product: pm.product || null, plan: pm.plan, seat_model: pm.seat_model, max_users: pm.max_users,
         terms: [...pm.terms.values()].map((x) => ({ period: x.period, amount: x.amount, currency: x.currency, quote: x.quote })), features: pm.features.size,
         state: prices.length && !madeAny ? 'already there' : prices.length ? 'prices added' : madeAny ? 'new' : 'no price',
       });
@@ -569,13 +539,9 @@ function apply(store, model: Model, o: { commit: boolean; overwrite: boolean; ac
 function summarise(model: Model, res: any, filename: string) {
   const noPrice = res.plan_rows.filter((p) => p.state === 'no price');
   const fresh = res.plan_rows.filter((p) => p.state !== 'already there');
-  const unlevelled = fresh.filter((p) => !p.level);
-  const guessed = fresh.filter((p) => p.level_guessed);
   const warnings = [...model.warnings];
   const s = (n: number, one: string, many: string) => (n === 1 ? one : many);
   if (noPrice.length) warnings.push(`${noPrice.length} ${s(noPrice.length, 'plan has', 'plans have')} no price at all, so ${s(noPrice.length, 'it is', 'they are')} not saved (${noPrice.slice(0, 6).map((p) => p.plan).join(', ')}${noPrice.length > 6 ? ', …' : ''}). A plan is saved together with its price; write "Contact sales" for a plan that has no public price.`);
-  if (unlevelled.length) warnings.push(`${unlevelled.length} ${s(unlevelled.length, 'plan has', 'plans have')} no level and none could be worked out from the name. Give ${s(unlevelled.length, 'it', 'them')} a level (Free, Entry, Mid, Top, Enterprise) on the competitor page, so ${s(unlevelled.length, 'it takes', 'they take')} part in level comparisons.`);
-  if (guessed.length) warnings.push(`${guessed.length} plan ${s(guessed.length, 'level was', 'levels were')} guessed from the plan name. Please check the Level column below.`);
   return {
     file: filename, sheets: model.sheets, ...res, plan_rows: res.plan_rows.slice(0, 300), plan_rows_total: res.plan_rows.length,
     assumptions: [...model.assumptions.entries()].map(([text, n]) => (n > 1 ? `${text} (${n} times)` : text)),
@@ -605,13 +571,13 @@ export function template(kind: string): { filename: string; body: string } {
   return {
     filename: 'competitor-plans-template.csv',
     body: csv([
-      ['Competitor', 'Tier', 'Website', 'Module', 'Product', 'Plan', 'Level', 'Licence', 'Max users', 'Monthly price', 'Yearly price', 'Lifetime price', 'Currency', 'GST included', 'Features'],
-      ['Zoho Books', 'Tier 1', 'zoho.com/books', 'Accounting', '', 'Free', 'free', 'multi user', '1', '0', '0', '', 'INR', '', 'Invoicing; Expense tracking'],
-      ['Zoho Books', '', '', '', '', 'Standard', 'entry', 'multi user', '3', '749', '7188', '', 'INR', 'no', 'Invoicing; Expense tracking; GST filing; Email support'],
-      ['Zoho Books', '', '', '', '', 'Professional', 'mid', 'multi user', '5', '1999', '19188', '', 'INR', 'no', 'Invoicing; GST filing; Inventory; Purchase orders'],
-      ['Zoho Books', '', '', '', '', 'Enterprise', 'enterprise', '', '', 'Contact sales', '', '', 'INR', '', 'Everything in Professional; Custom roles'],
-      ['Tally Prime', 'Tier 1', 'tallysolutions.com', 'Accounting', '', 'Silver', 'entry', 'single user', '1', '', '', '22500', 'INR', 'no', 'Accounting; GST returns; Inventory'],
-      ['Tally Prime', '', '', '', '', 'Gold', 'mid', 'multi user', '', '', '', '67500', 'INR', 'no', 'Accounting; GST returns; Inventory; Unlimited users'],
+      ['Competitor', 'Tier', 'Website', 'Module', 'Product', 'Plan', 'Licence', 'Max users', 'Monthly price', 'Yearly price', 'Lifetime price', 'Currency', 'GST included', 'Features'],
+      ['Zoho Books', 'Tier 1', 'zoho.com/books', 'Accounting', '', 'Free', 'multi user', '1', '0', '0', '', 'INR', '', 'Invoicing; Expense tracking'],
+      ['Zoho Books', '', '', '', '', 'Standard', 'multi user', '3', '749', '7188', '', 'INR', 'no', 'Invoicing; Expense tracking; GST filing; Email support'],
+      ['Zoho Books', '', '', '', '', 'Professional', 'multi user', '5', '1999', '19188', '', 'INR', 'no', 'Invoicing; GST filing; Inventory; Purchase orders'],
+      ['Zoho Books', '', '', '', '', 'Enterprise', '', '', 'Contact sales', '', '', 'INR', '', 'Everything in Professional; Custom roles'],
+      ['Tally Prime', 'Tier 1', 'tallysolutions.com', 'Accounting', '', 'Silver', 'single user', '1', '', '', '22500', 'INR', 'no', 'Accounting; GST returns; Inventory'],
+      ['Tally Prime', '', '', '', '', 'Gold', 'multi user', '', '', '', '67500', 'INR', 'no', 'Accounting; GST returns; Inventory; Unlimited users'],
     ]),
   };
 }
@@ -619,7 +585,7 @@ export function template(kind: string): { filename: string; body: string } {
 // ------------------------------------------------------------------ plans out, in the same layout the importer reads
 const SEAT_WORD: Record<string, string> = { single_user: 'single user', multi_user: 'multi user', per_user: 'per user', unlimited_users: 'unlimited' };
 const TIER_WORD: Record<string, string> = { T1: 'Tier 1', T2: 'Tier 2', T3: 'Tier 3', S: 'Substitute' };
-export const EXPORT_HEADERS = ['Competitor', 'Tier', 'Module', 'Product', 'Plan', 'Level', 'Licence', 'Max users', 'Monthly price', 'Quarterly price', 'Yearly price', 'Lifetime price', 'Currency', 'GST included', 'Features'];
+export const EXPORT_HEADERS = ['Competitor', 'Tier', 'Module', 'Product', 'Plan', 'Licence', 'Max users', 'Monthly price', 'Quarterly price', 'Yearly price', 'Lifetime price', 'Currency', 'GST included', 'Features'];
 
 /**
  * The plans of one competitor (or of everyone in scope) as a CSV that can be imported again unchanged:
@@ -633,22 +599,22 @@ export function exportPlans(store, o: { id?: string; scope?: string } = {}): { f
   for (const c of comps) {
     const own = cellsOf(store, c);
     const base = [c.title, TIER_WORD[c.tier] || '', (Array.isArray(c.scopes) ? c.scopes : []).join(', ')];
-    const plans = new Map<string, { product: string; plan: string; level: string; seat: string; max: string; terms: Map<string, any>; feats: Set<string> }>();
+    const plans = new Map<string, { product: string; plan: string; seat: string; max: string; terms: Map<string, any>; feats: Set<string> }>();
     for (const p of own.filter((x) => x.type === 'PricePoint' && x.status !== 'Retired')) {
       const product = (lineOf(store, p) || ({} as any)).product_name || '';
       const plan = String(p.plan || p.title || '');
       const key = [nkey(product), nkey(plan), p.seat_model || ''].join('|');
       let g = plans.get(key);
-      if (!g) { g = { product, plan, level: p.tier_tag || '', seat: SEAT_WORD[p.seat_model] || '', max: p.max_users ? String(p.max_users) : '', terms: new Map(), feats: new Set() }; plans.set(key, g); }
+      if (!g) { g = { product, plan, seat: SEAT_WORD[p.seat_model] || '', max: p.max_users ? String(p.max_users) : '', terms: new Map(), feats: new Set() }; plans.set(key, g); }
       const period = p.billing_model === 'one_time' ? 'one_time' : p.billing_period || 'month';
       if (!g.terms.has(period)) g.terms.set(period, p);
       for (const l of store.out(p.id, 'includes_capability')) { const r = store.get(l.target); if (r && r.status !== 'Retired') g.feats.add(featureKey(store, r, idx).name); }
     }
-    if (!plans.size) { rows.push([...base, '', '', '', '', '', '', '', '', '', '', '', '', '', '']); continue; }
+    if (!plans.size) { rows.push([...base, '', '', '', '', '', '', '', '', '', '', '']); continue; }
     for (const g of plans.values()) {
       const price = (period: string) => { const t = g.terms.get(period); return !t ? '' : t.price_type === 'quote' ? 'Contact sales' : String(t.amount); };
       const first = [...g.terms.values()][0];
-      rows.push([...base, g.product, g.plan, g.level, g.seat, g.max, price('month'), price('quarter'), price('year'), price('one_time'), first ? first.currency || '' : '', first ? (first.tax_basis === 'incl_gst' ? 'yes' : first.tax_basis === 'excl_gst' ? 'no' : '') : '', [...g.feats].join('; ')]);
+      rows.push([...base, g.product, g.plan, g.seat, g.max, price('month'), price('quarter'), price('year'), price('one_time'), first ? first.currency || '' : '', first ? (first.tax_basis === 'incl_gst' ? 'yes' : first.tax_basis === 'excl_gst' ? 'no' : '') : '', [...g.feats].join('; ')]);
     }
   }
   const name = o.id && comps[0] ? String(comps[0].title).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'competitor';

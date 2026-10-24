@@ -174,7 +174,7 @@ function productLinesOf(store, c) {
       plans: plPrices.map((p) => ({
         id: p.id, plan: p.plan, amount: p.amount, currency: p.currency, unit: p.unit,
         value_metric: p.value_metric, billing_model: p.billing_model, billing_period: p.billing_period || null,
-        tier_tag: p.tier_tag || null, tax_basis: p.tax_basis,
+        tax_basis: p.tax_basis,
       })),
     };
   });
@@ -204,7 +204,6 @@ function completenessChecks(c, myPrices, planFeatureCount, myFiles) {
     { key: 'weaknesses', auto: !!c.weaknesses, label: 'Note their weaknesses', weight: 1 },
     { key: 'company_facts', auto: !!(c.founded_year || c.hq_country || c.size_band), label: 'Add company facts (founded, head office or size)', weight: 1 },
     { key: 'pricing', auto: myPrices.length > 0 || !!c.pricing_na_reason, label: 'Add their prices, or say why there are none', weight: 3 },
-    { key: 'pricing_levels', auto: myPrices.length > 0 && myPrices.every((p) => p.tier_tag), label: 'Give every plan a level (Free, Entry, Mid, Top, Enterprise)', weight: 2 },
     { key: 'plan_features', auto: planFeatureCount > 0, label: 'Tick the features each plan includes', weight: 3 },
     { key: 'files', auto: myFiles > 0, label: 'Upload a source file (price list, deck, PDF)', weight: 1 },
     { key: 'looks_right', auto: false, label: 'Check that everything here looks right', weight: 2 },
@@ -226,15 +225,37 @@ function completeness(store) {
   return store.list('Competitor', (c) => c.status !== 'Retired').map((c) => completenessOf(store, c));
 }
 
-// ---- Normalized pricing: plans of every competitor on one scale, grouped by plan level
+// ---- Normalized pricing: plans of every competitor on one scale
 const median = (v: number[]) => { if (!v.length) return null; const s = [...v].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
 const spread = (v: number[]) => (v.length ? { min: Math.min(...v), median: median(v), max: Math.max(...v), count: v.length } : null);
 
 /**
- * Every tagged plan, costed with the same rules as the side-by-side compare (compare.costFor): INR excluding GST, over 12 months,
+ * Where a plan sits among ITS OWN company's plans, worked out from the prices (nothing is typed in or stored):
+ *   free      costs nothing,
+ *   cheapest  the lowest-priced paid plan of the company,
+ *   top       the highest-priced paid plan of the company (only when the company has at least two paid plans),
+ * and any plan in between has no position. Plans with no public price have none either.
+ */
+export const POSITIONS = ['free', 'cheapest', 'top'] as const;
+export const POSITION_NAME: Record<string, string> = { free: 'Free plans', cheapest: 'Cheapest paid plan', top: 'Most expensive plan' };
+function assignPositions(rows: any[]) {
+  const byCompany = new Map<string, any[]>();
+  for (const r of rows) { r.position = null; (byCompany.get(r.competitor.id) || byCompany.set(r.competitor.id, []).get(r.competitor.id)!).push(r); }
+  for (const list of byCompany.values()) {
+    const cost = (r: any) => (r.yearly_inr !== null ? r.yearly_inr : r.once_inr);
+    for (const r of list) if (cost(r) === 0) r.position = 'free';
+    const paid = list.filter((r) => cost(r) !== null && cost(r) > 0).sort((a, b) => cost(a) - cost(b));
+    if (paid.length) paid[0].position = 'cheapest';
+    if (paid.length > 1) paid[paid.length - 1].position = 'top';
+  }
+}
+
+/**
+ * Every plan, costed with the same rules as the side-by-side compare (compare.costFor): INR excluding GST, over 12 months,
  * for ONE usage scenario (?users=, ?units=, ?gb=). A plan sold for several terms (1, 3, 12 months, lifetime) is ONE row:
  * yearly_inr is its cheapest recurring term over 12 months, once_inr is the lifetime / one-time price. Single-user licences are
- * bought once per user; multi-user licences are one price that covers up to max_users.
+ * bought once per user; multi-user licences are one price that covers up to max_users. Rows carry their `position` (see above)
+ * and `key`, which is `<competitor>|<product line>|<plan name>|<licence>`; `positions` groups the rows by position.
  */
 function normalizedPricing(store, query: any = {}) {
   // compare.ts imports this file, so it is loaded when first needed rather than at start-up
@@ -243,14 +264,11 @@ function normalizedPricing(store, query: any = {}) {
   const fx = store.data.settings.fx;
   const { usage, defaults_used } = parseUsage(query);
   const allPrices = store.list('PricePoint', (p) => p.status !== 'Retired');
-  const TIER_TAGS = ['free', 'entry', 'mid', 'top', 'enterprise'];
   const plans = new Map<string, any>();
   const skipped: any[] = [];
-  let untagged = 0;
   for (const p of allPrices) {
     const comp = ownerOf(store, p);
     if (!comp || !inScope(comp, query.scope)) continue;
-    if (!p.tier_tag) { untagged++; continue; }
     const line = lineOf(store, p);
     const key = [comp.id, line ? line.id : '', String(p.plan || p.title).toLowerCase(), p.seat_model || ''].join('|');
     const r = costFor(p, usage, 12, fx);
@@ -258,7 +276,7 @@ function normalizedPricing(store, query: any = {}) {
     if (r.cost === null || r.cost === undefined) { skipped.push({ id: p.id, plan: p.plan || p.title, competitor: comp.title, reason: r.reason }); }
     let row = plans.get(key);
     if (!row) {
-      row = { id: p.id, plan: p.plan || p.title, competitor: { id: comp.id, title: comp.title, tier: comp.tier }, product: line ? line.product_name : null, tier_tag: p.tier_tag, seat_model: p.seat_model || null, max_users: p.max_users || null, yearly_inr: null, once_inr: null, terms: [] };
+      row = { key, id: p.id, plan: p.plan || p.title, competitor: { id: comp.id, title: comp.title, tier: comp.tier }, product: line ? line.product_name : null, position: null, seat_model: p.seat_model || null, max_users: p.max_users || null, yearly_inr: null, once_inr: null, terms: [] };
       plans.set(key, row);
     }
     const period = oneTime ? 'one_time' : (p.billing_period || 'month');
@@ -268,13 +286,14 @@ function normalizedPricing(store, query: any = {}) {
       else row.yearly_inr = row.yearly_inr === null ? r.cost : Math.min(row.yearly_inr, r.cost);
     }
   }
-  const byTier = Object.fromEntries(TIER_TAGS.map((t) => [t, [] as any[]]));
-  for (const row of plans.values()) byTier[row.tier_tag].push(row);
-  const tiers = TIER_TAGS.map((tag) => {
-    const rows = byTier[tag].sort((a, b) => (a.yearly_inr ?? a.once_inr ?? Infinity) - (b.yearly_inr ?? b.once_inr ?? Infinity));
-    return { tier_tag: tag, count: rows.length, rows, yearly: spread(rows.filter((r) => r.yearly_inr !== null).map((r) => r.yearly_inr)), once: spread(rows.filter((r) => r.once_inr !== null).map((r) => r.once_inr)) };
+  const rows = [...plans.values()];
+  assignPositions(rows);
+  const cheapFirst = (a: any, b: any) => (a.yearly_inr ?? a.once_inr ?? Infinity) - (b.yearly_inr ?? b.once_inr ?? Infinity);
+  const positions = POSITIONS.map((position) => {
+    const list = rows.filter((r) => r.position === position).sort(cheapFirst);
+    return { position, label: POSITION_NAME[position], count: list.length, rows: list, yearly: spread(list.filter((r) => r.yearly_inr !== null).map((r) => r.yearly_inr)), once: spread(list.filter((r) => r.once_inr !== null).map((r) => r.once_inr)) };
   }).filter((t) => t.count > 0);
-  return { tiers, usage: { ...usage, defaults_used }, summary: { total: allPrices.length, tagged: allPrices.length - untagged, untagged, plans: plans.size }, skipped, fx };
+  return { positions, rows: rows.sort(cheapFirst), usage: { ...usage, defaults_used }, summary: { total: allPrices.length, plans: rows.length, with_position: rows.filter((r) => r.position).length }, skipped, fx };
 }
 
 // ---- Plan-capability mapping: which capabilities are included in which plan
@@ -288,7 +307,7 @@ function planCapabilities(store) {
       // capabilities linked to this plan via includes_capability
       const planCaps = store.out(p.id, 'includes_capability').map((l) => store.get(l.target)).filter((x) => x && x.type === 'CompetitorCapability' && x.status !== 'Retired');
       return {
-        id: p.id, plan: p.plan, tier_tag: p.tier_tag || null, amount: p.amount, currency: p.currency,
+        id: p.id, plan: p.plan, amount: p.amount, currency: p.currency,
         billing_model: p.billing_model, billing_period: p.billing_period || null,
         capabilities: planCaps.map((cap) => ({ id: cap.id, tag: capabilityTag(store, cap), their_name: cap.capability_tag, level: cap.level })),
       };

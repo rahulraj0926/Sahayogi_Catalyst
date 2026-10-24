@@ -4,12 +4,12 @@ import { Empty, ErrorBox, Loading } from '@/components/ui';
 import { Field, Modal, useAction } from '@/components/kit';
 import { Plus } from 'lucide-react';
 import { api, useApi } from '@/lib/api';
-import { LEVEL_LABEL, PlanCard, PlanRow } from './PlanKit';
+import { PlanCard, PlanRow } from './PlanKit';
 
 const PERIODS: [string, string][] = [['monthly', 'per month'], ['quarterly', 'per quarter'], ['yearly', 'per year'], ['one_time', 'paid once'], ['per_unit', 'per unit'], ['custom', 'custom']];
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? 'On request' : `${c === 'INR' ? '₹' : c + ' '}${Number(a).toLocaleString('en-IN')}`);
 
-/** One form for adding a plan and for changing one: name, price, how it is billed, free or not, and the competitor level it sits at. */
+/** One form for adding a plan and for changing one: name, price, how it is billed and free or not. */
 const USERS: [string, string][] = [['single_user', 'One user'], ['multi_user', 'A set number of users'], ['per_user', 'Price is for each user'], ['unlimited_users', 'No limit on users']];
 /** "One user", "Up to 3 users" ... said in plain words. */
 export const usersText = (p: any) => (p.seat_model === 'single_user' ? 'One user' : p.seat_model === 'multi_user' ? (p.max_users ? `Up to ${p.max_users} user${p.max_users === 1 ? '' : 's'}` : 'Several users') : p.seat_model === 'per_user' ? 'Price is for each user' : p.seat_model === 'unlimited_users' ? 'No limit on users' : 'Users not set');
@@ -26,7 +26,7 @@ function PlanForm({ pid, plan, plans = [], all = [], onClose, onDone }: { pid: s
   // a new plan starts with everything the plan below it has: the dearest plan so far (or the last one added), because a higher plan always includes the lower ones
   const price = (p: any) => (p.is_free ? 0 : Number(p.price_monthly ?? (p.price_yearly != null ? p.price_yearly / 12 : p.amount ?? 0)) || 0);
   const [copyFrom, setCopyFrom] = useState(() => (plan || plans.length === 0 ? '' : [...plans].sort((a, b) => price(a) - price(b)).pop()!.id));
-  const [v, setV] = useState({ title: plan?.title || '', monthly: plan?.price_monthly ?? '', yearly: plan?.price_yearly ?? '', seat_model: plan?.seat_model || 'single_user', max_users: plan?.max_users ?? 3, tier_tag: plan?.tier_tag || '', is_free: !!plan?.is_free });
+  const [v, setV] = useState({ title: plan?.title || '', monthly: plan?.price_monthly ?? '', yearly: plan?.price_yearly ?? '', seat_model: plan?.seat_model || 'single_user', max_users: plan?.max_users ?? 3, is_free: !!plan?.is_free });
   const act = useAction();
   const set = (k: string, x: any) => setV({ ...v, [k]: x });
   const m = num(v.monthly), y = num(v.yearly);
@@ -49,14 +49,13 @@ function PlanForm({ pid, plan, plans = [], all = [], onClose, onDone }: { pid: s
         {v.seat_model === 'multi_user' && <Field label="How many users"><input type="number" min={1} value={v.max_users} onChange={(e) => set('max_users', e.target.value)} /></Field>}
       </div>
       {!plan && plans.length > 0 && <Field label="Start with the features of" help="A higher plan includes what the lower one has, so this one starts with all of it. Add more or take some out after."><select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}><option value="">Nothing, start empty</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.title} ({p.feature_count} feature{p.feature_count === 1 ? '' : 's'})</option>)}</select></Field>}
-      <Field label="Competitor plan level it sits at"><select value={v.tier_tag} onChange={(e) => set('tier_tag', e.target.value)}><option value="">Not decided</option>{Object.entries(LEVEL_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       {act.box}
       <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
         if (!v.title.trim()) throw new Error('Please fill in the plan name.');
         if (v.seat_model === 'multi_user' && !(Number(v.max_users) >= 1)) throw new Error('Please say how many users the plan covers.');
         const free = v.is_free;
         const fields: any = {
-          title: v.title.trim(), currency: 'INR', is_free: free, tier_tag: v.tier_tag || null,
+          title: v.title.trim(), currency: 'INR', is_free: free,
           price_monthly: free ? null : m, price_yearly: free ? null : y,
           seat_model: v.seat_model, max_users: v.seat_model === 'multi_user' ? Number(v.max_users) : null,
         };
@@ -137,7 +136,6 @@ export default function Planner({ pid }: { pid: string; scope?: string }) {
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorBox message={error || 'No data'} />;
   const removePlan = (p: any) => act.run(async () => { if (!(await act.ask(`Delete the plan “${p.title}”? Its features stay on our list.`, 'Delete'))) return; await api(`/items/${p.id}/status`, { product: pid, method: 'POST', body: { status: 'Deprecated' } }); reload(); });
-  const setLevel = (p: any, tier_tag: string) => act.run(async () => { await api(`/items/${p.id}`, { product: pid, method: 'PATCH', body: { fields: { tier_tag: tier_tag || null } } }); reload(); });
   const takeOut = (p: any, capability_id: string) => act.run(async () => { await api('/competitors/our-plans/features', { product: pid, method: 'POST', body: { plan_id: p.id, capability_id, included: false } }); reload(); });
   return (
     <div className="flex flex-col gap-6">
@@ -157,8 +155,6 @@ export default function Planner({ pid }: { pid: string; scope?: string }) {
                 ...(p.price_yearly != null ? [{ id: `${p.id}-y`, label: 'per year', value: money(p.price_yearly, p.currency || 'INR') }] : []),
               ]}
               note={usersText(p)}
-              level={p.tier_tag || ''}
-              onLevel={(v) => setLevel(p, v)}
               features={all.filter((f) => f.in_plans.includes(p.id)).map((f) => ({ key: f.capability_id, name: f.name }))}
               onRemoveFeature={(k) => takeOut(p, k)}
               onAddFeature={() => setAddingTo(p)}
