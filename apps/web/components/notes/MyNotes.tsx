@@ -1,10 +1,12 @@
 'use client';
-import { Bold, GripVertical, Italic, ListChecks, Pin, PinOff, Plus, Search, Trash2 } from 'lucide-react';
+import { SearchField } from '@/components/ui/search-field';
+import { STICKY_COLORS, STICKY_TILT, stickyHash } from '@/components/notes/StickyBoard';
+import { Bold, GripVertical, Italic, ListChecks, Pin, PinOff, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Note = { id: string; html: string; tone: number; pinned: boolean; at: string };
 /** What the board needs to show a note. */
-export type BoardNote = { id: string; html: string; tone: number; pinned: boolean };
+export type BoardNote = { id: string; html: string; tone: number; pinned: boolean; /** a small line under the text, for example who wrote it and when */ meta?: string };
 /** A colour for a note that has none of its own, the same every time for the same id. */
 export const toneFor = (id: string) => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 7;
 
@@ -54,8 +56,8 @@ function toggleBox() {
   return true;
 }
 
-function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, grip, className = '' }: {
-  html: string; placeholder?: string; tone: number; pinned?: boolean; onPin?: () => void; className?: string;
+function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, grip, className = '', sticky, tilt = '', meta }: {
+  html: string; placeholder?: string; tone: number; pinned?: boolean; onPin?: () => void; className?: string; sticky?: boolean; tilt?: string; meta?: string;
   onCommit: (html: string) => void; onClear: () => void; grip?: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -64,13 +66,14 @@ function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, gri
   const cmd = (c: string) => { ref.current?.focus(); document.execCommand(c); };
   const save = () => { if (ref.current) onCommit(clean(ref.current.innerHTML)); };
   return (
-    <div className={`group relative flex h-[17rem] min-w-0 flex-col rounded-xl p-4 shadow-sm transition-shadow focus-within:shadow-md ${TONES[tone % TONES.length]} ${className}`}>
+    <div className={`group relative flex min-w-0 flex-col shadow-sm transition-shadow focus-within:shadow-md ${sticky ? `min-h-[11rem] rounded-md border p-3 transition-transform hover:z-10 hover:rotate-0 focus-within:rotate-0 ${STICKY_COLORS[tone % STICKY_COLORS.length]} ${tilt}` : `h-[17rem] rounded-xl p-4 ${TONES[tone % TONES.length]}`} ${className}`}>
       {grip}
       <div ref={ref} contentEditable suppressContentEditableWarning role="textbox" aria-multiline aria-label={placeholder ? 'New note' : 'Note'} data-placeholder={placeholder}
         onBlur={save} onClick={() => { if (toggleBox()) save(); }}
         onPaste={(e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }}
         onKeyDown={(e) => { if (e.key === 'Escape') (e.target as HTMLElement).blur(); }}
         className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-[0.95rem] leading-snug outline-none empty:before:opacity-60 empty:before:content-[attr(data-placeholder)]" />
+      {meta && <div className="mt-1 text-[11px] opacity-80">{meta}</div>}
       <div className="mt-2 flex items-center gap-0.5" onMouseDown={(e) => e.preventDefault()}>
         <button type="button" style={BTN} className={TOOL} aria-label="Bold" title="Bold" onClick={() => cmd('bold')}><Bold size={15} /></button>
         <button type="button" style={BTN} className={TOOL} aria-label="Italic" title="Italic" onClick={() => cmd('italic')}><Italic size={15} /></button>
@@ -88,8 +91,8 @@ function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, gri
  * It keeps nothing itself. Personal notes (below) and a competitor's notes both use it and decide where the notes are saved.
  * Dragging a card to rearrange works only when `onMove` is given.
  */
-export function NoteBoard({ notes, onAdd, onEdit, onRemove, onPin, onMove, busy }: {
-  notes: BoardNote[]; busy?: boolean;
+export function NoteBoard({ notes, onAdd, onEdit, onRemove, onPin, onMove, busy, search = true, sticky }: {
+  notes: BoardNote[]; busy?: boolean; search?: boolean; /** the tilted paper look with a border (the competitor notes) */ sticky?: boolean;
   onAdd: (html: string, tone: number) => void; onEdit: (id: string, html: string) => void; onRemove: (id: string) => void; onPin: (id: string) => void; onMove?: (from: string, before: string) => void;
 }) {
   const [next, setNext] = useState(0);
@@ -108,19 +111,16 @@ export function NoteBoard({ notes, onAdd, onEdit, onRemove, onPin, onMove, busy 
     <div className="flex flex-col gap-[var(--space-md)]">
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="btn primary inline-flex items-center gap-1.5" disabled={busy} onClick={() => (document.querySelector('[aria-label="New note"]') as HTMLElement | null)?.focus()}><Plus size={16} />Add note</button>
-        {notes.length > 3 && (
-          <label className="relative w-full max-w-xs">
-            <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes" aria-label="Search notes" className="h-8 w-full rounded-lg border border-[var(--divider)] bg-[var(--surface)] pl-8 pr-2.5 text-sm text-[var(--text-heading)] outline-none placeholder:text-[var(--text-muted)]" />
-          </label>
+        {search && notes.length > 3 && (
+          <SearchField value={q} onChange={setQ} placeholder="Search notes" className="w-full max-w-xs" />
         )}
       </div>
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(15.5rem,1fr))] gap-4">
-        <li><Editor key={`new-${fresh}`} html="" placeholder="Write your note here, then press Add note" tone={next} onCommit={add} onClear={() => undefined} /></li>
+        <li><Editor key={`new-${fresh}`} html="" placeholder="Write your note here, then press Add note" tone={next} sticky={sticky} onCommit={add} onClear={() => undefined} /></li>
         {shown.map((n) => (
           <li key={n.id} draggable={!!onMove && armed === n.id} onDragStart={(e) => { setDrag(n.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', n.id); }} onDragEnd={() => { setDrag(null); setArmed(null); }}
             onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (drag && onMove) onMove(drag, n.id); setDrag(null); setArmed(null); }} className={drag === n.id ? 'opacity-40' : ''}>
-            <Editor html={n.html} tone={n.tone} pinned={n.pinned} onPin={() => onPin(n.id)}
+            <Editor html={n.html} tone={n.tone} pinned={n.pinned} onPin={() => onPin(n.id)} sticky={sticky} meta={n.meta} tilt={sticky ? STICKY_TILT[stickyHash(n.id) % STICKY_TILT.length] : ''}
               onCommit={(h) => { if (!plain(h)) onRemove(n.id); else if (h !== n.html) onEdit(n.id, h); }} onClear={() => onRemove(n.id)}
               grip={onMove ? <span aria-label="Drag to rearrange" title="Drag to rearrange" onMouseDown={() => setArmed(n.id)} onMouseUp={() => setArmed(null)} className="absolute right-2 top-2 cursor-grab opacity-0 transition-opacity group-hover:opacity-60 active:cursor-grabbing"><GripVertical size={16} /></span> : undefined} />
           </li>

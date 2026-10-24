@@ -30,6 +30,7 @@ async function main() {
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'target_market'")).rowCount) await run('0014_competitor_customer_size_market');
     if ((await c.query("SELECT 1 FROM information_schema.columns WHERE column_name = 'tier_tag' AND table_name IN ('item_price_point', 'item_pricing_plan')")).rowCount) await run('0015_drop_plan_level');
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor_note' AND column_name = 'pinned'")).rowCount) await run('0016_competitor_note_sticky');
+    if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'todo_hidden'")).rowCount) await run('0017_competitor_todo_edit');
     await c.query('COMMIT');
   } catch (e) { await c.query('ROLLBACK'); throw e; } finally { await c.end(); }
 }

@@ -1021,6 +1021,8 @@ CREATE TABLE "item_competitor" (
     "review_by" DATE,
     "todo_done" TEXT[],
     "todo_items" TEXT[],
+    "todo_hidden" TEXT[],
+    "todo_renamed" TEXT[],
     "scopes" TEXT[],
     CONSTRAINT "item_competitor_pkey" PRIMARY KEY ("product_id","id")
 );

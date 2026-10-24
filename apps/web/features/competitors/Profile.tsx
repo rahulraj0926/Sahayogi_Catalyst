@@ -15,7 +15,7 @@ import { ago, hueOf } from './Dashboard';
 import { filled, F } from './profileFields';
 import Overview from './Overview';
 import NotesCard from './NotesCard';
-import { Card as CardBox } from '@/components/dashboard/Card';
+import TodoCard from './TodoCard';
 import { uploadFiles } from './uploadFiles';
 import SourcesTab from './SourcesTab';
 
@@ -151,8 +151,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   const [renaming, setRenaming] = useState(false);
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [showDone, setShowDone] = useState(false); const [newTodo, setNewTodo] = useState(''); const [editTodo, setEditTodo] = useState<{ i: number; text: string } | null>(null);
-  if (loading) return <Loading />;
+  if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorBox message={error || 'Not found'} />;
   const c = data.item;
   // everything below belongs to this competitor: the server has already picked it out
@@ -178,35 +177,6 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   ];
   const server = data.completeness;
   const pct = server ? server.score : Math.round((checks.filter((x) => x.done).length / checks.length) * 100);
-  const toggleTodo = (key: string, on: boolean) => { const cur = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []); if (on) cur.add(key); else cur.delete(key); patch(id, { todo_done: cur.size ? [...cur] : '' }); };
-  const myTodos: string[] = Array.isArray(c.todo_items) ? c.todo_items : [];
-  const doneSet = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []);
-  const saveTodos = (items: string[], done: Set<string>) => patch(id, { todo_items: items.length ? items : '', todo_done: done.size ? [...done] : '' });
-  const addTodo = () => { const t = newTodo.trim(); if (!t || myTodos.includes(t)) { setNewTodo(''); return; } setNewTodo(''); saveTodos([...myTodos, t], doneSet); };
-  const removeTodo = (i: number) => { const d = new Set(doneSet); d.delete(`my:${myTodos[i]}`); saveTodos(myTodos.filter((_, j) => j !== i), d); };
-  const renameTodo = (i: number, text: string) => { const t = text.trim(); if (!t) return; const d = new Set(doneSet); if (d.delete(`my:${myTodos[i]}`)) d.add(`my:${t}`); setEditTodo(null); saveTodos(myTodos.map((x, j) => (j === i ? t : x)), d); };
-  type Todo = { key: string; label: string; done: boolean; auto: boolean; mine?: number };
-  const todoAll: Todo[] = [
-    ...((server?.items || []) as any[]).map((x) => ({ key: x.key, label: x.label, done: !!x.done, auto: !!x.auto })),
-    ...myTodos.map((t, i) => ({ key: `my:${t}`, label: t, done: doneSet.has(`my:${t}`), auto: false, mine: i })),
-  ];
-  const todoOpen = todoAll.filter((x) => !x.done); const todoDone = todoAll.filter((x) => x.done);
-  const todoRow = (x: Todo) => (
-    <li key={x.key} className="flex items-center gap-2 py-0.5 text-[13px]">
-      {x.mine !== undefined && editTodo?.i === x.mine ? (
-        <span className="row" style={{ gap: 6, flex: 1 }}>
-          <input autoFocus value={editTodo.text} onChange={(e) => setEditTodo({ i: x.mine!, text: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') renameTodo(x.mine!, editTodo.text); if (e.key === 'Escape') setEditTodo(null); }} aria-label="Edit this to-do" style={{ flex: 1, minWidth: 0 }} />
-          <button type="button" className="btn xs primary" disabled={act.busy || !editTodo.text.trim()} onClick={() => renameTodo(x.mine!, editTodo.text)}>Save</button>
-          <button type="button" className="btn xs" onClick={() => setEditTodo(null)}>Cancel</button>
-        </span>
-      ) : (
-        <>
-          <input type="checkbox" checked={x.done} disabled={x.auto || act.busy} onChange={(e) => toggleTodo(x.key, e.target.checked)} aria-label={x.label} title={x.auto ? 'Done by itself once the details are filled in' : undefined} />
-          <span className="min-w-0 flex-1" style={{ textDecoration: x.done ? 'line-through' : 'none', opacity: x.done ? 0.6 : 1 }}>{x.label}</span>
-          {x.mine !== undefined && <><button type="button" className="btn xs ghost" onClick={() => setEditTodo({ i: x.mine!, text: x.label })}>Edit</button><button type="button" className="btn xs ghost" disabled={act.busy} onClick={() => removeTodo(x.mine!)}>Remove</button></>}
-        </>)}
-    </li>
-  );
   const patch = (iid: string, fields: any) => act.run(async () => { await api(`/items/${iid}`, { method: 'PATCH', body: { fields } }); refreshAll(); });
   const runAssist = (a: any, goal: string, label: string) => act.run(async () => {
     const r = await assist.run(a.id, { goal, target: c.id });
@@ -248,20 +218,8 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
           <Overview c={c} onAddProduct={() => setAddLine(true)} lines={myLines} recent={data.recent || []} onSaved={refreshAll}
             kind={<select value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
             todo={(<>
-            {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}
-            <CardBox title="To do" action={<span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span>}>
-              {todoOpen.length === 0 && <div className="small muted" style={{ marginBottom: 6 }}>Nothing left to do.</div>}
-              <ul className="m-0 grid list-none gap-y-1 p-0">{todoOpen.map(todoRow)}</ul>
-              {todoDone.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  <button type="button" className="btn xs ghost" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>{showDone ? 'Hide' : 'Show'} {todoDone.length} done</button>
-                  {showDone && <ul className="m-0 mt-1 grid list-none gap-y-1 p-0">{todoDone.map(todoRow)}</ul>}
-                </div>)}
-              <form className="row mt-auto" style={{ gap: 6, paddingTop: 12 }} onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
-                <input value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Add a to-do" aria-label="Add a to-do" style={{ flex: 1, minWidth: 0 }} />
-                <button type="submit" className="btn sm primary" disabled={act.busy || !newTodo.trim()}>Add</button>
-              </form>
-            </CardBox>
+            {/* Anyone who can edit this page can add, reword and remove to-dos. Who may do that is decided later with the access rules. */}
+            <TodoCard id={id} builtIn={((server?.items || []) as any[]).map((x) => ({ key: x.key, label: x.label, auto: !!x.auto }))} done={c.todo_done} mine={c.todo_items} hidden={c.todo_hidden} renamed={c.todo_renamed} onSaved={refreshAll} />
           </>)} />
         )}
         {tab === 'prices' && (

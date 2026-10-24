@@ -264,6 +264,8 @@ const TYPES = {
       D('last_reviewed_on'), D('review_by'),
       L('todo_done', { help: 'To-do items a person ticked off by hand on the competitor page.' }),
       L('todo_items', { help: 'To-do items people added by hand on the competitor page. A ticked one is listed in todo_done as "my:<text>".' }),
+      L('todo_hidden', { help: 'Built-in to-do items a person removed from the competitor page (their keys).' }),
+      L('todo_renamed', { help: 'Built-in to-do items a person reworded, each as "<key>=<new text>".' }),
       L('scopes', { help: 'Which part of our product this competitor competes with (a module, or any area name). Empty means the whole product.' }),
     ],
     suspectFields: ['positioning', 'kind', 'tier'], countedStatuses: ['Reviewed'],

@@ -5,11 +5,14 @@
  * bulk-tick logic (instant on screen, saved in the background, put back if the save fails, with Undo).
  */
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowRight, Check, ChevronDown, ChevronUp, ListFilter, Search, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, ListFilter, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Field, Modal, useAction } from '@/components/kit';
+import { SearchField } from '@/components/ui/search-field';
 import { useApi } from '@/lib/api';
 
 export const CHUNK = 200;
+/** How many feature rows are drawn before the rest are added as the list is scrolled. */
+const ROWS_AT_A_TIME = 60;
 /** The top row of a long list: solid, so the rows scrolling under it never show through (set inline so no table style can override it). */
 export const STICKY: CSSProperties = { position: 'sticky', top: 0, zIndex: 3, background: 'var(--bg)', boxShadow: 'inset 0 -1px 0 var(--divider)' };
 const SMALL_SELECT: CSSProperties = { height: 32, minHeight: 0, padding: '0 8px', fontSize: 13 };
@@ -73,13 +76,16 @@ export interface PlanCardProps {
 /** One plan: name, price, the features it includes (with a × to take one out) and Delete. The same card for a competitor's plan and for ours. */
 export function PlanCard(p: PlanCardProps) {
   return (
-    <div className="flex w-[260px] shrink-0 flex-col gap-3 rounded-xl border border-[var(--divider)] p-4">
+    <div className="group/card flex w-[260px] shrink-0 flex-col gap-3 rounded-xl border border-[var(--divider)] p-4">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-semibold text-[var(--text-heading)]">{p.title}</div>
           {p.sub && <div className="truncate text-xs text-[var(--text-muted)]">{p.sub}</div>}
         </div>
-        {p.action && <button type="button" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-heading)]" onClick={p.action.onClick}>{p.action.label}</button>}
+        <div className="flex shrink-0 gap-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover/card:opacity-100 [@media(hover:none)]:opacity-100">
+          {p.action && <button type="button" aria-label={`${p.action.label} ${p.title}`} title={p.action.label} className="text-[var(--text-muted)] hover:text-[var(--text-heading)]" onClick={p.action.onClick}><Pencil size={14} /></button>}
+          <button type="button" aria-label={`Delete ${p.title}`} title="Delete plan" className="text-[var(--text-muted)] hover:text-[var(--bad)]" disabled={p.busy} onClick={p.onDelete}><Trash2 size={14} /></button>
+        </div>
       </div>
       {p.terms && p.terms.length > 0 && (
         <div className="grid gap-0.5">
@@ -105,7 +111,6 @@ export function PlanCard(p: PlanCardProps) {
           </ScrollList>
         )}
       </div>
-      <button type="button" className="mt-auto self-start text-[13px] text-[var(--text-muted)] hover:text-[var(--bad)]" disabled={p.busy} onClick={p.onDelete}>Delete plan</button>
     </div>
   );
 }
@@ -118,10 +123,7 @@ export function FeatureBar({ title, q, setQ, group, setGroup, groups, children }
     <>
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <h2 className="m-0 mr-auto text-[15px] font-semibold text-[var(--text-heading)]">{title}</h2>
-      <label className="relative block">
-        <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search features" aria-label="Search features" className="h-9 w-44 rounded-lg border border-[var(--divider)] bg-[var(--search-bg)] pr-2 text-sm" style={{ paddingLeft: 32 }} />
-      </label>
+      <SearchField value={q} onChange={setQ} placeholder="Search features" className="w-44" />
       {groups.length > 1 && (
         <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Group" style={{ height: 36, minHeight: 0, padding: '0 8px', fontSize: 13 }}>
           <option value="">All groups</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -187,8 +189,20 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
     return undefined;
   };
   const role = (col: string) => (hl && col === hl.from ? 'Copying from' : hl && col === hl.to ? 'Copying to' : '');
+  // a long list is drawn a screenful at a time: the next rows are added as the end of the table scrolls into view (counts and group ticks still use every row)
+  const [limit, setLimit] = useState(ROWS_AT_A_TIME);
+  const box = useRef<HTMLDivElement>(null);
+  const end = useRef<HTMLTableRowElement>(null);
+  useEffect(() => { setLimit(ROWS_AT_A_TIME); }, [rows.length]);
+  useEffect(() => {
+    const el = end.current;
+    if (!el || limit >= rows.length) return;
+    const io = new IntersectionObserver((e) => { if (e[0].isIntersecting) setLimit((l) => l + ROWS_AT_A_TIME); }, { root: box.current, rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [limit, rows.length]);
   return (
-    <div className="max-h-[65vh] overflow-auto rounded-xl border border-[var(--divider)] [scrollbar-width:thin]">
+    <div ref={box} className="max-h-[65vh] overflow-auto rounded-xl border border-[var(--divider)] [scrollbar-width:thin]">
       <table className="tbl compact" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
         <thead>
           <tr>
@@ -215,7 +229,7 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
           {rows.length === 0 && (
             <tr><td colSpan={cols.length + 1} className="text-sm text-[var(--text-muted)]" style={{ padding: '18px 12px' }}>No feature matches. {Object.keys(filters).length > 0 && <button type="button" className="font-medium text-[var(--sd-accent)]" onClick={onClear}>Clear filters</button>}</td></tr>
           )}
-          {rows.map((f, i) => {
+          {rows.slice(0, limit).map((f, i) => {
             const cat = f.category || 'Other';
             const head = (i === 0 && showGroups) || (i > 0 && (rows[i - 1].category || 'Other') !== cat);
             const inGroup = head ? rows.filter((x) => (x.category || 'Other') === cat) : [];
@@ -251,6 +265,7 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
               </Fragment>
             );
           })}
+          {limit < rows.length && <tr ref={end}><td colSpan={cols.length + 1} className="text-center text-xs text-[var(--text-muted)]" style={{ padding: 12 }}>Loading more features…</td></tr>}
         </tbody>
       </table>
     </div>
@@ -308,7 +323,7 @@ export function AddFeatureModal({ title, copy, onCopy, known = [], onAddKnown, o
   onAddKnown?: (key: string, plans: string[]) => Promise<unknown> | void;
   onAddNew: (names: string[], plans: string[]) => Promise<unknown>;
   pick?: { key: string; label: string }[];
-  rivals?: { pid: string; onAdd: (name: string) => Promise<unknown> };
+  rivals?: { pid: string; onAdd: (name: string, plans: string[]) => Promise<unknown> };
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -326,13 +341,12 @@ export function AddFeatureModal({ title, copy, onCopy, known = [], onAddKnown, o
   const other: any[] = rivals && q ? theirs.data?.features || [] : [];
   const total: number = rivals && q ? theirs.data?.total || 0 : 0;
   const run = (fn: () => Promise<unknown> | void) => act.run(async () => { await fn(); onDone(); });
-  const btn = { justifyContent: 'space-between', textAlign: 'left' } as const;
   return (
     <Modal title={title} onClose={onClose}>
       {pick && pick.length > 0 && (
         <Field label="Put them in" help="Tick the plans that include them. You can change this later in the table.">
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {pick.map((p) => <label key={p.key} className="row small" style={{ gap: 6 }}><input type="checkbox" checked={on.includes(p.key)} onChange={(e) => setOn(e.target.checked ? [...on, p.key] : on.filter((x) => x !== p.key))} />{p.label}</label>)}
+          <div className="flex flex-wrap gap-2">
+            {pick.map((p) => { const sel = on.includes(p.key); return <button key={p.key} type="button" aria-pressed={sel} onClick={() => setOn(sel ? on.filter((x) => x !== p.key) : [...on, p.key])} className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[13px] transition-colors ${sel ? 'border-[var(--sd-accent)] bg-[var(--sd-accent)]/15 text-[var(--text-heading)]' : 'border-[var(--divider)] text-[var(--text-muted)] hover:text-[var(--text-heading)]'}`}>{sel && <Check size={12} aria-hidden />}{p.label}</button>; })}
           </div>
         </Field>
       )}
@@ -349,9 +363,13 @@ export function AddFeatureModal({ title, copy, onCopy, known = [], onAddKnown, o
           <Field label="Search features" help={rivals ? 'Search the features our plans and all the competitors have. Click one to add it to this plan.' : 'Click a feature on our list to add it to this plan.'}>
             <input type="search" autoFocus value={find} onChange={(e) => setFind(e.target.value)} placeholder="For example: audit, GST, export" />
           </Field>
-          <div className="grid gap-1" style={{ margin: '-4px 0 12px' }}>
-            {mine.map((f) => <button key={f.key} type="button" className="btn sm" style={btn} disabled={act.busy} onClick={() => run(() => onAddKnown?.(f.key, on))}><span>+ {f.name}</span></button>)}
-            {other.map((f) => <button key={f.name} type="button" className="btn sm" style={btn} disabled={act.busy} title={(f.competitors || []).join(', ')} onClick={() => run(() => rivals!.onAdd(f.name))}><span>+ {f.name}</span><span className="xs muted">{f.count} competitor{f.count === 1 ? '' : 's'}</span></button>)}
+          <div className="-mt-1 mb-3 flex flex-col gap-1">
+            {(mine.length > 0 || other.length > 0) && (
+              <ul className="m-0 max-h-52 list-none overflow-y-auto rounded-lg border border-[var(--divider)] p-1">
+                {mine.map((f) => <li key={f.key}><button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-[var(--surface-hover,rgba(127,127,127,.12))]" disabled={act.busy} onClick={() => run(() => onAddKnown?.(f.key, on))}><Plus size={13} aria-hidden className="shrink-0 text-[var(--sd-accent)]" /><span className="min-w-0 flex-1">{f.name}</span></button></li>)}
+                {other.map((f) => <li key={f.name}><button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-[var(--surface-hover,rgba(127,127,127,.12))]" disabled={act.busy} title={(f.competitors || []).join(', ')} onClick={() => run(() => rivals!.onAdd(f.name, on))}><Plus size={13} aria-hidden className="shrink-0 text-[var(--sd-accent)]" /><span className="min-w-0 flex-1">{f.name}</span><span className="text-xs text-[var(--text-muted)]">{f.count} competitor{f.count === 1 ? '' : 's'}</span></button></li>)}
+              </ul>
+            )}
             {theirs.loading && !theirs.data && q !== '' && rivals && <p className="small muted" style={{ margin: 0 }}>Searching…</p>}
             {q !== '' && !theirs.loading && mine.length + other.length === 0 && <p className="small muted" style={{ margin: 0 }}>No match. Type it below to add it as a new feature.</p>}
             {matches.length > mine.length && <p className="xs muted" style={{ margin: 0 }}>{matches.length - mine.length} more. Type more letters to narrow it down.</p>}

@@ -1,9 +1,9 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Empty, ErrorBox, Loading } from '@/components/ui';
 import { Field, Modal, useAction } from '@/components/kit';
 import { api, useApi } from '@/lib/api';
-import { AddFeatureModal, PlanCard, PlanRow } from './PlanKit';
+import { AddFeatureModal, CopyBar, FeatureBar, FeatureGrid, PlanCard, PlanRow, useBulkTicks, type Filters } from './PlanKit';
 
 const PERIODS: [string, string][] = [['monthly', 'per month'], ['quarterly', 'per quarter'], ['yearly', 'per year'], ['one_time', 'paid once'], ['per_unit', 'per unit'], ['custom', 'custom']];
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? 'On request' : `${c === 'INR' ? '₹' : c + ' '}${Number(a).toLocaleString('en-IN')}`);
@@ -76,52 +76,92 @@ function PlanForm({ pid, plan, plans = [], all = [], onClose, onDone }: { pid: s
 export default function Planner({ pid, adding, setAdding }: { pid: string; scope?: string; adding: boolean; setAdding: (v: boolean) => void }) {
   const { data, error, loading, reload } = useApi<any>('/competitors/our-plans', pid, { keep: true });
   const [editing, setEditing] = useState<any>(null);
-  const [addingTo, setAddingTo] = useState<any>(null);
+  const [addingFeature, setAddingFeature] = useState(false);
   const act = useAction();
-  const plans: any[] = data?.plans || [];
+  const plans: any[] = useMemo(() => data?.plans || [], [data]);
   const all: any[] = useMemo(() => data?.features || [], [data]);
+  // the ticks follow what the server last said, each time it answers
+  const answer = useRef(0);
+  const sig = useMemo(() => `${++answer.current}`, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bulk = useBulkTicks({
+    initial: data ? Object.fromEntries(all.map((f: any) => [f.capability_id, f.in_plans])) : null,
+    sig, fkey: (f) => f.capability_id, colName: (col) => plans.find((p) => p.id === col)?.title || '', onStart: act.clear,
+    send: async (col, fs, included) => { await api('/competitors/our-plans/features', { product: pid, method: 'POST', body: { plan_id: col, capability_ids: fs.map((f) => f.capability_id), included } }); },
+  });
+  const [q, setQ] = useState('');
+  const [group, setGroup] = useState('');
+  const [filters, setFilters] = useState<Filters>({});
+  const [hl, setHl] = useState({ from: '', to: '' });
+  useEffect(() => { setFilters({}); }, [plans.map((p) => p.id).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  // inside each group the features some plan has come first, then the ones no plan has
+  const feats: any[] = useMemo(() => all.slice().sort((a, b) => (a.category || '~').localeCompare(b.category || '~') || (b.in_plans.length > 0 ? 1 : 0) - (a.in_plans.length > 0 ? 1 : 0) || a.name.localeCompare(b.name)), [all]);
+  const groups = useMemo(() => [...new Set(feats.map((f: any) => f.category || 'Other'))] as string[], [feats]);
+  const shown = useMemo(() => feats.filter((f: any) => {
+    if (group && (f.category || 'Other') !== group) return false;
+    if (q && !`${f.name} ${f.category || ''}`.toLowerCase().includes(q.toLowerCase())) return false;
+    for (const [col, mode] of Object.entries(filters)) if (bulk.has(f, col) !== (mode === 'in')) return false;
+    return true;
+  }), [feats, group, q, filters, bulk.ticks]); // eslint-disable-line react-hooks/exhaustive-deps
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorBox message={error || 'No data'} />;
   const removePlan = (p: any) => act.run(async () => { if (!(await act.ask(`Delete the plan “${p.title}”? Its features stay on our list.`, 'Delete'))) return; await api(`/items/${p.id}/status`, { product: pid, method: 'POST', body: { status: 'Deprecated' } }); reload(); });
-  const takeOut = (p: any, capability_id: string) => act.run(async () => { await api('/competitors/our-plans/features', { product: pid, method: 'POST', body: { plan_id: p.id, capability_id, included: false } }); reload(); });
+  const cols = plans.map((p) => ({ key: p.id, label: p.title }));
   return (
     <div className="flex flex-col gap-6">
       {act.box}
       {plans.length === 0 ? <Empty>No plans yet. Add the first one, for example Starter, Business or Enterprise. Then add features to each plan.</Empty> : (
-        <PlanRow>
-          {plans.map((p) => (
-            <PlanCard
-              key={p.id}
-              title={p.title}
-              action={{ label: 'Edit', onClick: () => setEditing(p) }}
-              terms={p.is_free ? [{ id: `${p.id}-f`, label: 'Price', value: 'Free' }] : p.price_monthly == null && p.price_yearly == null ? [{ id: `${p.id}-o`, label: PERIODS.find(([k]) => k === p.billing_period)?.[1] || 'Price', value: money(p.amount, p.currency || 'INR') }] : [
-                ...(p.price_monthly != null ? [{ id: `${p.id}-m`, label: 'per month', value: money(p.price_monthly, p.currency || 'INR') }] : []),
-                ...(p.price_yearly != null ? [{ id: `${p.id}-y`, label: 'per year', value: money(p.price_yearly, p.currency || 'INR') }] : []),
-              ]}
-              note={usersText(p)}
-              features={all.filter((f) => f.in_plans.includes(p.id)).map((f) => ({ key: f.capability_id, name: f.name }))}
-              onRemoveFeature={(k) => takeOut(p, k)}
-              onAddFeature={() => setAddingTo(p)}
-              onDelete={() => removePlan(p)}
-              busy={act.busy}
-            />
-          ))}
-        </PlanRow>
+        <>
+          <PlanRow>
+            {plans.map((p) => (
+              <PlanCard
+                key={p.id}
+                title={p.title}
+                action={{ label: 'Edit', onClick: () => setEditing(p) }}
+                terms={p.is_free ? [{ id: `${p.id}-f`, label: 'Price', value: 'Free' }] : p.price_monthly == null && p.price_yearly == null ? [{ id: `${p.id}-o`, label: PERIODS.find(([k]) => k === p.billing_period)?.[1] || 'Price', value: money(p.amount, p.currency || 'INR') }] : [
+                  ...(p.price_monthly != null ? [{ id: `${p.id}-m`, label: 'per month', value: money(p.price_monthly, p.currency || 'INR') }] : []),
+                  ...(p.price_yearly != null ? [{ id: `${p.id}-y`, label: 'per year', value: money(p.price_yearly, p.currency || 'INR') }] : []),
+                ]}
+                note={usersText(p)}
+                features={feats.filter((f) => bulk.has(f, p.id)).map((f) => ({ key: f.capability_id, name: f.name }))}
+                onRemoveFeature={(k) => { const f = feats.find((x) => x.capability_id === k); if (f) bulk.apply(p.id, [f], false); }}
+                onDelete={() => removePlan(p)}
+                busy={act.busy}
+              />
+            ))}
+          </PlanRow>
+
+          <section>
+            <FeatureBar title="Compare plan features" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups}>
+              <button type="button" className="btn sm" onClick={() => setAddingFeature(true)}>Add feature</button>
+            </FeatureBar>
+            {feats.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No features yet. Use “Add feature” above.</p> : (
+              <>
+                <CopyBar
+                  plans={cols}
+                  msg={bulk.msg}
+                  onUndo={bulk.undo}
+                  onPick={(from, to) => setHl((h) => (h.from === from && h.to === to ? h : { from, to }))}
+                  news={(from, to) => feats.filter((f) => bulk.has(f, from) && !bulk.has(f, to)).length}
+                  onCopy={(from, to) => bulk.apply(to, feats.filter((f) => bulk.has(f, from)), true, `Added everything ${cols.find((c) => c.key === from)?.label} has to ${cols.find((c) => c.key === to)?.label}.`)}
+                />
+                <FeatureGrid rows={shown} total={feats.length} cols={cols} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.capability_id} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1}
+                  filters={filters} setFilter={(c, v) => setFilters((f) => { const n = { ...f }; if (v) n[c] = v; else delete n[c]; return n; })} onClear={() => setFilters({})} hl={hl} />
+              </>
+            )}
+          </section>
+        </>
       )}
 
       {adding && <PlanForm pid={pid} plans={plans} all={all} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
       {editing && <PlanForm pid={pid} plan={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); reload(); }} />}
-      {addingTo && (
+      {addingFeature && (
         <AddFeatureModal
-          title={`Add features to ${addingTo.title}`}
-          copy={plans.filter((p) => p.id !== addingTo.id && p.feature_count > 0).map((p) => ({ key: p.id, label: p.title, count: p.feature_count }))}
-          onCopy={(from) => copyFeatures(pid, from, addingTo.id, all)}
-          known={all.filter((f) => !f.in_plans.includes(addingTo.id)).map((f) => ({ key: f.capability_id, name: f.name }))}
-          onAddKnown={(key) => api('/competitors/our-plans/features', { product: pid, method: 'POST', body: { plan_id: addingTo.id, capability_id: key, included: true } })}
-          rivals={{ pid, onAdd: (name) => api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: [{ name }], plan_ids: [addingTo.id] } }) }}
-          onAddNew={(names) => api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: names.map((name) => ({ name })), plan_ids: [addingTo.id] } })}
-          onClose={() => setAddingTo(null)}
-          onDone={() => { setAddingTo(null); reload(); }}
+          title="Add features"
+          pick={cols}
+          rivals={{ pid, onAdd: (name, keys) => api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: [{ name }], plan_ids: keys } }) }}
+          onAddNew={(names, keys) => api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: names.map((name) => ({ name })), plan_ids: keys } })}
+          onClose={() => setAddingFeature(false)}
+          onDone={() => { setAddingFeature(false); reload(); }}
         />
       )}
     </div>

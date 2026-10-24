@@ -37,7 +37,7 @@ export function profile(store: any, id: string) {
 
 const NOUN: Record<string, string> = { CompetitorNote: 'note', PricePoint: 'price', CompetitorCapability: 'capability', CompetitorProductLine: 'product' };
 /** Fields people do not think of as "details" (bookkeeping), so a change to only these is not worth showing. */
-const QUIET = new Set(['todo_done', 'todo_items', 'last_reviewed_on', 'review_by']);
+const QUIET = new Set(['todo_done', 'todo_items', 'todo_hidden', 'todo_renamed', 'last_reviewed_on', 'review_by']);
 const words = (k: string) => k.replace(/_/g, ' ');
 
 /**

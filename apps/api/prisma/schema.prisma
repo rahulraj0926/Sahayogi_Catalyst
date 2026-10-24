@@ -1400,6 +1400,8 @@ model ItemCompetitor {
   review_by DateTime? @db.Date
   todo_done String[]
   todo_items String[]
+  todo_hidden String[]
+  todo_renamed String[]
   scopes String[]
   itemCompetitorProductIdIdFkey Item @relation("item_competitor_product_id_id_fkey", fields: [product_id, id], references: [product_id, id], onDelete: Cascade, map: "item_competitor_product_id_id_fkey")
 

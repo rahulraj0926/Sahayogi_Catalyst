@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, LayoutGrid, List, Search } from 'lucide-react';
 import { Empty, ErrorBox, Loading } from '@/components/ui';
+import { SearchField } from '@/components/ui/search-field';
 import { Pager, usePaged } from '@/components/kit';
 import { api, clearApiCache, useApi } from '@/lib/api';
 import { THREAT_COLOR, tint } from './Overview';
@@ -120,10 +121,7 @@ export default function Dashboard({ pid, scope, onScope, onAdd }: { pid: string;
   const list = (
     <section className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="relative block w-full screen-lg:w-64">
-          <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-          <input type="search" value={q} onChange={(e) => { setQ(e.target.value); pg.setPage(1); }} placeholder="Search competitors" aria-label="Search competitors" className="h-9 w-full rounded-lg border border-[var(--divider)] bg-[var(--search-bg)] pr-2 text-sm" style={{ paddingLeft: 32 }} />
-        </label>
+        <SearchField value={q} onChange={(v) => { setQ(v); pg.setPage(1); }} placeholder="Search competitors" className="w-full screen-lg:w-64" />
         <div className="seg" role="group" aria-label="Order">
           <button type="button" className={sort === 'name' ? 'on' : ''} onClick={() => setSort('name')}>A to Z</button>
           <button type="button" className={sort === 'recent' ? 'on' : ''} onClick={() => setSort('recent')}>Recently updated</button>

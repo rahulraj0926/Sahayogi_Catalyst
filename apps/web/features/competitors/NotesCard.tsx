@@ -4,7 +4,7 @@
  * Each note is a CompetitorNote tied to this competitor, so it is kept apart from the notes about the product or the tool
  * and the Notes page can later tell the three kinds apart. `html` holds the note as written, `text` the same note as plain words.
  */
-import { useAction, useConfirm } from '@/components/kit';
+import { fmtDate, useAction, useConfirm } from '@/components/kit';
 import { actor, api } from '@/lib/api';
 import { NoteBoard, toneFor, type BoardNote } from '@/components/notes/MyNotes';
 import { Card } from '@/components/dashboard/Card';
@@ -19,13 +19,13 @@ export default function NotesCard({ c, notes, onSaved }: { c: any; notes: any[];
   const act = useAction();
   const run = (fn: () => Promise<unknown>) => act.run(async () => { await fn(); onSaved(); });
   const board: BoardNote[] = notes.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
-    .map((n) => ({ id: n.id, html: n.html || esc(String(n.text || '')).replace(/\n/g, '<br>'), tone: toneFor(n.id), pinned: !!n.pinned }));
+    .map((n) => ({ id: n.id, html: n.html || esc(String(n.text || '')).replace(/\n/g, '<br>'), tone: toneFor(n.id), pinned: !!n.pinned, meta: [n.author || n.created_by, fmtDate(n.date || n.created_at)].filter(Boolean).join(' · ') }));
   const edit = (id: string, html: string) => run(() => api(`/items/${id}`, { method: 'PATCH', body: { fields: { html, text: plainOf(html) } } }));
   return (
     <Card title={`Notes about ${c.title}`} className="@container">
       {dialog}
       {act.box}
-      <NoteBoard notes={board} busy={act.busy}
+      <NoteBoard notes={board} busy={act.busy} sticky
         onAdd={(html) => run(async () => {
           const text = plainOf(html);
           const r = await api<any>('/items', { method: 'POST', body: { type: 'CompetitorNote', fields: { title: `${c.title}: ${text.slice(0, 60)}`, text, html, date: today(), author: actor(), importance: 'medium' } } });

@@ -57,7 +57,7 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
   const [group, setGroup] = useState('');
   const [filters, setFilters] = useState<Filters>({});
   const [rename, setRename] = useState<any>(null);
-  const [adding, setAdding] = useState<null | { plan?: any }>(null);
+  const [adding, setAdding] = useState<null | boolean>(null);
   const [hl, setHl] = useState({ from: '', to: '' });
   // inside each group the features some plan has come first, then the ones no plan has (decided from what the server last said, so rows do not jump while you tick)
   const feats: any[] = useMemo(() => (d?.features || []).slice().sort((a: any, b: any) => (a.category || '~').localeCompare(b.category || '~') || (b.in_plans.length > 0 ? 1 : 0) - (a.in_plans.length > 0 ? 1 : 0) || a.name.localeCompare(b.name)), [d]);
@@ -130,7 +130,6 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
                 extra={checkLine(p)}
                 features={feats.filter((f) => bulk.has(f, p.key)).map((f) => ({ key: f.key, name: f.name }))}
                 onRemoveFeature={(k) => { const f = feats.find((x) => x.key === k); if (f) bulk.apply(p.key, [f], false); }}
-                onAddFeature={() => setAdding({ plan: p })}
                 onDelete={() => removePlan(p)}
                 busy={act.busy}
               />
@@ -139,7 +138,7 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
 
           <section>
             <FeatureBar title="Compare plan features" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups}>
-              <button type="button" className="btn sm" onClick={() => setAdding({})}>Add feature</button>
+              <button type="button" className="btn sm" onClick={() => setAdding(true)}>Add feature</button>
             </FeatureBar>
             {feats.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No features yet. Use “Add feature” above.</p> : (
               <>
@@ -158,24 +157,15 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
           </section>
         </>
       )}
-      {adding && d && (() => {
-        const one = adding.plan as any;
-        const idsOf = (keys: string[]) => keys.flatMap((k) => plans.find((p) => p.key === k)?.price_ids || []);
-        const copyFeatures = plans.filter((p) => one && p.key !== one.key).map((p) => ({ key: p.key, label: nameOf(p.key), count: feats.filter((f) => bulk.has(f, p.key)).length })).filter((p) => p.count > 0);
-        return (
-          <AddFeatureModal
-            title={one ? `Add features to ${nameOf(one.key)}` : 'Add features'}
-            copy={one ? copyFeatures : undefined}
-            onCopy={async (from) => { bulk.apply(one.key, feats.filter((f) => bulk.has(f, from)), true, `Added everything ${nameOf(from)} has to ${nameOf(one.key)}.`); }}
-            known={one ? feats.filter((f) => !bulk.has(f, one.key)).map((f) => ({ key: f.key, name: f.name })) : undefined}
-            onAddKnown={(key) => { const f = feats.find((x) => x.key === key); if (f) bulk.apply(one.key, [f], true); }}
-            pick={one ? undefined : plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))}
-            onAddNew={(names, keys) => api('/competitors/catalog/common', { product: pid, method: 'POST', body: { features: names.map((name) => ({ name })), competitor: id, price_ids: idsOf(one ? [one.key] : keys) } })}
-            onClose={() => setAdding(null)}
-            onDone={() => { setAdding(null); det.reload(); }}
-          />
-        );
-      })()}
+      {adding && d && (
+        <AddFeatureModal
+          title="Add features"
+          pick={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))}
+          onAddNew={(names, keys) => api('/competitors/catalog/common', { product: pid, method: 'POST', body: { features: names.map((name) => ({ name })), competitor: id, price_ids: keys.flatMap((k) => plans.find((p) => p.key === k)?.price_ids || []) } })}
+          onClose={() => setAdding(null)}
+          onDone={() => { setAdding(null); det.reload(); }}
+        />
+      )}
       {rename && <RenamePlan pid={pid} plan={rename} onClose={() => setRename(null)} onDone={(name) => { setNames((n) => ({ ...n, [rename.key]: name })); setRename(null); onChanged?.(); }} />}
     </div>
   );
