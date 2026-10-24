@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Badge, Empty, ErrorBox, Loading } from '@/components/ui';
 import { Field, Modal, useAction } from '@/components/kit';
 import { api, useApi } from '@/lib/api';
-import { CopyBar, FeatureBar, FeatureGrid, PlanCard, PlanRow, useBulkTicks, type Show } from './PlanKit';
+import { CopyBar, FeatureBar, FeatureGrid, PlanCard, PlanRow, useBulkTicks, type Filters } from './PlanKit';
 
 export const SEAT_LABEL: Record<string, string> = { single_user: 'One user per licence', multi_user: 'Several users share one', per_user: 'Per user', unlimited_users: 'No user limit' };
 const PERIOD: Record<string, string> = { month: 'month', quarter: '3 months', year: 'year', one_time: 'lifetime' };
@@ -41,7 +41,7 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
   // names changed on this screen show at once, before the server answers
   const [names, setNames] = useState<Record<string, string>>({});
   const sig = d ? `${d.competitor?.id}|${plans.map((p: any) => p.key).join(',')}` : '';
-  useEffect(() => { setNames({}); }, [sig]);
+  useEffect(() => { setNames({}); setFilters({}); }, [sig]);
   const nameOf = (key: string) => names[key] ?? plans.find((p) => p.key === key)?.plan ?? '';
 
   const bulk = useBulkTicks({
@@ -55,7 +55,7 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
 
   const [q, setQ] = useState('');
   const [group, setGroup] = useState('');
-  const [show, setShow] = useState<Show>('all');
+  const [filters, setFilters] = useState<Filters>({});
   const [rename, setRename] = useState<any>(null);
   const [hl, setHl] = useState({ from: '', to: '' });
   // inside each group the features some plan has come first, then the ones no plan has (decided from what the server last said, so rows do not jump while you tick)
@@ -64,10 +64,9 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
   const shown = useMemo(() => feats.filter((f: any) => {
     if (group && (f.category || 'Other') !== group) return false;
     if (q && !`${f.name} ${f.category || ''}`.toLowerCase().includes(q.toLowerCase())) return false;
-    if (show === 'in' && f.in_plans.length === 0) return false; // decided from what the server last said, so rows do not jump while you tick
-    if (show === 'out' && f.in_plans.length > 0) return false;
+    for (const [col, mode] of Object.entries(filters)) if (bulk.has(f, col) !== (mode === 'in')) return false;
     return true;
-  }), [feats, group, q, show]);
+  }), [feats, group, q, filters, bulk.ticks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (list.loading && !list.data) return <Loading />;
   if (list.error || !list.data) return <ErrorBox message={list.error || 'No data'} />;
@@ -90,7 +89,7 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
     return (
       <div className="flex flex-wrap items-center gap-2">
         {rs.some((r) => r.status === 'Disputed') ? <Badge kind="bad">Disputed</Badge> : todo.length === 0 ? <Badge kind="ok">{who.length ? `Checked by ${who.join(', ')}` : 'Checked'}</Badge> : <Badge kind="warn">Not checked yet</Badge>}
-        {todo.length > 0 && onCheck && <button type="button" className="btn xs" onClick={() => onCheck(todo.map((r) => r.id), `${p.plan}: ${p.terms.map((t: any) => `${t.price_type === 'quote' ? 'On request' : money(t.amount, t.currency)} / ${PERIOD[t.period] || t.period}`).join(', ')}`)}>Mark as checked</button>}
+        {todo.length > 0 && onCheck && <button type="button" className="text-[13px] font-medium text-[var(--sd-accent)]" onClick={() => onCheck(todo.map((r) => r.id), `${p.plan}: ${p.terms.map((t: any) => `${t.price_type === 'quote' ? 'On request' : money(t.amount, t.currency)} / ${PERIOD[t.period] || t.period}`).join(', ')}`)}>Mark as checked</button>}
         {old && <span className="text-xs text-[var(--text-muted)]">Price may be out of date</span>}
       </div>
     );
@@ -137,7 +136,7 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
           </PlanRow>
 
           <section>
-            <FeatureBar title="What each plan includes" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups} />
+            <FeatureBar title="Compare plan features" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups} />
             {feats.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No features on our list yet. <Link href={`${base}/catalog`}>Add some</Link>.</p> : (
               <>
                 <CopyBar
@@ -148,9 +147,8 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
                   news={(from, to) => feats.filter((f) => bulk.has(f, from) && !bulk.has(f, to)).length}
                   onCopy={(from, to) => bulk.apply(to, feats.filter((f) => bulk.has(f, from)), true, `Added everything ${nameOf(from)} has to ${nameOf(to)}.`)}
                 />
-                {shown.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No feature matches.</p> : (
-                  <FeatureGrid rows={shown} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1} show={show} setShow={setShow} hl={hl} />
-                )}
+                <FeatureGrid rows={shown} total={feats.length} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1}
+                  filters={filters} setFilter={(c, v) => setFilters((f) => { const n = { ...f }; if (v) n[c] = v; else delete n[c]; return n; })} onClear={() => setFilters({})} hl={hl} />
               </>
             )}
           </section>

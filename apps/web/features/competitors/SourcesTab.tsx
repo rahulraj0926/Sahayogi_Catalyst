@@ -60,16 +60,14 @@ export default function SourcesTab({ c, links, pid, onSaved }: { c: any; links: 
   return (
     <>
     {dialog}
-    <Card title="Review">
-      {act.box}
-      <div className="row wrap" style={{ gap: 24 }}>
-        <span><span className="muted">Last checked </span><b>{c.last_reviewed_on ? fmtDate(c.last_reviewed_on) : 'not yet'}</b></span>
-        <label className="row" style={{ gap: 8 }}><span className="muted">Next review</span><input type="date" value={c.review_by || ''} disabled={act.busy} onChange={(e) => { if (e.target.value) save({ review_by: e.target.value }); }} style={{ height: 30, minHeight: 0 }} />{overdue && <span style={{ color: 'var(--status-warning-fg)' }}>overdue</span>}</label>
-        <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => save({ last_reviewed_on: today(), review_by: addDays(today(), 90) })}>Checked today</button>
-      </div>
-    </Card>
     <div className="@container">
     <Card title="Sources" right={!adding && <button type="button" className="btn sm primary" onClick={() => setAdding(true)}>+ Add a source</button>}>
+      {act.box}
+      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--divider)] pb-4 text-sm">
+        <span><span className="text-[var(--text-muted)]">Last checked </span><b>{c.last_reviewed_on ? fmtDate(c.last_reviewed_on) : 'not yet'}</b></span>
+        <label className="flex items-center gap-2"><span className="text-[var(--text-muted)]">Next review</span><input type="date" value={c.review_by || ''} disabled={act.busy} onChange={(e) => { if (e.target.value) save({ review_by: e.target.value }); }} style={{ height: 30, minHeight: 0 }} />{overdue && <Badge kind="warn">overdue</Badge>}</label>
+        <button type="button" className="btn sm ml-auto" disabled={act.busy} onClick={() => save({ last_reviewed_on: today(), review_by: addDays(today(), 90) })}>Checked today</button>
+      </div>
       {adding && <AddSource c={c} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); ev.reload(); onSaved(); }} />}
       {list.length === 0 && !adding ? <Empty>No sources yet. Add a web page, video or article we used. A file we hold, such as a price list or a deck, goes on the Files tab.</Empty> : list.length > 0 && (
         <table className="tbl compact"><thead><tr><th>Source</th><th>Type</th><th>Added</th><th /></tr></thead><tbody>

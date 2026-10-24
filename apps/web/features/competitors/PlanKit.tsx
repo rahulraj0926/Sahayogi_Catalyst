@@ -5,7 +5,7 @@
  * bulk-tick logic (instant on screen, saved in the background, put back if the save fails, with Undo).
  */
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, ListFilter, Search, X } from 'lucide-react';
 
 export const CHUNK = 200;
 /** The top row of a long list: solid, so the rows scrolling under it never show through (set inline so no table style can override it). */
@@ -38,7 +38,7 @@ function ScrollList({ children, label }: { children: ReactNode; label: string })
   return (
     <div className="relative">
       {more.up && <button type="button" aria-label={`Scroll ${label} up`} className={`${arrow} top-0 bg-gradient-to-b from-[var(--bg)] to-transparent`} onClick={() => go(-1)}><ChevronUp size={16} /></button>}
-      <ul ref={ref} onScroll={look} className="m-0 grid max-h-[60vh] list-none gap-1 overflow-y-auto p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</ul>
+      <ul ref={ref} onScroll={look} className="m-0 grid max-h-64 list-none gap-1 overflow-y-auto p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</ul>
       {more.down && <button type="button" aria-label={`Scroll ${label} down`} className={`${arrow} bottom-0 bg-gradient-to-t from-[var(--bg)] to-transparent`} onClick={() => go(1)}><ChevronDown size={16} /></button>}
     </div>
   );
@@ -108,7 +108,8 @@ export function PlanCard(p: PlanCardProps) {
   );
 }
 
-export type Show = 'all' | 'in' | 'out';
+/** For one plan column: show only the features it has (`in`) or only the ones it lacks (`out`). No entry means no filter. */
+export type Filters = Record<string, 'in' | 'out'>;
 /** Search and group above a feature list. Which features to show (all, ticked, not ticked) is chosen in the grid's first column. `children` goes at the end (for example an Add button). */
 export function FeatureBar({ title, q, setQ, group, setGroup, groups, children }: { title: string; q: string; setQ: (v: string) => void; group: string; setGroup: (v: string) => void; groups: string[]; children?: ReactNode }) {
   return (
@@ -154,13 +155,25 @@ export function CopyBar({ plans, msg, news, onCopy, onUndo, onPick }: { plans: {
   );
 }
 
+/** The small button under a plan name: click once to list only the features the plan has, again for only the ones it lacks, again for all. */
+function FilterButton({ mode, plan, onChange }: { mode?: 'in' | 'out'; plan: string; onChange: (v: 'in' | 'out' | undefined) => void }) {
+  const next = mode === undefined ? 'in' : mode === 'in' ? 'out' : undefined;
+  const title = next === 'in' ? `Show only features ${plan} has` : next === 'out' ? `Show only features ${plan} does not have` : 'Show all features again';
+  const look = mode === 'in' ? 'border-[var(--ok)] text-[var(--ok)]' : mode === 'out' ? 'border-[var(--warn)] text-[var(--warn)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-heading)]';
+  return (
+    <button type="button" title={title} aria-label={title} className={`mx-auto mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${look}`} onClick={() => onChange(next)}>
+      {mode === 'in' ? <><Check size={12} />Has it</> : mode === 'out' ? <><X size={12} />Lacks it</> : <><ListFilter size={12} />Filter</>}
+    </button>
+  );
+}
+
 /**
  * The feature list: one row per feature, one tick box per plan. Click anywhere in a cell to tick it; the box at the top of a column
  * ticks (or unticks) every feature shown; each group has its own box. The list scrolls inside its frame and the plan names stay on top.
  */
-export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, onRename, onRemove, show, setShow, hl }: {
+export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, onRename, onRemove, filters, setFilter, total, onClear, hl }: {
   /** the plans chosen in the copy bar: their columns are tinted, and the features about to be added to `to` are marked */ hl?: { from: string; to: string };
-  /** which features are listed: all, only ticked in some plan, only ticked in none */ show: Show; setShow: (v: Show) => void;
+  /** per plan: only features it has / only features it lacks */ filters: Filters; setFilter: (col: string, v: 'in' | 'out' | undefined) => void; /** every feature on the list, shown or not */ total: number; onClear: () => void;
   onRename?: (f: any) => void; onRemove?: (f: any) => void;
   rows: any[]; cols: { key: string; label: string }[]; has: (f: any, col: string) => boolean; apply: (col: string, fs: any[], on: boolean) => void;
   fkey: (f: any) => string; count: (col: string) => number; showGroups: boolean;
@@ -178,12 +191,7 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
         <thead>
           <tr>
             <th style={STICKY}>
-              <div className="flex flex-wrap items-center gap-2">
-                <span>Feature <span className="font-normal text-[var(--text-muted)]">({rows.length})</span></span>
-                <div className="seg" role="group" aria-label="Show features that are">
-                  {([['all', 'All'], ['in', 'In a plan'], ['out', 'In no plan']] as [Show, string][]).map(([k, l]) => <button key={k} type="button" className={show === k ? 'on' : ''} onClick={() => setShow(k)}>{l}</button>)}
-                </div>
-              </div>
+              <span>Feature <span className="font-normal text-[var(--text-muted)]">({rows.length === total ? total : `${rows.length} of ${total}`})</span></span>
             </th>
             {cols.map((c) => {
               const n = rows.filter((x) => has(x, c.key)).length;
@@ -192,15 +200,19 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
                   <label className="flex w-full cursor-pointer flex-col items-center gap-1">
                     {role(c.key) && <span className={`text-[11px] font-semibold ${c.key === hl?.from ? 'text-[var(--sd-accent)]' : 'text-[var(--ok)]'}`}>{role(c.key)}</span>}
                     <span className={role(c.key) ? 'font-bold text-[var(--text-heading)]' : ''}>{c.label}</span>
-                    <GroupBox label={`All shown features in ${c.label}`} all={n === rows.length} some={n > 0} onChange={(v) => apply(c.key, rows, v)} />
-                    <span className="font-normal text-[var(--text-muted)]">{count(c.key)}</span>
+                    <GroupBox label={`All shown features in ${c.label}`} all={rows.length > 0 && n === rows.length} some={n > 0} onChange={(v) => apply(c.key, rows, v)} />
+                    <span className="font-normal text-[var(--text-muted)]">{count(c.key)} of {total}</span>
                   </label>
+                  <FilterButton mode={filters[c.key]} plan={c.label} onChange={(v) => setFilter(c.key, v)} />
                 </th>
               );
             })}
           </tr>
         </thead>
         <tbody>
+          {rows.length === 0 && (
+            <tr><td colSpan={cols.length + 1} className="text-sm text-[var(--text-muted)]" style={{ padding: '18px 12px' }}>No feature matches. {Object.keys(filters).length > 0 && <button type="button" className="font-medium text-[var(--sd-accent)]" onClick={onClear}>Clear filters</button>}</td></tr>
+          )}
           {rows.map((f, i) => {
             const cat = f.category || 'Other';
             const head = (i === 0 && showGroups) || (i > 0 && (rows[i - 1].category || 'Other') !== cat);
