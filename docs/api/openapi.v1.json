@@ -2548,7 +2548,15 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           },
           "404": {
             "description": "Unknown record, product or route.",
@@ -2595,7 +2603,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Members of the platform, a project or a phase",
+        "description": "Everyone who has been added, with their role and where they were added. Works without a product. Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       },
       "post": {
         "operationId": "MembersController_add",
@@ -2621,6 +2631,17 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
           "401": {
             "description": "No name was sent in X-Actor (code actor_required).",
             "content": {
@@ -2632,7 +2653,7 @@
             }
           },
           "403": {
-            "description": "Only an administrator may do this (code role_required).",
+            "description": "Only an administrator can add members.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2652,7 +2673,7 @@
             }
           },
           "409": {
-            "description": "The change conflicts with the current state (for example stale_edit or stale_gate).",
+            "description": "This person is already a member at that level.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2662,7 +2683,7 @@
             }
           },
           "422": {
-            "description": "The input is not valid; the message says what to change.",
+            "description": "A name is needed, or project / phase is missing.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2701,7 +2722,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Add a member",
+        "description": "Administrators only. Adds a person at one level: the whole platform, one project (give product_id) or one phase of a project (give product_id and phase). Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       }
     },
     "/api/v1/members/{id}/role": {
@@ -2737,6 +2760,17 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
           "401": {
             "description": "No name was sent in X-Actor (code actor_required).",
             "content": {
@@ -2748,7 +2782,7 @@
             }
           },
           "403": {
-            "description": "Only an administrator may do this (code role_required).",
+            "description": "Only an administrator can change roles.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2758,7 +2792,7 @@
             }
           },
           "404": {
-            "description": "Unknown record, product or route.",
+            "description": "No such member.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2778,7 +2812,7 @@
             }
           },
           "422": {
-            "description": "The input is not valid; the message says what to change.",
+            "description": "That is not a role.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2817,7 +2851,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members/{id}/role, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Change a member's role",
+        "description": "Administrators only. Also answers at its old address /api/members/{id}/role, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       }
     },
     "/api/v1/members/{id}": {
@@ -2844,7 +2880,15 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           },
           "401": {
             "description": "No name was sent in X-Actor (code actor_required).",
@@ -2857,7 +2901,7 @@
             }
           },
           "403": {
-            "description": "Only an administrator may do this (code role_required).",
+            "description": "Only an administrator can remove members.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2867,7 +2911,7 @@
             }
           },
           "404": {
-            "description": "Unknown record, product or route.",
+            "description": "No such member.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2926,7 +2970,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members/{id}, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Remove a member",
+        "description": "Administrators only. The person keeps their history; they just no longer have the role. Also answers at its old address /api/members/{id}, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       }
     },
     "/api/v1/documents": {
