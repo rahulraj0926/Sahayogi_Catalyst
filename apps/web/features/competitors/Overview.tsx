@@ -7,7 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { Field, useAction } from '@/components/kit';
 import { api } from '@/lib/api';
 import { BLOCKS, SIDES, type BlockDef, type Row } from './overviewBlocks';
-import PointList, { toPoints } from './PointList';
+import PointList, { fromPoints, toPoints } from './PointList';
 import { Control, F, filled, norm } from './profileFields';
 
 const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -60,7 +60,7 @@ export default function Overview({ c, onOpen, onAddProduct, links, prices, files
   return (
     <div className="@container flex flex-col gap-4">
       <div className={across(top.length)}>{top.map(block)}</div>
-      <div className={across(1 + upkeep.length)}>{todo}{upkeep.map(block)}</div>
+      <div className={across(1 + upkeep.length)}>{upkeep.map(block)}{todo}</div>
       <HeadToHead c={c} onSaved={onSaved} />
     </div>
   );
@@ -72,9 +72,8 @@ function HeadToHead({ c, onSaved }: { c: any; onSaved: () => void }) {
     <div aria-label="Strengths and weaknesses" className="grid gap-4 @3xl:grid-cols-2">
       {SIDES.map((s) => (
         <section key={s.key} className={`min-w-0 p-6 ${EVERY}`}>
-          <h3 className="m-0 mb-4 text-[18px] font-bold text-[var(--text-heading)]">{s.title}</h3>
-          <PointList points={toPoints(c[s.key])} tone={s.tone} one={s.one}
-            onChange={async (next) => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { [s.key]: next.length ? next.join('\n') : null } } }); onSaved(); }} />
+          <PointList title={s.title} tone={s.tone} one={s.one} points={toPoints(c[s.key])}
+            onChange={async (next) => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { [s.key]: next.length ? fromPoints(next) : null } } }); onSaved(); }} />
         </section>
       ))}
     </div>
