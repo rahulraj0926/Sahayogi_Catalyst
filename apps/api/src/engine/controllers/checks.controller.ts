@@ -1,19 +1,10 @@
-import { Body, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Get, Param, Post, Query } from '@nestjs/common';
 import { Ctx, EngineController, EngineCtx, EngineRoute } from '../engine.decorators';
 import * as Q from '../../legacy/engine/query';
 import * as gates from '../../legacy/engine/gates';
 import * as coverage from '../../legacy/engine/coverage';
 import * as requests from '../../legacy/engine/requests';
 import * as agent from '../../legacy/engine/agent';
-import * as competitors from '../../legacy/engine/competitors';
-import * as competitorProfile from '../../legacy/engine/competitor_profile';
-import * as competitorPlans from '../../legacy/engine/competitor_plans';
-import * as competitorOverview from '../../legacy/engine/competitor_overview';
-import * as competitorSample from '../../legacy/engine/competitor_sample';
-import * as competitorImport from '../../legacy/engine/competitor_import';
-import { file } from '../../legacy/routes/http';
-import { readBody } from '../body';
-import { hasModules, scopeNames } from '../../legacy/engine/competitor_owner';
 import * as handoff from '../../legacy/engine/handoff';
 import * as demo from '../../legacy/engine/demo';
 import * as approvals from '../../legacy/engine/approvals';
@@ -173,64 +164,6 @@ export class FlowsController {
 
   @Get('entities/:id') @EngineRoute()
   entity(@Ctx() c: EngineCtx, @Param('id') id: string) { return coverage.entityCheck(c.store, id, new Q.Ctx(c.store, {})); }
-}
-
-@EngineController('competitors', 'Competitors')
-export class CompetitorViewsController {
-  @Get('tiers') @EngineRoute() tiers(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitors.tierView(c.store, query.scope); }
-  @Get('grid') @EngineRoute() grid(@Ctx() c: EngineCtx) { return competitors.grid(c.store); }
-  @Get('prices') @EngineRoute() prices(@Ctx() c: EngineCtx) { return competitors.prices(c.store); }
-  @Get('sources') @EngineRoute() sources(@Ctx() c: EngineCtx) { return competitors.sources(c.store); }
-  @Get('effort') @EngineRoute() effort(@Ctx() c: EngineCtx) { return competitors.effort(c.store); }
-  @Get('product-lines') @EngineRoute() productLines(@Ctx() c: EngineCtx) { return competitors.productLines(c.store); }
-  @Get('completeness') @EngineRoute() completeness(@Ctx() c: EngineCtx) { return competitors.completeness(c.store); }
-  @Get('normalized-prices') @EngineRoute() normalizedPrices(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitors.normalizedPricing(c.store, query); }
-  @Get('plan-capabilities') @EngineRoute() planCapabilities(@Ctx() c: EngineCtx) { return competitors.planCapabilities(c.store); }
-  @Get('catalog') @EngineRoute() catalog(@Ctx() c: EngineCtx) { return competitors.catalog(c.store); }
-  @Post('catalog/common') @EngineRoute() addCommon(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitors.addCommonFeatures(c.store, Array.isArray(body && body.features) ? body.features : [], c.actor); }
-  @Get('plans') @EngineRoute() plans(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.plans(c.store, query); }
-  @Post('plans/features') @EngineRoute() setPlanFeature(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.setPlanFeature(c.store, body || {}, c.actor); }
-  @Get('plan-level-features') @EngineRoute() planLevelFeatures(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.planLevelFeatures(c.store, query.scope); }
-  @Get('recommended') @EngineRoute() recommended(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.recommended(c.store, query); }
-  @Get('compare-plans') @EngineRoute() comparePlans(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.comparePlans(c.store, query); }
-  @Get('our-plans') @EngineRoute() ourPlans(@Ctx() c: EngineCtx) { return competitorPlans.ourPlans(c.store); }
-  @Get('our-plans/pick-features') @EngineRoute() pickFeatures(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.pickFeatures(c.store, query); }
-  @Post('our-plans/features/new') @EngineRoute() addOurFeatures(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.addOurFeatures(c.store, body || {}, c.actor); }
-  @Post('our-plans/features') @EngineRoute() setOurPlanFeature(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.setOurPlanFeature(c.store, body || {}, c.actor); }
-  @Get('must-have') @EngineRoute() mustHave(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitors.mustHaveCapabilities(c.store, Math.min(100, Math.max(1, Number(query.threshold) || 80)), query.scope); }
-
-  /** The whole competitor dashboard in one answer: analysed counts, tiers, common features with their share, the recommendation and its average price. */
-  @Get('scopes') @EngineRoute() scopes(@Ctx() c: EngineCtx) { return { has_modules: hasModules(c.store), scopes: scopeNames(c.store) }; }
-
-  /** Everything one competitor's page shows, worked out for that competitor only. */
-  @Get(':id/profile') @EngineRoute() profile(@Ctx() c: EngineCtx, @Param('id') id: string) { return competitorProfile.profile(c.store, id); }
-
-  @Get('overview') @EngineRoute() overview(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorOverview.overview(c.store, query); }
-
-  /** POST /competitors/import?name=FILE.csv&commit=0|1 - the body is the file itself (.csv or .xlsx). commit=0 only checks and reports. */
-  @Post('import') @EngineRoute()
-  async importFile(@Ctx() c: EngineCtx, @Req() req: any, @Query() query: Record<string, string>) {
-    const body = await readBody(req, true);
-    const on = (v?: string) => v === '1' || v === 'true';
-    return competitorImport.importCompetitors(c.store, { filename: query.name, buffer: body }, { commit: on(query.commit), overwrite: on(query.overwrite), createFeatures: query.create_features !== '0', actor: c.actor, competitor: query.competitor, tier: query.tier, scope: query.scope });
-  }
-
-  /** POST /competitors/sample - fills this product with nine fictional demo competitors, plans and features, to try the dashboard. Saving twice changes nothing. */
-  @Post('sample') @EngineRoute()
-  sample(@Ctx() c: EngineCtx) { return competitorSample.importSample(c.store, { commit: true, actor: c.actor }); }
-
-  /** Rows typed into the Add a competitor dialog: the same checks and the same saving as a file. */
-  @Post('bulk') @EngineRoute()
-  bulk(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) {
-    return competitorImport.importCompetitors(c.store, { rows: Array.isArray(body && body.rows) ? body.rows : [] }, { commit: !!(body && body.commit), overwrite: !!(body && body.overwrite), createFeatures: !(body && body.create_features === false), actor: c.actor });
-  }
-
-  /** GET /competitors/export?id=COMP-001 - the plans of one competitor (or all, optionally one module) as a CSV that imports again unchanged. */
-  @Get('export') @EngineRoute()
-  exportPlans(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { const t = competitorImport.exportPlans(c.store, { id: query.id, scope: query.scope }); return file(t.body, 'text/csv; charset=utf-8', t.filename, 'attachment'); }
-
-  @Get('import/template') @EngineRoute()
-  importTemplate(@Query() query: Record<string, string>) { const t = competitorImport.template(query.kind); return file(t.body, 'text/csv; charset=utf-8', t.filename, 'attachment'); }
 }
 
 @EngineController('handoff', 'Handover')
