@@ -31,7 +31,7 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 | Check again by | Next review (Sources tab) |
 
 ## Layout (follows the design mock-up)
-- **Under the title:** the description, the website, and who added the record and when it last changed. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
+- **Under the title:** the description, the website, and when it last changed ("Updated today"). Who added it is not shown. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
 - **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
 - **First row:** Company details and Customers & market, two equal cards.
 - **Second row:** Strengths and Weaknesses, side by side. Each is a numbered list of points with its own "+ Add" at the top right of the title. A point has a heading and details, edited in two separate boxes (the heading is optional). Edit changes one point, Remove deletes one, and every change saves straight away. Stored as text, one point per line, written "Heading: details".
@@ -77,3 +77,6 @@ Still to come (these need new fields in the data): recommended action and priori
 - **Plans & pricing:** the feature list has one filter, in its first column: All, In a plan, In no plan. The "Copy features from [plan] to [plan]" bar says how many features the copy would add ("Copy 12 features") and stays off when there is nothing new. The "Why are there no prices?" box shows only when the competitor has no plans; the answer counts as "prices or a reason" in the completeness check and the Stage 1 sign-off.
 - **Notes:** coloured sticky notes (see above).
 - **Sources:** a Review card (last checked, next review) and the list of sources. "+ Add a source" takes a link (web page, video, article, interview, other), an optional name and what it tells us, and saves it as evidence linked to the competitor. Documents we hold as files go on the Files tab.
+
+## Our plans
+Only the page title and the plan cards: no extra "Plans" heading. When a new plan is added, it starts with every feature of the dearest plan so far (a higher plan includes the lower ones); the "Start with the features of" box can be changed to another plan or to empty. "+ Add feature" on a card can also copy all features of another plan.

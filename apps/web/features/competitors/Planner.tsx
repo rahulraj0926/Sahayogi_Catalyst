@@ -23,7 +23,9 @@ async function copyFeatures(pid: string, from: string, to: string, all: any[]) {
 }
 
 function PlanForm({ pid, plan, plans = [], all = [], onClose, onDone }: { pid: string; plan?: any; plans?: any[]; all?: any[]; onClose: () => void; onDone: () => void }) {
-  const [copyFrom, setCopyFrom] = useState('');
+  // a new plan starts with everything the plan below it has: the dearest plan so far (or the last one added), because a higher plan always includes the lower ones
+  const price = (p: any) => (p.is_free ? 0 : Number(p.price_monthly ?? (p.price_yearly != null ? p.price_yearly / 12 : p.amount ?? 0)) || 0);
+  const [copyFrom, setCopyFrom] = useState(() => (plan || plans.length === 0 ? '' : [...plans].sort((a, b) => price(a) - price(b)).pop()!.id));
   const [v, setV] = useState({ title: plan?.title || '', monthly: plan?.price_monthly ?? '', yearly: plan?.price_yearly ?? '', seat_model: plan?.seat_model || 'single_user', max_users: plan?.max_users ?? 3, tier_tag: plan?.tier_tag || '', is_free: !!plan?.is_free });
   const act = useAction();
   const set = (k: string, x: any) => setV({ ...v, [k]: x });
@@ -46,7 +48,7 @@ function PlanForm({ pid, plan, plans = [], all = [], onClose, onDone }: { pid: s
         <Field label="Who can use one plan"><select value={v.seat_model} onChange={(e) => set('seat_model', e.target.value)}>{USERS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
         {v.seat_model === 'multi_user' && <Field label="How many users"><input type="number" min={1} value={v.max_users} onChange={(e) => set('max_users', e.target.value)} /></Field>}
       </div>
-      {!plan && plans.length > 0 && <Field label="Start with the features of" help="Copies every feature of that plan into this one. You can add more or take some out after."><select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}><option value="">Nothing, start empty</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.title} ({p.feature_count} feature{p.feature_count === 1 ? '' : 's'})</option>)}</select></Field>}
+      {!plan && plans.length > 0 && <Field label="Start with the features of" help="A higher plan includes what the lower one has, so this one starts with all of it. Add more or take some out after."><select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}><option value="">Nothing, start empty</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.title} ({p.feature_count} feature{p.feature_count === 1 ? '' : 's'})</option>)}</select></Field>}
       <Field label="Competitor plan level it sits at"><select value={v.tier_tag} onChange={(e) => set('tier_tag', e.target.value)}><option value="">Not decided</option>{Object.entries(LEVEL_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       {act.box}
       <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
@@ -140,8 +142,7 @@ export default function Planner({ pid }: { pid: string; scope?: string }) {
   return (
     <div className="flex flex-col gap-6">
       {act.box}
-      <div className="flex min-h-9 flex-wrap items-center gap-3">
-        <h2 className="m-0 flex-1 text-[15px] font-semibold text-[var(--text-heading)]">Plans</h2>
+      <div className="flex justify-end">
         <button className="btn primary inline-flex items-center gap-1" onClick={() => setAdding(true)}><Plus size={14} />Add a plan</button>
       </div>
       {plans.length === 0 ? <Empty>No plans yet. Add the first one, for example Starter, Business or Enterprise. Then add features to each plan.</Empty> : (

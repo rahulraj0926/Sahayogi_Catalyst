@@ -19,7 +19,6 @@ import { Card as CardBox } from '@/components/dashboard/Card';
 import { uploadFiles } from './uploadFiles';
 import SourcesTab from './SourcesTab';
 
-const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const sp = (s?: string) => String(s ?? '').replace(/_/g, ' ');
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (d: string, n: number) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
@@ -230,7 +229,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
           </p>
         )}
         {c.website && <a className="mt-1 inline-block text-[13px]" href={/^https?:/.test(c.website) ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer">{c.website}</a>}
-        <div className="mt-1 text-[12px] text-[var(--text-muted)]">Added {c.created_at ? niceDate(c.created_at) : 'on an unknown date'}{c.created_by ? ` by ${c.created_by}` : ''}. Changed {(() => { const t = ago(c.updated_at || c.created_at).replace('Updated ', ''); return t; })()}.</div>
+        <div className="mt-1 text-[12px] text-[var(--text-muted)]">{ago(c.updated_at || c.created_at)}</div>
         </div>
       </div>
       <div role="tablist" className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-1.5 [box-shadow:var(--card-shadow)]">
