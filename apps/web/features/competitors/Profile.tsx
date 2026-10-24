@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Download, Plus, Upload } from 'lucide-react';
 import { Badge, Card, Empty, ErrorBox, Loading, Page } from '@/components/ui';
 import { Field, Modal, Tabs, useAction, useConfirm, fmtDate } from '@/components/kit';
 import { actor, api, useApi } from '@/lib/api';
@@ -258,13 +258,11 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
         )}
         {tab === 'prices' && (
           <div className="stack">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="spacer" />
-              <a className="btn" href={`/api/v1/competitors/export?id=${encodeURIComponent(id)}&product=${encodeURIComponent(pid)}`} title="Download this competitor's plans as an Excel / CSV file">Download plans</a>
-              <button className="btn" onClick={() => setFromFile(true)} title="Fill in plans from an Excel / CSV file">Import from a file</button>
-              <button className="btn primary" onClick={() => setAddPrice(true)}>Add a plan</button>
-            </div>
-            <Plans key={myPrices.map((p) => `${p.id}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
+            <Plans actions={<>
+              <a className="btn sm inline-flex items-center gap-1" href={`/api/v1/competitors/export?id=${encodeURIComponent(id)}&product=${encodeURIComponent(pid)}`} title="Download this competitor's plans as an Excel / CSV file"><Download size={14} />Download plans</a>
+              <button className="btn sm inline-flex items-center gap-1" onClick={() => setFromFile(true)} title="Fill in plans from an Excel / CSV file"><Upload size={14} />Import from a file</button>
+              <button className="btn sm primary inline-flex items-center gap-1" onClick={() => setAddPrice(true)}><Plus size={14} />Add a plan</button>
+            </>} key={myPrices.map((p) => `${p.id}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
             {myPrices.length === 0 && <Card title="Why are there no prices?">
               <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="For example: price on request only" />
               <button className="btn sm" style={{ marginTop: 6 }} onClick={() => patch(id, { pricing_na_reason: (naWhy ?? c.pricing_na_reason ?? '').trim() })}>Save</button>

@@ -5,7 +5,7 @@
  * bulk-tick logic (instant on screen, saved in the background, put back if the save fails, with Undo).
  */
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 export const CHUNK = 200;
 /** The top row of a long list: solid, so the rows scrolling under it never show through (set inline so no table style can override it). */
@@ -38,7 +38,7 @@ function ScrollList({ children, label }: { children: ReactNode; label: string })
   return (
     <div className="relative">
       {more.up && <button type="button" aria-label={`Scroll ${label} up`} className={`${arrow} top-0 bg-gradient-to-b from-[var(--bg)] to-transparent`} onClick={() => go(-1)}><ChevronUp size={16} /></button>}
-      <ul ref={ref} onScroll={look} className="m-0 grid max-h-52 list-none gap-1 overflow-y-auto p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</ul>
+      <ul ref={ref} onScroll={look} className="m-0 grid max-h-[60vh] list-none gap-1 overflow-y-auto p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</ul>
       {more.down && <button type="button" aria-label={`Scroll ${label} down`} className={`${arrow} bottom-0 bg-gradient-to-t from-[var(--bg)] to-transparent`} onClick={() => go(1)}><ChevronDown size={16} /></button>}
     </div>
   );
@@ -126,27 +126,28 @@ export function FeatureBar({ title, q, setQ, group, setGroup, groups, children }
       )}
       {children}
     </div>
-      <p className="mb-3 mt-0 text-[13px] text-[var(--text-muted)]">Click a box to add a feature to a plan, or take it out. The box at the top of a plan does every feature shown.</p>
     </>
   );
 }
 
-/** "Copy features from [plan] to [plan]" and the line that says what the last change was, with Undo. */
+/** "Copy features: [plan] -> [plan]" and the line that says what the last change was, with Undo. The two chosen plans are reported through `onPick` so the table can highlight them. */
 /** `news(from, to)` is how many features the copy would add, so the button can say so and stay off when there is nothing new. */
-export function CopyBar({ plans, msg, news, onCopy, onUndo }: { plans: { key: string; label: string }[]; msg: { text: string; undo?: () => void } | null; news: (from: string, to: string) => number; onCopy: (from: string, to: string) => void; onUndo: () => void }) {
+export function CopyBar({ plans, msg, news, onCopy, onUndo, onPick }: { plans: { key: string; label: string }[]; msg: { text: string; undo?: () => void } | null; news: (from: string, to: string) => number; onCopy: (from: string, to: string) => void; onUndo: () => void; onPick?: (from: string, to: string) => void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  useEffect(() => { onPick?.(from, to); }, [from, to]); // eslint-disable-line react-hooks/exhaustive-deps
   if (plans.length < 2 && !msg) return null;
+  const n = from && to && from !== to ? news(from, to) : 0;
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
       {plans.length > 1 && (
-        <>
-          <span className="text-[var(--text-muted)]">Copy features from</span>
-          <select value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Copy from" style={SMALL_SELECT}><option value="">Pick a plan</option>{plans.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select>
-          <span className="text-[var(--text-muted)]">to</span>
-          <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Copy to" style={SMALL_SELECT}><option value="">Pick a plan</option>{plans.filter((p) => p.key !== from).map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select>
-          <button type="button" className="btn sm" disabled={!from || !to || from === to || news(from, to) === 0} onClick={() => onCopy(from, to)}>{from && to && from !== to ? (news(from, to) === 0 ? 'Nothing new to copy' : `Copy ${news(from, to)} feature${news(from, to) === 1 ? '' : 's'}`) : 'Copy'}</button>
-        </>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--divider)] px-3 py-2">
+          <span className="font-medium text-[var(--text-heading)]">Copy features</span>
+          <select value={from} onChange={(e) => { setFrom(e.target.value); if (e.target.value === to) setTo(''); }} aria-label="Copy from" style={SMALL_SELECT}><option value="">From plan</option>{plans.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select>
+          <ArrowRight size={14} aria-hidden className="text-[var(--text-muted)]" />
+          <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Copy to" style={SMALL_SELECT}><option value="">To plan</option>{plans.filter((p) => p.key !== from).map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select>
+          <button type="button" className="btn sm primary" disabled={n === 0} onClick={() => onCopy(from, to)}>{from && to ? (n === 0 ? 'Nothing new to copy' : `Copy ${n} feature${n === 1 ? '' : 's'}`) : 'Copy'}</button>
+        </div>
       )}
       {msg && <span className="ml-auto text-[13px] text-[var(--text-muted)]">{msg.text}{msg.undo && <button type="button" className="ml-2 font-medium text-[var(--sd-accent)]" onClick={onUndo}>Undo</button>}</span>}
     </div>
@@ -157,12 +158,20 @@ export function CopyBar({ plans, msg, news, onCopy, onUndo }: { plans: { key: st
  * The feature list: one row per feature, one tick box per plan. Click anywhere in a cell to tick it; the box at the top of a column
  * ticks (or unticks) every feature shown; each group has its own box. The list scrolls inside its frame and the plan names stay on top.
  */
-export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, onRename, onRemove, show, setShow }: {
+export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, onRename, onRemove, show, setShow, hl }: {
+  /** the plans chosen in the copy bar: their columns are tinted, and the features about to be added to `to` are marked */ hl?: { from: string; to: string };
   /** which features are listed: all, only ticked in some plan, only ticked in none */ show: Show; setShow: (v: Show) => void;
   onRename?: (f: any) => void; onRemove?: (f: any) => void;
   rows: any[]; cols: { key: string; label: string }[]; has: (f: any, col: string) => boolean; apply: (col: string, fs: any[], on: boolean) => void;
   fkey: (f: any) => string; count: (col: string) => number; showGroups: boolean;
 }) {
+  const tint = (col: string, strong = false): CSSProperties | undefined => {
+    if (!hl) return undefined;
+    if (col === hl.from) return { background: 'color-mix(in srgb, var(--sd-accent) 12%, transparent)' };
+    if (col === hl.to) return { background: `color-mix(in srgb, var(--ok) ${strong ? 30 : 12}%, transparent)` };
+    return undefined;
+  };
+  const role = (col: string) => (hl && col === hl.from ? 'Copying from' : hl && col === hl.to ? 'Copying to' : '');
   return (
     <div className="max-h-[65vh] overflow-auto rounded-xl border border-[var(--divider)] [scrollbar-width:thin]">
       <table className="tbl compact" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -179,9 +188,10 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
             {cols.map((c) => {
               const n = rows.filter((x) => has(x, c.key)).length;
               return (
-                <th key={c.key} style={{ ...STICKY, minWidth: 96, textAlign: 'center' }}>
+                <th key={c.key} style={{ ...STICKY, minWidth: 96, textAlign: 'center', ...(role(c.key) ? { background: (() => { const t = c.key === hl?.from ? 'color-mix(in srgb, var(--sd-accent) 16%, transparent)' : 'color-mix(in srgb, var(--ok) 16%, transparent)'; return `linear-gradient(${t}, ${t}), var(--bg)`; })() } : {}) }}>
                   <label className="flex w-full cursor-pointer flex-col items-center gap-1">
-                    <span>{c.label}</span>
+                    {role(c.key) && <span className={`text-[11px] font-semibold ${c.key === hl?.from ? 'text-[var(--sd-accent)]' : 'text-[var(--ok)]'}`}>{role(c.key)}</span>}
+                    <span className={role(c.key) ? 'font-bold text-[var(--text-heading)]' : ''}>{c.label}</span>
                     <GroupBox label={`All shown features in ${c.label}`} all={n === rows.length} some={n > 0} onChange={(v) => apply(c.key, rows, v)} />
                     <span className="font-normal text-[var(--text-muted)]">{count(c.key)}</span>
                   </label>
@@ -202,7 +212,7 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
                     <td className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]" style={{ paddingTop: 18 }}>{cat} <span className="font-normal normal-case">({inGroup.length})</span></td>
                     {cols.map((c) => {
                       const n = inGroup.filter((x) => has(x, c.key)).length;
-                      return <td key={c.key} className="text-center" style={{ paddingTop: 18 }}><GroupBox label={`All ${cat} in ${c.label}`} all={n === inGroup.length} some={n > 0} onChange={(v) => apply(c.key, inGroup, v)} /></td>;
+                      return <td key={c.key} className="text-center" style={{ paddingTop: 18, ...tint(c.key) }}><GroupBox label={`All ${cat} in ${c.label}`} all={n === inGroup.length} some={n > 0} onChange={(v) => apply(c.key, inGroup, v)} /></td>;
                     })}
                   </tr>
                 )}
@@ -219,7 +229,7 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
                     </div>
                   </td>
                   {cols.map((c) => (
-                    <td key={c.key} className="cursor-pointer select-none text-center" onClick={(e) => { if ((e.target as HTMLElement).tagName !== 'INPUT') apply(c.key, [f], !has(f, c.key)); }}>
+                    <td key={c.key} className="cursor-pointer select-none text-center" style={tint(c.key, !!hl && c.key === hl.to && has(f, hl.from) && !has(f, hl.to))} onClick={(e) => { if ((e.target as HTMLElement).tagName !== 'INPUT') apply(c.key, [f], !has(f, c.key)); }}>
                       <input type="checkbox" aria-label={`${f.name} in ${c.label}`} checked={has(f, c.key)} onChange={(e) => apply(c.key, [f], e.target.checked)} />
                     </td>
                   ))}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Badge, Empty, ErrorBox, Loading } from '@/components/ui';
 import { Field, Modal, useAction } from '@/components/kit';
@@ -27,7 +27,7 @@ function RenamePlan({ pid, plan, onClose, onDone }: { pid: string; plan: any; on
 }
 
 /** One competitor at a time: what each plan costs and which of our features each plan includes. Ticking is instant and can be done in bulk. */
-export default function Plans({ pid, initial, fixedId, scope, onChanged, records, isUnchecked, onCheck }: { pid: string; initial?: string; fixedId?: string; scope?: string; onChanged?: () => void; records?: any[]; isUnchecked?: (r: any) => boolean; onCheck?: (ids: string[], label: string) => void }) {
+export default function Plans({ pid, initial, fixedId, scope, onChanged, records, isUnchecked, onCheck, actions }: { actions?: ReactNode; pid: string; initial?: string; fixedId?: string; scope?: string; onChanged?: () => void; records?: any[]; isUnchecked?: (r: any) => boolean; onCheck?: (ids: string[], label: string) => void }) {
   const list = useApi<any>(`/competitors/plans${scope ? `?scope=${encodeURIComponent(scope)}` : ''}`, pid, { keep: true });
   const [pick, setId] = useState(initial || '');
   const id = fixedId || pick;
@@ -57,7 +57,9 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
   const [group, setGroup] = useState('');
   const [show, setShow] = useState<Show>('all');
   const [rename, setRename] = useState<any>(null);
-  const feats: any[] = useMemo(() => (d?.features || []).slice().sort((a: any, b: any) => (a.category || '~').localeCompare(b.category || '~') || a.name.localeCompare(b.name)), [d]);
+  const [hl, setHl] = useState({ from: '', to: '' });
+  // inside each group the features some plan has come first, then the ones no plan has (decided from what the server last said, so rows do not jump while you tick)
+  const feats: any[] = useMemo(() => (d?.features || []).slice().sort((a: any, b: any) => (a.category || '~').localeCompare(b.category || '~') || (b.in_plans.length > 0 ? 1 : 0) - (a.in_plans.length > 0 ? 1 : 0) || a.name.localeCompare(b.name)), [d]);
   const groups = useMemo(() => [...new Set(feats.map((f: any) => f.category || 'Other'))] as string[], [feats]);
   const shown = useMemo(() => feats.filter((f: any) => {
     if (group && (f.category || 'Other') !== group) return false;
@@ -106,6 +108,12 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
         </div>
       )}
       {act.box}
+      {fixedId && (
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="m-0 mr-auto text-[15px] font-semibold text-[var(--text-heading)]">{d ? `${plans.length} plan${plans.length === 1 ? '' : 's'}` : ''}</h2>
+          {actions}
+        </div>
+      )}
       {det.loading && !d ? <Loading /> : det.error || !d ? <ErrorBox message={det.error || 'No data'} /> : plans.length === 0 ? (
         <Empty>{d.competitor.title} has no plans yet. {fixedId ? 'Use “Add a plan” above.' : <Link href={`${base}/${id}?tab=prices`}>Add the first plan</Link>}</Empty>
       ) : (
@@ -136,11 +144,12 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
                   plans={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))}
                   msg={bulk.msg}
                   onUndo={bulk.undo}
+                  onPick={(from, to) => setHl((h) => (h.from === from && h.to === to ? h : { from, to }))}
                   news={(from, to) => feats.filter((f) => bulk.has(f, from) && !bulk.has(f, to)).length}
                   onCopy={(from, to) => bulk.apply(to, feats.filter((f) => bulk.has(f, from)), true, `Added everything ${nameOf(from)} has to ${nameOf(to)}.`)}
                 />
                 {shown.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No feature matches.</p> : (
-                  <FeatureGrid rows={shown} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1} show={show} setShow={setShow} />
+                  <FeatureGrid rows={shown} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1} show={show} setShow={setShow} hl={hl} />
                 )}
               </>
             )}
