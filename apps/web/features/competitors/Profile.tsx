@@ -17,6 +17,7 @@ import Overview from './Overview';
 import NotesCard from './NotesCard';
 import { Card as CardBox } from '@/components/dashboard/Card';
 import { uploadFiles } from './uploadFiles';
+import SourcesTab from './SourcesTab';
 
 const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const sp = (s?: string) => String(s ?? '').replace(/_/g, ' ');
@@ -267,10 +268,10 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
               <button className="btn primary" onClick={() => setAddPrice(true)}>Add a plan</button>
             </div>
             <Plans key={myPrices.map((p) => `${p.id}${p.tier_tag || ''}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
-            <Card title="No price published?">
-              <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="Price on request only" />
+            {myPrices.length === 0 && <Card title="Why are there no prices?">
+              <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="For example: price on request only" />
               <button className="btn sm" style={{ marginTop: 6 }} onClick={() => patch(id, { pricing_na_reason: (naWhy ?? c.pricing_na_reason ?? '').trim() })}>Save</button>
-            </Card>
+            </Card>}
           </div>
         )}
         {tab === 'files' && (
@@ -305,30 +306,3 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
 }
 
 /** When the competitor was last checked and when to check it next, then the evidence behind what we know. */
-function SourcesTab({ c, links, pid, onSaved }: { c: any; links: any[]; pid: string; onSaved: () => void }) {
-  const ev = useApi<any>('/items?type=Evidence&limit=5000', pid);
-  const act = useAction();
-  const ids = new Set(links.map((l) => l.other));
-  const list = ((ev.data?.items as any[]) || []).filter((e) => ids.has(e.id));
-  const save = (fields: Record<string, unknown>) => act.run(async () => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields } }); onSaved(); });
-  const overdue = !!c.review_by && c.review_by < today();
-  return (
-    <>
-    <Card title="Review">
-      {act.box}
-      <div className="row wrap" style={{ gap: 24 }}>
-        <span><span className="muted">Last checked </span><b>{c.last_reviewed_on ? fmtDate(c.last_reviewed_on) : 'not yet'}</b></span>
-        <label className="row" style={{ gap: 8 }}><span className="muted">Next review</span><input type="date" value={c.review_by || ''} disabled={act.busy} onChange={(e) => { if (e.target.value) save({ review_by: e.target.value }); }} style={{ height: 30, minHeight: 0 }} />{overdue && <span style={{ color: 'var(--status-warning-fg)' }}>overdue</span>}</label>
-        <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => save({ last_reviewed_on: today(), review_by: addDays(today(), 90) })}>Checked today</button>
-      </div>
-    </Card>
-    <Card title="Sources" flush>
-      {list.length === 0 ? <Empty>No evidence is linked to this competitor yet. Evidence is added when a file or web page is used for a price or capability.</Empty> : (
-        <table className="tbl compact"><thead><tr><th>ID</th><th>Evidence</th><th>Grade</th><th>Retrieved</th></tr></thead><tbody>
-          {list.map((e) => <tr key={e.id}><td><Link href={`/products/${pid}/item/${e.id}`}>{e.id}</Link></td><td>{e.url ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.title}</a> : e.title}</td><td><Badge kind="info">{e.grade || '?'}</Badge></td><td>{fmtDate(e.retrieved_on)}</td></tr>)}
-        </tbody></table>
-      )}
-    </Card>
-    </>
-  );
-}

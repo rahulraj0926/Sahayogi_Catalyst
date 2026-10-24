@@ -115,8 +115,8 @@ export function PlanCard(p: PlanCardProps) {
 }
 
 export type Show = 'all' | 'in' | 'out';
-/** Search, group and "all / in a plan / in no plan" above a feature list. `children` goes at the end (for example an Add button). */
-export function FeatureBar({ title, q, setQ, group, setGroup, groups, show, setShow, children }: { title: string; q: string; setQ: (v: string) => void; group: string; setGroup: (v: string) => void; groups: string[]; show: Show; setShow: (v: Show) => void; children?: ReactNode }) {
+/** Search and group above a feature list. Which features to show (all, ticked, not ticked) is chosen in the grid's first column. `children` goes at the end (for example an Add button). */
+export function FeatureBar({ title, q, setQ, group, setGroup, groups, children }: { title: string; q: string; setQ: (v: string) => void; group: string; setGroup: (v: string) => void; groups: string[]; children?: ReactNode }) {
   return (
     <>
     <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -130,11 +130,6 @@ export function FeatureBar({ title, q, setQ, group, setGroup, groups, show, setS
           <option value="">All groups</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}
         </select>
       )}
-      <div className="seg" role="group" aria-label="Show features that are">
-        <button type="button" className={show === 'all' ? 'on' : ''} onClick={() => setShow('all')}>All</button>
-        <button type="button" className={show === 'in' ? 'on' : ''} onClick={() => setShow('in')}>Ticked</button>
-        <button type="button" className={show === 'out' ? 'on' : ''} onClick={() => setShow('out')}>Not ticked</button>
-      </div>
       {children}
     </div>
       <p className="mb-3 mt-0 text-[13px] text-[var(--text-muted)]">Click a box to add a feature to a plan, or take it out. The box at the top of a plan does every feature shown.</p>
@@ -143,7 +138,8 @@ export function FeatureBar({ title, q, setQ, group, setGroup, groups, show, setS
 }
 
 /** "Copy features from [plan] to [plan]" and the line that says what the last change was, with Undo. */
-export function CopyBar({ plans, msg, onCopy, onUndo }: { plans: { key: string; label: string }[]; msg: { text: string; undo?: () => void } | null; onCopy: (from: string, to: string) => void; onUndo: () => void }) {
+/** `news(from, to)` is how many features the copy would add, so the button can say so and stay off when there is nothing new. */
+export function CopyBar({ plans, msg, news, onCopy, onUndo }: { plans: { key: string; label: string }[]; msg: { text: string; undo?: () => void } | null; news: (from: string, to: string) => number; onCopy: (from: string, to: string) => void; onUndo: () => void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   if (plans.length < 2 && !msg) return null;
@@ -155,7 +151,7 @@ export function CopyBar({ plans, msg, onCopy, onUndo }: { plans: { key: string; 
           <select value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Copy from" style={SMALL_SELECT}><option value="">Pick a plan</option>{plans.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select>
           <span className="text-[var(--text-muted)]">to</span>
           <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Copy to" style={SMALL_SELECT}><option value="">Pick a plan</option>{plans.filter((p) => p.key !== from).map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select>
-          <button type="button" className="btn sm" disabled={!from || !to || from === to} onClick={() => onCopy(from, to)}>Copy</button>
+          <button type="button" className="btn sm" disabled={!from || !to || from === to || news(from, to) === 0} onClick={() => onCopy(from, to)}>{from && to && from !== to ? (news(from, to) === 0 ? 'Nothing new to copy' : `Copy ${news(from, to)} feature${news(from, to) === 1 ? '' : 's'}`) : 'Copy'}</button>
         </>
       )}
       {msg && <span className="ml-auto text-[13px] text-[var(--text-muted)]">{msg.text}{msg.undo && <button type="button" className="ml-2 font-medium text-[var(--sd-accent)]" onClick={onUndo}>Undo</button>}</span>}
@@ -167,7 +163,8 @@ export function CopyBar({ plans, msg, onCopy, onUndo }: { plans: { key: string; 
  * The feature list: one row per feature, one tick box per plan. Click anywhere in a cell to tick it; the box at the top of a column
  * ticks (or unticks) every feature shown; each group has its own box. The list scrolls inside its frame and the plan names stay on top.
  */
-export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, onRename, onRemove }: {
+export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, onRename, onRemove, show, setShow }: {
+  /** which features are listed: all, only ticked in some plan, only ticked in none */ show: Show; setShow: (v: Show) => void;
   onRename?: (f: any) => void; onRemove?: (f: any) => void;
   rows: any[]; cols: { key: string; label: string }[]; has: (f: any, col: string) => boolean; apply: (col: string, fs: any[], on: boolean) => void;
   fkey: (f: any) => string; count: (col: string) => number; showGroups: boolean;
@@ -177,7 +174,14 @@ export function FeatureGrid({ rows, cols, has, apply, fkey, count, showGroups, o
       <table className="tbl compact" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
         <thead>
           <tr>
-            <th style={STICKY}>Feature <span className="font-normal text-[var(--text-muted)]">({rows.length})</span></th>
+            <th style={STICKY}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span>Feature <span className="font-normal text-[var(--text-muted)]">({rows.length})</span></span>
+                <div className="seg" role="group" aria-label="Show features that are">
+                  {([['all', 'All'], ['in', 'In a plan'], ['out', 'In no plan']] as [Show, string][]).map(([k, l]) => <button key={k} type="button" className={show === k ? 'on' : ''} onClick={() => setShow(k)}>{l}</button>)}
+                </div>
+              </div>
+            </th>
             {cols.map((c) => {
               const n = rows.filter((x) => has(x, c.key)).length;
               return (

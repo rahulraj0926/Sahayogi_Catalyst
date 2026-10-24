@@ -137,17 +137,18 @@ export default function Plans({ pid, initial, fixedId, scope, onChanged, records
           </PlanRow>
 
           <section>
-            <FeatureBar title="What each plan includes" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups} show={show} setShow={setShow} />
+            <FeatureBar title="What each plan includes" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups} />
             {feats.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No features on our list yet. <Link href={`${base}/catalog`}>Add some</Link>.</p> : (
               <>
                 <CopyBar
                   plans={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))}
                   msg={bulk.msg}
                   onUndo={bulk.undo}
+                  news={(from, to) => feats.filter((f) => bulk.has(f, from) && !bulk.has(f, to)).length}
                   onCopy={(from, to) => bulk.apply(to, feats.filter((f) => bulk.has(f, from)), true, `Added everything ${nameOf(from)} has to ${nameOf(to)}.`)}
                 />
                 {shown.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No feature matches.</p> : (
-                  <FeatureGrid rows={shown} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1} />
+                  <FeatureGrid rows={shown} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1} show={show} setShow={setShow} />
                 )}
               </>
             )}

@@ -72,3 +72,8 @@ Changed, and why
 - **Thirteen fields on the list card.** Too wide to read. The card shows who they are, a few facts and the threat.
 
 Still to come (these need new fields in the data): recommended action and priority, an owner and next step, a threat override with a reason, revenue as a number, industries, and customer complaints with their source.
+
+## Tabs other than Overview
+- **Plans & pricing:** the feature list has one filter, in its first column: All, In a plan, In no plan. The "Copy features from [plan] to [plan]" bar says how many features the copy would add ("Copy 12 features") and stays off when there is nothing new. The "Why are there no prices?" box shows only when the competitor has no plans; the answer counts as "prices or a reason" in the completeness check and the Stage 1 sign-off.
+- **Notes:** coloured sticky notes (see above).
+- **Sources:** a Review card (last checked, next review) and the list of sources. "+ Add a source" takes a link (web page, video, article, interview, other), an optional name and what it tells us, and saves it as evidence linked to the competitor. Documents we hold as files go on the Files tab.
