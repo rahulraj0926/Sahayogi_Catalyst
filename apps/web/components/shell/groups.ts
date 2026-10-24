@@ -77,13 +77,13 @@ function hubLink(pid: string, h: Hub): NavLinkDef {
 /** Sidebar groups for one product. A 'menu' entry lists all its screens; a 'page' entry is one plain link. History is always last. */
 export function productGroups(pid: string, mode?: string): NavGroupDef[] {
   const phaseGroup: NavGroupDef = {
-    key: 'phases', label: 'Phases', icon: Layers, hint: 'The 13 phases, from Intake to Improve', collapsible: true, defaultOpen: true, items: [],
+    key: 'phases', label: 'Phases', icon: Layers, hint: 'The 13 phases, from Intake to Improve', collapsible: true, defaultOpen: false, items: [],
     phases: PHASE_SHORT.map((name, i): NavLinkDef => ({ href: `/products/${pid}/phase/${i}`, label: name, hint: `Phase ${i}: ${name}`, glyph: String(i), match: 'prefix' })),
   };
   const groups = HUBS.map((h): NavGroupDef => {
     if (h.style === 'page') return { key: h.key, label: '', items: [hubLink(pid, h)] };
     return {
-      key: h.key, label: h.label, icon: h.icon, hint: h.hint, collapsible: true, defaultOpen: true,
+      key: h.key, label: h.label, icon: h.icon, hint: h.hint, collapsible: true, defaultOpen: false,
       items: h.sections.filter((x) => !x.onlyMode || x.onlyMode === mode).map((x) => ({ href: `/products/${pid}/${x.id}`, label: x.label, hint: x.plain, icon: SECTION_ICON[x.id], isOn: (path: string) => { const sc = screenOfPath(path); return (SAME[sc] || sc) === x.id; } })),
     };
   });
@@ -126,11 +126,9 @@ export function competitorGroups(pid: string): NavGroupDef[] {
   const view = (path: string) => { if (path !== base && !path.startsWith(base + '/')) return null; return path.slice(base.length + 1).split('/')[0] || ''; };
   const on = (v: string) => (path: string) => view(path) === v;
   return [
-    { key: 'browse', label: 'Browse', items: [
-      { href: base, label: 'Dashboard', icon: Gauge, hint: 'Where we stand against competitors', isOn: on('') },
-      { href: `${base}/list`, label: 'All competitors', icon: Swords, hint: 'Each competitor, with its plans and prices', isOn: (p) => { const v = view(p); return v === 'list' || (!!v && !COMPETITOR_VIEWS.includes(v)); } },
-      { href: `${base}/planner`, label: 'Plans and features', icon: Layers, hint: 'Our own plans and the features each one gives', isOn: on('planner') },
-      { href: `${base}/grid`, label: 'Compare competitors', icon: Grid3x3, hint: 'Every competitor and the features it provides', isOn: on('grid') },
+    { key: 'browse', label: '', items: [
+      { href: base, label: 'Competitor list', icon: Swords, hint: 'Every competitor in one list', isOn: (p) => { const v = view(p); return v === '' || v === 'list' || v === 'grid' || (!!v && !COMPETITOR_VIEWS.includes(v)); } },
+      { href: `${base}/planner`, label: 'Our plans', icon: Layers, hint: 'Our own plans and the features each one gives', isOn: on('planner') },
     ] },
   ];
 }

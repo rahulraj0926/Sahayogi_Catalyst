@@ -10,7 +10,7 @@
     "db:migrate": "prisma migrate deploy",
     "seed": "ts-node --transpile-only src/seed.ts",
     "test": "ts-node --transpile-only src/tests/run.ts",
-    "test:unit": "ts-node --transpile-only src/tests/mapper.test.ts && ts-node --transpile-only src/tests/home.test.ts && ts-node --transpile-only src/tests/safety.test.ts && ts-node --transpile-only src/tests/engine.test.ts && ts-node --transpile-only src/tests/competitor-import.test.ts && ts-node --transpile-only src/tests/framework.test.ts && ts-node --transpile-only src/tests/observability.test.ts && ts-node --transpile-only src/tests/hostile.test.ts",
+    "test:unit": "ts-node --transpile-only src/tests/mapper.test.ts && ts-node --transpile-only src/tests/reload.test.ts && ts-node --transpile-only src/tests/home.test.ts && ts-node --transpile-only src/tests/safety.test.ts && ts-node --transpile-only src/tests/engine.test.ts && ts-node --transpile-only src/tests/competitor-import.test.ts && ts-node --transpile-only src/tests/framework.test.ts && ts-node --transpile-only src/tests/observability.test.ts && ts-node --transpile-only src/tests/hostile.test.ts",
     "test:db": "ts-node --transpile-only src/tests/db.test.ts && ts-node --transpile-only src/tests/legacy-import.test.ts && ts-node --transpile-only src/tests/backup.test.ts",
     "test:safety": "ts-node --transpile-only src/tests/safety.test.ts && ts-node --transpile-only src/tests/engine.test.ts",
     "test:load": "ts-node --transpile-only src/tests/load.test.ts",

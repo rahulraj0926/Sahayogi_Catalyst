@@ -44,7 +44,7 @@ export const analysisDocs: DocSet = {
     },
     'POST /api/competitors/plans/features': {
       summary: 'Say a competitor plan includes (or no longer includes) a feature',
-      description: 'Applies to every term of the plan (price_ids). Give capability_id (a feature on our list) or rating_id. If the competitor has no row for the feature yet, an unrated one is created.',
+      description: 'Applies to every term of the plan (price_ids). Give capability_id (a feature on our list) or rating_id, or a list `features` of those to change many at once (up to 500). If the competitor has no row for the feature yet, an unrated one is created.',
       body: obj({ competitor: str('Competitor id.'), price_ids: { type: 'array', items: str('Price id.'), description: 'Every price (term) of the plan.' }, capability_id: str('A feature on our list.'), rating_id: str('The competitor\'s own rating row.'), included: { type: 'boolean', description: 'true to include, false to remove.' } }, ['competitor', 'price_ids', 'included']),
       response: open, errors: { '422': 'A price or rating does not belong to the competitor, or no feature was given.' },
     },
@@ -54,20 +54,26 @@ export const analysisDocs: DocSet = {
       description: 'For each plan level (free, entry, mid, top, enterprise) with competitor plans: the average yearly price in INR excluding GST for the given number of users, and the features that at least the given share of those plans include. new_features is what the level adds over the one below it.',
       query: { threshold: { description: 'Share of plans that must include a feature, 1 to 100. Default 60.' }, users: { description: 'Users in the price scenario. Default 1.' }, scope: { description: 'Only competitors that matter for this part of our product (a module or area name). Competitors with no scope count everywhere.' } }, response: open, errors: { '422': 'users is not a number of 1 or more.' },
     },
-    'POST /api/competitors/our-plans/from-recommendation': {
-      summary: 'Create one of our plans from the recommendation for a level',
-      description: 'Creates a draft plan at the level, priced at the average yearly price, with the recommended features switched on. Features still in a competitor\'s own wording (not matched to our feature list) are reported, not added.',
-      body: obj({ tier_tag: str('free, entry, mid, top or enterprise.'), threshold: { type: 'integer', description: 'Share of plans, 1 to 100. Default 60.' }, users: { type: 'integer', description: 'Users in the price scenario. Default 1.' }, title: str('Name for the plan. Default "<Level> (recommended)".') }, ['tier_tag']),
-      response: open, errors: { '422': 'Unknown level, or no competitor plan is tagged with that level.' },
-    },
     'GET /api/competitors/compare-plans': {
       summary: 'Compare competitors\' plans at one level',
       description: 'One column per competitor plan at the level (for example everyone\'s Entry plan), with its yearly price and the features it includes, plus the competitors that have no plan at that level.',
       query: { level: { description: 'free, entry, mid, top or enterprise.' }, users: { description: 'Users in the price scenario. Default 1.' }, fallback: { description: 'A level to show instead for a competitor that has no plan at the asked level, for example entry when asking for free. Left out when it has neither.' } }, response: open, errors: { '422': 'Unknown level, or users is not a number of 1 or more.' },
     },
-    'GET /api/competitors/our-plans': { summary: 'Our plans and the features each includes', description: 'Our plans, our common features as rows with the plans that include them and what competitors give at each level, and per plan the features the market gives at its level that it lacks.', response: open },
+    'GET /api/competitors/our-plans': { summary: 'Our plans and the features each includes', description: 'Our plans, and our features as rows with the plans that include them. Each plan has price_monthly and price_yearly (empty when not sold that way), seat_model and max_users (how many users it covers), and its level.', response: open },
+    'GET /api/competitors/our-plans/pick-features': {
+      summary: 'Features competitors have that are not on our list yet, to pick from',
+      description: 'Nothing is suggested or added. The same feature written in slightly different ways is one row, with how many competitors have it, most common first. Add the ones you choose with POST /api/competitors/our-plans/features/new.',
+      query: { tier: { description: 'Only competitor plans at this level: free, entry, mid, top or enterprise.' }, competitor: { description: 'Only this competitor.' }, q: { description: 'Words the feature name contains.' }, offset: { description: 'Rows to skip. Default 0.' }, limit: { description: 'Rows to return, 1 to 500. Default 30.' }, names_only: { description: 'Set to 1 to get every matching name (up to 5000) and nothing else.' }, scope: { description: 'Only competitors that matter for this part of our product.' } },
+      response: open, errors: { '422': 'Unknown level.' },
+    },
     'POST /api/competitors/our-plans/features': {
-      summary: 'Say one of our plans includes (or no longer includes) a feature', body: obj({ plan_id: str('Our plan id.'), capability_id: str('A feature on our list.'), included: { type: 'boolean', description: 'true to include, false to remove.' } }, ['plan_id', 'capability_id', 'included']), response: open,
+      summary: 'Say one of our plans includes (or no longer includes) a feature', body: obj({ plan_id: str('Our plan id.'), capability_id: str('A feature on our list.'), capability_ids: { type: 'array', items: str('A feature on our list.'), description: 'Instead of capability_id: many features at once (up to 500).' }, included: { type: 'boolean', description: 'true to include, false to remove.' } }, ['plan_id', 'included']), response: open,
+    },
+    'POST /api/competitors/our-plans/features/new': {
+      summary: 'Add many features to our list at once, and switch them on in some of our plans',
+      description: 'Give a list of names (each with an optional group). A name already on our list is reused, not added twice. Optionally put every one of them into the listed plans. Up to 300 at a time.',
+      body: obj({ features: { type: 'array', items: obj({ name: str('Feature name.'), category: str('Group it belongs to.') }, ['name']), description: 'The features to add.' }, plan_ids: { type: 'array', items: str('Our plan id.'), description: 'Plans that should include them.' } }, ['features']),
+      response: open, errors: { '422': 'No names given, more than 300, or a plan id is not one of our plans.' },
     },
     'GET /api/competitors/catalog': { summary: 'Our common feature list and the competitor ratings that still use only their own name', description: 'Per common feature: which competitors offer it and what each calls it. Also the names not yet mapped, with a suggested match.', response: open },
     'GET /api/competitors/plan-capabilities': { summary: 'Which capabilities each plan includes', description: 'Per competitor: each plan with the capabilities linked to it, and how many plans have no capabilities mapped yet.', response: open },

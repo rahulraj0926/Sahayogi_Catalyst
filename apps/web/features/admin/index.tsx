@@ -65,7 +65,7 @@ function Settings({ pid }: { pid: string }) {
   if (error || !data) return <ErrorBox message={error || 'No data'} />;
   const st = data.settings || {};
   return (
-    <Card title="Settings" sub="Stored with the product">
+    <Card title="Settings">
       <Field label="Today’s date for this product (leave empty to use the real date)" help="The demonstration data is pinned to 9 October 2026 so freshness checks are repeatable."><input type="date" value={asOf ?? st.asOf ?? ''} onChange={(e) => setAsOf(e.target.value)} /></Field>
       <Field label="How far a change spreads before a record is flagged for a second look" help="Depth 3 is the default."><input type="number" min={1} max={6} value={depth ?? st.suspectDepth ?? 3} onChange={(e) => setDepth(Number(e.target.value))} style={{ width: 90 }} /></Field>
       {act.box}

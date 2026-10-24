@@ -39,7 +39,7 @@ export default function PhasePage({ pid, args }: FeatureProps) {
       right={<span className="row"><Badge kind="outline">{phase.percent}% complete</Badge><Badge>{phase.status}</Badge>{phase.depth === 'tracking' && <Badge kind="outline">links &amp; status</Badge>}</span>}
     >
       {!phase.ready && num > 0 && <div className="callout warn" style={{ marginBottom: 12 }}>Phase {num - 1} is not signed off yet. You can prepare records here, but this phase cannot be signed off until the earlier one is.</div>}
-      <Steps pid={pid} num={num} onChanged={life.reload} />
+      <Steps pid={pid} num={num} />
       <div style={{ height: 16 }} />
       <div className="grid g3" style={{ marginBottom: 16 }}>
         <Card title="What this phase produces"><ul className="list">{phase.outputs.map((o: string) => <li key={o}>{o}</li>)}</ul></Card>

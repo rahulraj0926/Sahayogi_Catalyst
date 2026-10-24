@@ -122,82 +122,146 @@ export function ImportDialog({ pid, hasModules, fixedCompetitor, onClose, onDone
 
 const EMPTY_PLAN = { plan: '', level: '', licence: '', max: '', month: '', year: '', once: '', features: '', quote: false };
 
+const SIZE_BANDS = ['1-10', '11-50', '51-200', '201-1000', '1001-5000', '5000+'];
+const OWNERSHIP: [string, string][] = [['private', 'Private'], ['public', 'Listed company'], ['subsidiary', 'Part of a bigger group'], ['state', 'State owned'], ['unknown', 'Not known']];
+const KINDS: [string, string, string][] = [['direct', 'Direct competitor', 'Sells the same thing to the same customers'], ['indirect', 'Indirect competitor', 'Solves a nearby problem'], ['alternative', 'Alternative', 'A substitute, such as Excel or doing it by hand']];
+const nkey2 = (s: unknown) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+/** Chips for the parts of our product, plus a box to add a part that is not on the list yet. */
+function PartPicker({ known, value, onChange }: { known: string[]; value: string[]; onChange: (v: string[]) => void }) {
+  const [more, setMore] = useState('');
+  const all = [...known, ...value.filter((v) => !known.some((k) => nkey2(k) === nkey2(v)))];
+  const on = (n: string) => value.some((v) => nkey2(v) === nkey2(n));
+  const toggle = (n: string) => onChange(on(n) ? value.filter((v) => nkey2(v) !== nkey2(n)) : [...value, n]);
+  return (
+    <div>
+      <div className="row wrap" style={{ gap: 6 }}>
+        <button type="button" className={`btn sm ${value.length === 0 ? 'primary' : ''}`} onClick={() => onChange([])}>Whole product</button>
+        {all.map((n) => <button key={n} type="button" className={`btn sm ${on(n) ? 'primary' : ''}`} aria-pressed={on(n)} onClick={() => toggle(n)}>{n}</button>)}
+      </div>
+      <div className="row" style={{ marginTop: 8, gap: 6 }}>
+        <input value={more} onChange={(e) => setMore(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (more.trim() && !on(more.trim())) onChange([...value, more.trim()]); setMore(''); } }} placeholder="Another part, then press Enter" aria-label="Add another part of our product" style={{ maxWidth: 260 }} />
+      </div>
+    </div>
+  );
+}
+
+/** Add a competitor on one wide screen: the form on the left, and on the right everything that can be recorded about a competitor, ticking off as it is filled in. */
 export function AddCompetitor({ pid, scopes, hasModules, defaultScope, onClose, onDone }: { pid: string; scopes: string[]; hasModules?: boolean; defaultScope?: string; onClose: () => void; onDone: () => void }) {
-  const [mode, setMode] = useState<'type' | 'file'>('type');
-  const [f, setF] = useState<any>({ title: '', kind: 'direct', tier: 'T2', website: '', positioning: '', scopes: defaultScope || '', currency: 'INR', gst: '' });
+  const [f, setF] = useState<any>({ title: '', kind: 'direct', website: '', legal_name: '', positioning: '', currency: 'INR', gst: '', hq_country: '', founded_year: '', size_band: '', ownership: '', target_customers: '', strengths: '', weaknesses: '' });
+  const [mods, setMods] = useState<string[]>(defaultScope ? [defaultScope] : []);
   const [plans, setPlans] = useState<any[]>([{ ...EMPTY_PLAN }]);
   const [res, setRes] = useState<any>(null);
   const act = useAction();
+  const set = (k: string, v: string) => setF((o: any) => ({ ...o, [k]: v }));
   const setPlan = (i: number, k: string, v: string) => setPlans(plans.map((p, j) => (j === i ? { ...p, [k]: v } : p)));
   const used = plans.filter((p) => p.plan.trim() || p.month || p.year || p.once || p.quote);
   const rows = () => {
-    const base = { Competitor: f.title.trim(), Tier: f.tier, Kind: f.kind, Website: f.website.trim(), Positioning: f.positioning.trim(), Module: f.scopes.trim() };
+    const base = { Competitor: f.title.trim(), Kind: f.kind, Website: f.website.trim(), Positioning: f.positioning.trim(), Module: mods.join(', ') };
     const list = used.length ? used : [{ ...EMPTY_PLAN }];
     return list.map((p) => ({ ...base, Plan: p.plan.trim(), Level: p.level, Licence: p.licence, 'Max users': p.max, 'Monthly price': p.quote ? 'Contact sales' : p.month, 'Yearly price': p.quote ? '' : p.year, 'Lifetime price': p.quote ? '' : p.once, Currency: f.currency, 'GST included': f.gst, Features: p.features }));
   };
+  const filled = (...k: string[]) => k.some((x) => String(f[x] || '').trim());
+  const save = () => act.run(async () => {
+    const bad = used.find((p) => !p.plan.trim());
+    if (bad) throw new Error('Please give each plan a name.');
+    const noPrice = used.find((p) => !p.month && !p.year && !p.once && !p.quote);
+    if (noPrice) throw new Error(`Please give "${noPrice.plan}" a price, or tick "No public price".`);
+    const r = await api<any>('/competitors/bulk', { product: pid, method: 'POST', body: { rows: rows(), commit: true } });
+    // company facts and notes are not part of the plan table, so they are saved on the competitor itself
+    const extra: any = {};
+    for (const k of ['legal_name', 'hq_country', 'size_band', 'ownership', 'target_customers', 'strengths', 'weaknesses']) if (String(f[k] || '').trim()) extra[k] = String(f[k]).trim();
+    if (String(f.founded_year).trim() && Number(f.founded_year) > 0) extra.founded_year = Number(f.founded_year);
+    if (Object.keys(extra).length) {
+      const list = await api<any>('/items?type=Competitor&limit=5000', { product: pid });
+      const me = ((list.items as any[]) || []).find((x) => x.status !== 'Retired' && nkey2(x.title) === nkey2(f.title));
+      if (!me) throw new Error(`${f.title} was added, but its company details could not be saved. Open it and fill them in there.`);
+      await api(`/items/${me.id}`, { product: pid, method: 'PATCH', body: { fields: extra } });
+    }
+    setRes({ ...r, extra: Object.keys(extra).length });
+  });
   return (
     <Modal title="Add a competitor" onClose={res ? onDone : onClose}>
-      {!res && (
-        <div className="seg" role="group" aria-label="How to add" style={{ marginBottom: 12 }}>
-          <button type="button" className={mode === 'type' ? 'on' : ''} onClick={() => setMode('type')}>Type it in</button>
-          <button type="button" className={mode === 'file' ? 'on' : ''} onClick={() => setMode('file')}>Add plans from an Excel / CSV file</button>
-        </div>)}
-      {!res && mode === 'file' ? <FileImport pid={pid} hasModules={hasModules} onClose={onClose} onDone={onDone} /> : res ? (
+      {res ? (
         <>
           <div className="callout ok small" style={{ marginBottom: 8 }}>{res.competitors.created ? `${f.title} was added.` : `${f.title} was already there; only blank details were filled in.`}</div>
-          <div className="small">{res.prices.created} price{res.prices.created === 1 ? '' : 's'} and {res.features.plan_links} plan feature{res.features.plan_links === 1 ? '' : 's'} saved.</div>
+          <div className="small">{res.prices.created} price{res.prices.created === 1 ? '' : 's'} and {res.features.plan_links} plan feature{res.features.plan_links === 1 ? '' : 's'} saved{res.extra ? ', company details saved' : ''}.</div>
           {res.warnings.length > 0 && <ul className="small" style={{ paddingLeft: 18 }}>{res.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}</ul>}
           <div className="row" style={{ marginTop: 12 }}><span className="spacer" /><button className="btn primary" onClick={onDone}>Done</button></div>
         </>
       ) : (
-        <>
-          <Field label="Name *"><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
-          <div className="grid g2"><Field label="Tier" help="Tier 1 is closest to our customers."><select value={f.tier} onChange={(e) => setF({ ...f, tier: e.target.value })}><option value="T1">Tier 1</option><option value="T2">Tier 2</option><option value="T3">Tier 3</option><option value="S">Substitute</option></select></Field>
-            <Field label="Kind"><select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}><option value="direct">Direct</option><option value="indirect">Indirect</option><option value="alternative">Alternative / substitute</option></select></Field></div>
-          <div className="grid g2"><Field label="Website"><input value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></Field>
-            {hasModules ? <Field label="Which module do they compete with?" help="For example CRM or Payroll. Leave empty if they compete with the whole product. Separate several with commas."><input list="comp-scopes" value={f.scopes} onChange={(e) => setF({ ...f, scopes: e.target.value })} placeholder="Whole product" /></Field> : <span />}</div>
-          <datalist id="comp-scopes">{scopes.map((s) => <option key={s} value={s} />)}</datalist>
-          <Field label="How they position themselves"><textarea rows={2} value={f.positioning} onChange={(e) => setF({ ...f, positioning: e.target.value })} /></Field>
+        <div style={{ display: 'grid', gap: 12 }}>
+            <section className="card"><div className="card-b" style={{ display: 'grid', gap: 10 }}>
+              <div className="strong">Who are they?</div>
+              <Field label="Name *"><input value={f.title} onChange={(e) => set('title', e.target.value)} autoFocus /></Field>
+              <Field label="What kind of competitor?">
+                <div className="seg" role="group" aria-label="Kind of competitor">{KINDS.map(([k, l]) => <button key={k} type="button" className={f.kind === k ? 'on' : ''} title={KINDS.find((x) => x[0] === k)?.[2]} onClick={() => set('kind', k)}>{l}</button>)}</div>
+                <div className="xs muted" style={{ marginTop: 4 }}>{KINDS.find((x) => x[0] === f.kind)?.[2]}</div>
+              </Field>
+              <div className="grid g2">
+                <Field label="Website"><input value={f.website} onChange={(e) => set('website', e.target.value)} placeholder="example.com" /></Field>
+                <Field label="Company name" help="If it differs from the name above."><input value={f.legal_name} onChange={(e) => set('legal_name', e.target.value)} /></Field>
+              </div>
+              <Field label="How do they position themselves?"><textarea rows={2} value={f.positioning} onChange={(e) => set('positioning', e.target.value)} /></Field>
+            </div></section>
 
-          <div className="strong" style={{ margin: '12px 0 4px' }}>Plans <span className="small muted">(optional, add them later if you prefer)</span></div>
-          <div className="row wrap small" style={{ gap: 12, marginBottom: 8 }}>
-            <label>Currency <select value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })}>{['INR', 'USD', 'EUR', 'GBP'].map((x) => <option key={x}>{x}</option>)}</select></label>
-            <label>Prices include GST <select value={f.gst} onChange={(e) => setF({ ...f, gst: e.target.value })}><option value="">Not stated</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {plans.map((p, i) => (
-              <div key={i} className="card"><div className="card-b" style={{ padding: 10, display: 'grid', gap: 8 }}>
-                <div className="row wrap" style={{ gap: 8 }}>
-                  <input style={{ flex: '1 1 130px', minWidth: 0 }} placeholder="Plan name, e.g. Standard" aria-label="Plan name" value={p.plan} onChange={(e) => setPlan(i, 'plan', e.target.value)} />
-                  <select aria-label="Plan level" value={p.level} onChange={(e) => setPlan(i, 'level', e.target.value)}><option value="">Level: work out from name</option>{Object.entries(LEVEL_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-                  {plans.length > 1 && <button className="btn xs danger" type="button" onClick={() => setPlans(plans.filter((_, j) => j !== i))}>Remove</button>}
-                </div>
-                <div className="row wrap" style={{ gap: 8 }}>
-                  <select aria-label="Users covered" value={p.licence} onChange={(e) => setPlan(i, 'licence', e.target.value)}><option value="">Users: not stated</option><option value="single user">One user per licence</option><option value="multi user">Several users share one</option><option value="per user">Priced per user</option><option value="unlimited">No limit on users</option></select>
-                  <input type="number" min={1} style={{ width: 100 }} placeholder="Max users" aria-label="Most users" value={p.max} onChange={(e) => setPlan(i, 'max', e.target.value)} />
-                </div>
-                <div className="row wrap" style={{ gap: 8 }}>
-                  <input type="number" min={0} style={{ width: 120 }} disabled={p.quote} placeholder="Per month" aria-label="Price per month" value={p.month} onChange={(e) => setPlan(i, 'month', e.target.value)} />
-                  <input type="number" min={0} style={{ width: 120 }} disabled={p.quote} placeholder="Per year" aria-label="Price per year" value={p.year} onChange={(e) => setPlan(i, 'year', e.target.value)} />
-                  <input type="number" min={0} style={{ width: 120 }} disabled={p.quote} placeholder="Paid once" aria-label="Price paid once" value={p.once} onChange={(e) => setPlan(i, 'once', e.target.value)} />
-                  <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={p.quote} onChange={(e) => setPlans(plans.map((x, j) => (j === i ? { ...x, quote: e.target.checked } : x)))} />No public price (contact sales)</label>
-                </div>
-                <textarea rows={2} placeholder="Features this plan includes, separated by semicolons (Invoicing; GST filing; Email support)" aria-label="Features" value={p.features} onChange={(e) => setPlan(i, 'features', e.target.value)} />
-              </div></div>))}
-          </div>
-          <button className="btn sm" type="button" style={{ marginTop: 8 }} onClick={() => setPlans([...plans, { ...EMPTY_PLAN }])}>Add another plan</button>
-          {act.box}
-          <div className="row" style={{ marginTop: 12 }}>
-            <button className="btn primary" disabled={!f.title.trim() || act.busy} onClick={() => act.run(async () => {
-              const bad = used.find((p) => !p.plan.trim());
-              if (bad) throw new Error('Please give each plan a name.');
-              const noPrice = used.find((p) => !p.month && !p.year && !p.once && !p.quote);
-              if (noPrice) throw new Error(`Please give "${noPrice.plan}" a price, or tick "No public price".`);
-              setRes(await api('/competitors/bulk', { product: pid, method: 'POST', body: { rows: rows(), commit: true } }));
-            })}>Add</button>
-            <button className="btn" onClick={onClose}>Cancel</button>
-          </div>
-        </>)}
+            {hasModules && (
+              <section className="card"><div className="card-b" style={{ display: 'grid', gap: 8 }}>
+                <div className="strong">Which part of our product do they compete with?</div>
+                <div className="small muted">Pick one or more. Choose Whole product if they compete with all of it.</div>
+                <PartPicker known={scopes} value={mods} onChange={setMods} />
+              </div></section>)}
+
+            <section className="card"><div className="card-b" style={{ display: 'grid', gap: 10 }}>
+              <div className="strong">About the company <span className="small muted">(optional)</span></div>
+              <div className="grid g2">
+                <Field label="Head office"><input value={f.hq_country} onChange={(e) => set('hq_country', e.target.value)} placeholder="Country" /></Field>
+                <Field label="Founded"><input type="number" min={1800} max={2100} value={f.founded_year} onChange={(e) => set('founded_year', e.target.value)} placeholder="Year" /></Field>
+                <Field label="Number of people"><select value={f.size_band} onChange={(e) => set('size_band', e.target.value)}><option value="">Not known</option>{SIZE_BANDS.map((s) => <option key={s} value={s}>{s} people</option>)}</select></Field>
+                <Field label="Ownership"><select value={f.ownership} onChange={(e) => set('ownership', e.target.value)}><option value="">Not known</option>{OWNERSHIP.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+              </div>
+              <Field label="Who do they sell to?"><textarea rows={2} value={f.target_customers} onChange={(e) => set('target_customers', e.target.value)} /></Field>
+              <div className="grid g2">
+                <Field label="What are they good at?"><textarea rows={2} value={f.strengths} onChange={(e) => set('strengths', e.target.value)} /></Field>
+                <Field label="Where are they weak?"><textarea rows={2} value={f.weaknesses} onChange={(e) => set('weaknesses', e.target.value)} /></Field>
+              </div>
+            </div></section>
+
+            <section className="card"><div className="card-b">
+              <div className="strong">Plans and prices <span className="small muted">(optional, add them later if you prefer)</span></div>
+              <div className="row wrap small" style={{ gap: 12, margin: '8px 0' }}>
+                <label>Currency <select value={f.currency} onChange={(e) => set('currency', e.target.value)}>{['INR', 'USD', 'EUR', 'GBP'].map((x) => <option key={x}>{x}</option>)}</select></label>
+                <label>Prices include GST <select value={f.gst} onChange={(e) => set('gst', e.target.value)}><option value="">Not stated</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {plans.map((p, i) => (
+                  <div key={i} className="card"><div className="card-b" style={{ padding: 10, display: 'grid', gap: 8 }}>
+                    <div className="row wrap" style={{ gap: 8 }}>
+                      <input style={{ flex: '1 1 130px', minWidth: 0 }} placeholder="Plan name, e.g. Standard" aria-label="Plan name" value={p.plan} onChange={(e) => setPlan(i, 'plan', e.target.value)} />
+                      <select aria-label="Plan level" value={p.level} onChange={(e) => setPlan(i, 'level', e.target.value)}><option value="">Level: work out from name</option>{Object.entries(LEVEL_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+                      {plans.length > 1 && <button className="btn xs danger" type="button" onClick={() => setPlans(plans.filter((_, j) => j !== i))}>Remove</button>}
+                    </div>
+                    <div className="row wrap" style={{ gap: 8 }}>
+                      <select aria-label="Users covered" value={p.licence} onChange={(e) => setPlan(i, 'licence', e.target.value)}><option value="">Users: not stated</option><option value="single user">One user per licence</option><option value="multi user">Several users share one</option><option value="per user">Priced per user</option><option value="unlimited">No limit on users</option></select>
+                      <input type="number" min={1} style={{ width: 100 }} placeholder="Max users" aria-label="Most users" value={p.max} onChange={(e) => setPlan(i, 'max', e.target.value)} />
+                    </div>
+                    <div className="row wrap" style={{ gap: 8 }}>
+                      <input type="number" min={0} style={{ width: 120 }} disabled={p.quote} placeholder="Per month" aria-label="Price per month" value={p.month} onChange={(e) => setPlan(i, 'month', e.target.value)} />
+                      <input type="number" min={0} style={{ width: 120 }} disabled={p.quote} placeholder="Per year" aria-label="Price per year" value={p.year} onChange={(e) => setPlan(i, 'year', e.target.value)} />
+                      <input type="number" min={0} style={{ width: 120 }} disabled={p.quote} placeholder="Paid once" aria-label="Price paid once" value={p.once} onChange={(e) => setPlan(i, 'once', e.target.value)} />
+                      <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={p.quote} onChange={(e) => setPlans(plans.map((x, j) => (j === i ? { ...x, quote: e.target.checked } : x)))} />No public price (contact sales)</label>
+                    </div>
+                    <textarea rows={2} placeholder="Features this plan includes, separated by semicolons (Invoicing; GST filing; Email support)" aria-label="Features" value={p.features} onChange={(e) => setPlan(i, 'features', e.target.value)} />
+                  </div></div>))}
+              </div>
+              <button className="btn sm" type="button" style={{ marginTop: 8 }} onClick={() => setPlans([...plans, { ...EMPTY_PLAN }])}>Add another plan</button>
+            </div></section>
+            {act.box}
+            <div className="row">
+              <button className="btn primary" disabled={!f.title.trim() || act.busy} onClick={save}>{act.busy ? 'Adding…' : 'Add competitor'}</button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+        </div>)}
     </Modal>
   );
 }

@@ -10,6 +10,7 @@
  */
 import * as schema from './schema';
 import * as suspect from './suspect';
+import * as selfcheck from './selfcheck';
 import { ValidationError } from './store';
 
 const CONFIDENCE_TO_CRED = { high: 2, moderate: 3, low: 4 };
@@ -148,7 +149,7 @@ function verify(store, id, actor, note?) {
   if (!it) throw Object.assign(new Error(`item ${id} not found`), { status: 404 });
   if (!needsVerification(it)) throw Object.assign(new Error(`${id} is not waiting for verification`), { status: 409 });
   const same = (n) => n && String(n).trim().toLowerCase() === String(actor).trim().toLowerCase();
-  if (same(it.proposed_by) || same(it.created_by) || same(it.requested_by)) throw Object.assign(new Error(`${actor} created or asked for ${id}, so a different person has to check it.`), { status: 409, code: 'same_person' });
+  if ((same(it.proposed_by) || same(it.created_by) || same(it.requested_by)) && !(it.origin === 'human' && selfcheck.allowed(actor))) throw Object.assign(new Error(`${actor} created or asked for ${id}, so a different person has to check it.`), { status: 409, code: 'same_person' });
   if (it.type === 'Competitor' && !(it.tier && it.tier_basis)) throw Object.assign(new Error('a Competitor needs a tier and a tier_basis before it can be reviewed'), { status: 409 });
   const patch = { verification: 'verified', verified_by: actor, verified_on: store.today(), verified_note: note.slice(0, 300), status: VERIFIED_STATUS[it.type] || it.status };
   store.update(id, patch, { actor, silent: true, strict: false });

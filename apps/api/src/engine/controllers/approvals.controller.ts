@@ -114,7 +114,7 @@ export class ApprovalsController {
 /** The address approval links start with, and how long they live. */
 @EngineController('sharing', 'Approvals')
 export class SharingController {
-  private view(c: EngineCtx, req: any) { const s = settingsOf(c); return { public_url: s.public_url || '', approval_expiry_days: approvals.expiryDays(s), base: baseFor(c, req), detected: approvals.lanAddress() }; }
+  private view(c: EngineCtx, req: any) { const s = settingsOf(c); return { public_url: s.public_url || '', approval_expiry_days: approvals.expiryDays(s), admins_check_own: s.admins_check_own !== false, base: baseFor(c, req), detected: approvals.lanAddress() }; }
 
   @Get() @EngineRoute({ noProduct: true })
   get(@Ctx() c: EngineCtx, @Req() req: any) { return this.view(c, req); }
@@ -128,6 +128,7 @@ export class SharingController {
       s.public_url = v.replace(/\/+$/, '');
     }
     if (dto.approval_expiry_days !== undefined) { const n = Number(dto.approval_expiry_days); if (!(n >= 1 && n <= 365)) throw httpErr(422, 'Links can last from 1 to 365 days.'); s.approval_expiry_days = Math.round(n); }
+    if (dto.admins_check_own !== undefined) s.admins_check_own = !!dto.admins_check_own;
     c.portfolio.saveRegistry();
     return this.view(c, req);
   }

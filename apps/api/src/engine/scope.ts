@@ -10,6 +10,7 @@ import { Logger } from '@nestjs/common';
 import type { Request } from 'express';
 import { actorOf, rolesOf } from '../common/auth/actor';
 import * as approvals from '../legacy/engine/approvals';
+import * as selfcheck from '../legacy/engine/selfcheck';
 import type { PersistenceService } from '../persistence.service';
 
 const log = new Logger('legacy-api');
@@ -44,6 +45,7 @@ export function openScope(persistence: PersistenceService, req: Request, o: Scop
     else { product = portfolio.resolve(wanted); store = portfolio.store(product.id); }
   }
   approvals.configure((portfolio.reg.settings = portfolio.reg.settings || {}));
+  selfcheck.configure((a) => (portfolio.reg.settings as any).admins_check_own !== false && rolesOf(a).includes('admin'));
   return { actor, portfolio, product, store };
 }
 

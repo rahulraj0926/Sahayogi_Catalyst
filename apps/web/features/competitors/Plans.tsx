@@ -1,102 +1,160 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Badge, Card, Empty, ErrorBox, Loading } from '@/components/ui';
-import { Pager, useAction, usePaged } from '@/components/kit';
+import { Badge, Empty, ErrorBox, Loading } from '@/components/ui';
+import { Field, Modal, useAction } from '@/components/kit';
 import { api, useApi } from '@/lib/api';
+import { CopyBar, FeatureBar, FeatureGrid, PlanCard, PlanRow, useBulkTicks, type Show } from './PlanKit';
 
-export const LEVEL_LABEL: Record<string, string> = { free: 'Free', entry: 'Entry', mid: 'Mid', top: 'Top', enterprise: 'Enterprise' };
+export { LEVEL_LABEL } from './PlanKit';
 export const SEAT_LABEL: Record<string, string> = { single_user: 'One user per licence', multi_user: 'Several users share one', per_user: 'Per user', unlimited_users: 'No user limit' };
 const PERIOD: Record<string, string> = { month: 'month', quarter: '3 months', year: 'year', one_time: 'lifetime' };
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? '' : `${c === 'INR' ? '₹' : c + ' '}${Number(a).toLocaleString('en-IN')}`);
-const LEVEL_TONE: Record<string, string> = { strong: 'ok', parity: 'ok', partial: 'warn', absent: 'bad', unknown: '' };
 
-/** One competitor at a time: how many plans it sells, what each costs for each term, and which of our common features each plan includes. */
-export default function Plans({ pid, initial, fixedId, scope }: { pid: string; initial?: string; fixedId?: string; scope?: string }) {
-  const list = useApi<any>(`/competitors/plans${scope ? `?scope=${encodeURIComponent(scope)}` : ''}`, pid);
+/** Change the name of one plan (every term of it keeps its own price). */
+function RenamePlan({ pid, plan, onClose, onDone }: { pid: string; plan: any; onClose: () => void; onDone: (name: string) => void }) {
+  const [name, setName] = useState(plan.plan || '');
+  const act = useAction();
+  return (
+    <Modal title={`Rename ${plan.plan}`} onClose={onClose}>
+      <Field label="Plan name"><input type="text" autoFocus value={name} onChange={(e) => setName(e.target.value)} /></Field>
+      {act.box}
+      <button className="btn primary" disabled={act.busy || !name.trim()} onClick={() => act.run(async () => {
+        for (const id of plan.price_ids) await api(`/items/${id}`, { product: pid, method: 'PATCH', body: { fields: { plan: name.trim() } } });
+        onDone(name.trim());
+      })}>Save</button>
+    </Modal>
+  );
+}
+
+/** One competitor at a time: what each plan costs and which of our features each plan includes. Ticking is instant and can be done in bulk. */
+export default function Plans({ pid, initial, fixedId, scope, onChanged, records, isUnchecked, onCheck }: { pid: string; initial?: string; fixedId?: string; scope?: string; onChanged?: () => void; records?: any[]; isUnchecked?: (r: any) => boolean; onCheck?: (ids: string[], label: string) => void }) {
+  const list = useApi<any>(`/competitors/plans${scope ? `?scope=${encodeURIComponent(scope)}` : ''}`, pid, { keep: true });
   const [pick, setId] = useState(initial || '');
   const id = fixedId || pick;
   const first = list.data?.competitors?.[0]?.id || '';
   useEffect(() => { if (!fixedId && !pick && first) setId(first); }, [fixedId, pick, first]);
-  const det = useApi<any>(id ? `/competitors/plans?competitor=${encodeURIComponent(id)}` : null, pid);
-  const [onlyUsed, setOnlyUsed] = useState(true);
+  const det = useApi<any>(id ? `/competitors/plans?competitor=${encodeURIComponent(id)}` : null, pid, { keep: true });
+  const d = det.data;
   const act = useAction();
-  const feats: any[] = (det.data?.features || []).filter((f: any) => !onlyUsed || f.in_plans.length > 0);
-  const pg = usePaged(feats, 10);
-  if (list.loading) return <Loading />;
+  const plans: any[] = d?.plans || [];
+
+  // names and levels changed on this screen show at once, before the server answers
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [levels, setLevels] = useState<Record<string, string>>({});
+  const sig = d ? `${d.competitor?.id}|${plans.map((p: any) => p.key).join(',')}` : '';
+  useEffect(() => { setNames({}); setLevels({}); }, [sig]);
+  const nameOf = (key: string) => names[key] ?? plans.find((p) => p.key === key)?.plan ?? '';
+
+  const bulk = useBulkTicks({
+    initial: d ? Object.fromEntries(d.features.map((f: any) => [f.key, f.in_plans])) : null,
+    sig, fkey: (f) => f.key, colName: nameOf, onStart: act.clear,
+    send: async (col, fs, included) => {
+      const plan = plans.find((p) => p.key === col);
+      await api('/competitors/plans/features', { product: pid, method: 'POST', body: { competitor: id, price_ids: plan?.price_ids, features: fs.map((f) => (f.capability_id ? { capability_id: f.capability_id } : { rating_id: f.rating_id })), included } });
+    },
+  });
+
+  const [q, setQ] = useState('');
+  const [group, setGroup] = useState('');
+  const [show, setShow] = useState<Show>('all');
+  const [rename, setRename] = useState<any>(null);
+  const feats: any[] = useMemo(() => (d?.features || []).slice().sort((a: any, b: any) => (a.category || '~').localeCompare(b.category || '~') || a.name.localeCompare(b.name)), [d]);
+  const groups = useMemo(() => [...new Set(feats.map((f: any) => f.category || 'Other'))] as string[], [feats]);
+  const shown = useMemo(() => feats.filter((f: any) => {
+    if (group && (f.category || 'Other') !== group) return false;
+    if (q && !`${f.name} ${f.category || ''}`.toLowerCase().includes(q.toLowerCase())) return false;
+    if (show === 'in' && f.in_plans.length === 0) return false; // decided from what the server last said, so rows do not jump while you tick
+    if (show === 'out' && f.in_plans.length > 0) return false;
+    return true;
+  }), [feats, group, q, show]);
+
+  if (list.loading && !list.data) return <Loading />;
   if (list.error || !list.data) return <ErrorBox message={list.error || 'No data'} />;
   const comps: any[] = list.data.competitors;
-  if (!comps.length) return <Empty>No competitors yet. Add the first one from “All competitors”.</Empty>;
-  const d = det.data;
+  if (!comps.length) return <Empty>No competitors yet. Add the first one from “Competitors”.</Empty>;
   const base = `/products/${pid}/competitors`;
-  const toggle = (f: any, plan: any, included: boolean) => act.run(async () => {
-    await api('/competitors/plans/features', { product: pid, method: 'POST', body: { competitor: id, price_ids: plan.price_ids, ...(f.capability_id ? { capability_id: f.capability_id } : { rating_id: f.rating_id }), included } });
-    det.reload(); list.reload();
+
+  const removePlan = (p: any) => act.run(async () => {
+    if (!(await act.ask(`Delete the plan “${p.plan}” with all of its prices? It is kept in history but no longer counted.`, 'Delete'))) return;
+    for (const pidn of p.price_ids) await api(`/items/${pidn}/status`, { product: pid, method: 'POST', body: { status: 'Retired' } });
+    onChanged?.(); det.reload(); list.reload();
   });
-  return (
-    <>
-      <div className="row wrap" style={{ marginBottom: 12, gap: 10, alignItems: 'center' }}>
-        {!fixedId && <><label className="small" htmlFor="plans-competitor">Competitor</label>
-        <select id="plans-competitor" value={id} onChange={(e) => setId(e.target.value)}>
-          {comps.map((c) => <option key={c.id} value={c.id}>{c.title}{c.tier ? ` (${c.tier})` : ''} · {c.plan_count} plan{c.plan_count === 1 ? '' : 's'}</option>)}
-        </select>
-        {d && <Link className="btn sm" href={`${base}/${id}?tab=prices`}>Edit prices</Link>}</>}
-        <span className="spacer" />
-        <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={onlyUsed} onChange={(e) => setOnlyUsed(e.target.checked)} />Only features some plan includes</label>
+  const setLevel = (p: any, tier_tag: string) => act.run(async () => {
+    setLevels((l) => ({ ...l, [p.key]: tier_tag }));
+    for (const pidn of p.price_ids) await api(`/items/${pidn}`, { product: pid, method: 'PATCH', body: { fields: { tier_tag: tier_tag || null } } });
+  });
+  /** Who checked the saved prices behind a plan, with a button to check them. */
+  const checkLine = (p: any) => {
+    if (!records) return null;
+    const rs = records.filter((r) => p.price_ids.includes(r.id));
+    const todo = rs.filter((r) => (isUnchecked ? isUnchecked(r) : false) || r.status === 'Draft');
+    const who = Array.from(new Set(rs.map((r) => r.verified_by).filter(Boolean)));
+    const old = rs.some((r) => r._freshness && r._freshness !== 'fresh');
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {rs.some((r) => r.status === 'Disputed') ? <Badge kind="bad">Disputed</Badge> : todo.length === 0 ? <Badge kind="ok">{who.length ? `Checked by ${who.join(', ')}` : 'Checked'}</Badge> : <Badge kind="warn">Not checked yet</Badge>}
+        {todo.length > 0 && onCheck && <button type="button" className="btn xs" onClick={() => onCheck(todo.map((r) => r.id), `${p.plan}: ${p.terms.map((t: any) => `${t.price_type === 'quote' ? 'On request' : money(t.amount, t.currency)} / ${PERIOD[t.period] || t.period}`).join(', ')}`)}>Mark as checked</button>}
+        {old && <span className="text-xs text-[var(--text-muted)]">Price may be out of date</span>}
       </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      {!fixedId && (
+        <div className="row wrap" style={{ gap: 10, alignItems: 'center' }}>
+          <label className="small" htmlFor="plans-competitor">Competitor</label>
+          <select id="plans-competitor" value={id} onChange={(e) => setId(e.target.value)}>
+            {comps.map((c) => <option key={c.id} value={c.id}>{c.title} · {c.plan_count} plan{c.plan_count === 1 ? '' : 's'}</option>)}
+          </select>
+          {d && <Link className="btn sm" href={`${base}/${id}?tab=prices`}>Edit prices</Link>}
+        </div>
+      )}
       {act.box}
-      {det.loading && !d ? <Loading /> : det.error || !d ? <ErrorBox message={det.error || 'No data'} /> : (
+      {det.loading && !d ? <Loading /> : det.error || !d ? <ErrorBox message={det.error || 'No data'} /> : plans.length === 0 ? (
+        <Empty>{d.competitor.title} has no plans yet. {fixedId ? 'Use “Add a plan” above.' : <Link href={`${base}/${id}?tab=prices`}>Add the first plan</Link>}</Empty>
+      ) : (
         <>
-          <div className="grid g4" style={{ marginBottom: 14 }}>
-            <Card title="Plans"><div className="strong" style={{ fontSize: 22 }}>{d.summary.plans}</div></Card>
-            <Card title="Features in some plan"><div className="strong" style={{ fontSize: 22 }}>{d.summary.features_in_some_plan}</div><div className="xs muted">of {d.summary.features_listed} on our list</div></Card>
-            <Card title="Plans with no features listed"><div className="strong" style={{ fontSize: 22 }}>{d.summary.plans_without_features}</div></Card>
-          </div>
-          {d.plans.length === 0 ? <Empty>{d.competitor.title} has no prices yet. <Link href={`${base}/${id}?tab=prices`}>Add the first price</Link>.</Empty> : (
-            <>
-              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6, marginBottom: 14, alignItems: 'stretch' }}>
-                {d.plans.map((p: any) => {
-                  const inc = d.features.filter((f: any) => f.in_plans.includes(p.key));
-                  return (
-                    <div key={p.key} className="card" style={{ flex: '0 0 250px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                      <div className="card-b" style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-                        <div>
-                          <div className="strong" style={{ fontSize: 16 }}>{p.plan}</div>
-                          <div className="xs muted">{[p.tier_tag ? LEVEL_LABEL[p.tier_tag] : 'No level yet', p.product].filter(Boolean).join(' · ')}</div>
-                        </div>
-                        <div className="stack" style={{ gap: 2 }}>
-                          {p.terms.map((t: any) => <div key={t.id} className="row" style={{ justifyContent: 'space-between', fontSize: 13 }}><span className="muted">{PERIOD[t.period] || t.period}</span><span className="strong">{t.price_type === 'quote' ? 'On request' : money(t.amount, t.currency)}</span></div>)}
-                        </div>
-                        <div className="xs muted">{p.seat_model ? SEAT_LABEL[p.seat_model] : 'Users: not stated'}{p.max_users ? `, up to ${p.max_users}` : ''}</div>
-                        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 8 }}>
-                          <div className="xs muted" style={{ marginBottom: 4 }}>{inc.length} feature{inc.length === 1 ? '' : 's'} included</div>
-                          {inc.length === 0 ? <div className="xs muted">None ticked yet. Tick them in the table below.</div> : (
-                            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 3 }}>{inc.map((f: any) => <li key={f.key} className="small" style={{ display: 'flex', gap: 6 }}><span aria-hidden style={{ color: 'var(--ok)' }}>✓</span><span>{f.name}</span></li>)}</ul>)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <Card title="Tick what each plan includes" sub="Tick a box to say the plan includes that feature" flush>
-                {feats.length === 0 ? <div className="card-b small muted">{d.features.length === 0 ? <>No features on our list yet. <Link href={`${base}/catalog`}>Add some</Link>.</> : 'No plan includes a feature yet. Untick “Only features some plan includes” to see all of them and start ticking.'}</div> : (
-                  <div style={{ overflow: 'auto' }}><table className="tbl compact"><thead><tr><th>Feature</th><th>Rated</th>{d.plans.map((p: any) => <th key={p.key} className="xs" style={{ textAlign: 'center' }}>{p.plan}<div className="muted">{p.feature_count}</div></th>)}</tr></thead><tbody>
-                    {pg.rows.map((f) => (
-                      <tr key={f.key}>
-                        <td><span className="strong">{f.name}</span>{f.category && <span className="xs muted"> · {f.category}</span>}{f.their_name && f.their_name !== f.name && <div className="xs muted">they call it: {f.their_name}</div>}</td>
-                        <td>{f.level ? <Badge kind={LEVEL_TONE[f.level] as any}>{f.level}</Badge> : <span className="xs muted">no row</span>}</td>
-                        {d.plans.map((p: any) => <td key={p.key} style={{ textAlign: 'center' }}><input type="checkbox" aria-label={`${f.name} in ${p.plan}`} checked={f.in_plans.includes(p.key)} disabled={act.busy} onChange={(e) => toggle(f, p, e.target.checked)} /></td>)}
-                      </tr>
-                    ))}
-                  </tbody></table></div>
+          <PlanRow>
+            {plans.map((p: any) => (
+              <PlanCard
+                key={p.key}
+                title={nameOf(p.key)}
+                sub={p.product}
+                action={{ label: 'Rename', onClick: () => setRename(p) }}
+                terms={p.terms.map((t: any) => ({ id: t.id, label: PERIOD[t.period] || t.period, value: t.price_type === 'quote' ? 'On request' : money(t.amount, t.currency) }))}
+                note={`${p.seat_model ? SEAT_LABEL[p.seat_model] : 'Users not stated'}${p.max_users ? `, up to ${p.max_users}` : ''}`}
+                level={levels[p.key] ?? p.tier_tag ?? ''}
+                onLevel={(v) => setLevel(p, v)}
+                extra={checkLine(p)}
+                features={feats.filter((f) => bulk.has(f, p.key)).map((f) => ({ key: f.key, name: f.name }))}
+                onRemoveFeature={(k) => { const f = feats.find((x) => x.key === k); if (f) bulk.apply(p.key, [f], false); }}
+                onDelete={() => removePlan(p)}
+                busy={act.busy}
+              />
+            ))}
+          </PlanRow>
+
+          <section>
+            <FeatureBar title="What each plan includes" q={q} setQ={setQ} group={group} setGroup={setGroup} groups={groups} show={show} setShow={setShow} />
+            {feats.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No features on our list yet. <Link href={`${base}/catalog`}>Add some</Link>.</p> : (
+              <>
+                <CopyBar
+                  plans={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))}
+                  msg={bulk.msg}
+                  onUndo={bulk.undo}
+                  onCopy={(from, to) => bulk.apply(to, feats.filter((f) => bulk.has(f, from)), true, `Added everything ${nameOf(from)} has to ${nameOf(to)}.`)}
+                />
+                {shown.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No feature matches.</p> : (
+                  <FeatureGrid rows={shown} cols={plans.map((p) => ({ key: p.key, label: nameOf(p.key) }))} has={bulk.has} apply={(c, fs, on) => bulk.apply(c, fs, on)} fkey={(f) => f.key} count={(c) => bulk.count(c, feats)} showGroups={groups.length > 1} />
                 )}
-                <Pager {...pg} />
-              </Card>
-              <div className="xs muted" style={{ marginTop: 8 }}>Ticking a feature applies to every term of the plan (monthly, yearly, lifetime). If {d.competitor.title} has no row for the feature yet, an empty one is created so it can be rated later.</div>
-            </>
-          )}
+              </>
+            )}
+          </section>
         </>
       )}
-    </>
+      {rename && <RenamePlan pid={pid} plan={rename} onClose={() => setRename(null)} onDone={(name) => { setNames((n) => ({ ...n, [rename.key]: name })); setRename(null); onChanged?.(); }} />}
+    </div>
   );
 }

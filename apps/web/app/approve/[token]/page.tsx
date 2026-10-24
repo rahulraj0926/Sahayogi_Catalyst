@@ -25,7 +25,7 @@ export default function ApprovePage({ params }: { params: Promise<{ token: strin
     try { const r = await api<any>(`/approve/${encodeURIComponent(token)}/decide`, { method: 'POST', body: { decision: choice === 'decline' ? 'decline' : 'approve', name: name.trim(), note: note.trim() } }); setDone({ decision: choice, message: r.message }); }
     catch (e: any) { setMsg(errorMessage(e)); } finally { setBusy(false); }
   };
-  const Wrap = ({ children }: { children: React.ReactNode }) => <div style={{ maxWidth: 760, margin: '0 auto', padding: '18px 16px 60px' }}><div className="row" style={{ margin: '6px 0 18px' }}><div className="brand-mark">S</div><span className="muted small">Sahayogi Platform: an approval request</span></div>{children}</div>;
+  const Wrap = ({ children }: { children: React.ReactNode }) => <div style={{ maxWidth: 760, margin: '0 auto', padding: '18px 16px 60px' }}><div className="row" style={{ margin: '6px 0 18px' }}><div className="brand-mark">S</div><span className="muted small">Sahayogi Catalyst: an approval request</span></div>{children}</div>;
   if (err) return <Wrap><div className="card"><div className="card-b"><h1>This link does not work</h1><p>{err}</p><p className="small muted">Nothing was approved or declined.</p></div></div></Wrap>;
   if (!d) return <Wrap><div className="loading">Loading…</div></Wrap>;
   if (done) return <Wrap><div className={`callout ${done.decision === 'decline' ? 'warn' : 'ok'}`}><h1>{done.decision === 'decline' ? 'You declined it' : 'You approved it'}</h1><p>{done.message}</p><p className="small muted">This request is now closed. You can close this page.</p></div></Wrap>;

@@ -1,0 +1,71 @@
+# Competitor overview: what it shows and why
+
+Where: Competitors, one competitor, Overview tab. Worked out on Zoho in Sahayogi Developer.
+
+The page answers three questions, in the order a decision is made:
+1. Where are they strong, and where can we beat them?
+2. What do they sell, to whom, and for how much?
+3. Who are they, and how sure are we?
+
+Nothing is invented. A row is either a field someone typed in, or worked out from the plans, files and notes already saved. A row with nothing in it is left out, so the page never shows empty lines. There is no threat banner and no "against us" counter: how close they are to us stays on the list card, and the feature-by-feature comparison stays in Compare and the Plans tab.
+
+## Naming rule
+A heading names what the block holds (a noun). A row label is one or two plain nouns. The same word is used on the row, in the Edit form and in the list, so a person never meets two names for one thing.
+
+| Was | Now |
+|---|---|
+| What they are good at / Where they are strong | Strengths |
+| Where they are weak | Weaknesses & risks |
+| What they sell | (removed: see the Plans & pricing tab) |
+| The company | Company details |
+| Who they sell to | Customers & market (row: Target customers) |
+| Overlap with our customers / Same customers as us | Shared with us (High, Medium, Low) |
+| Well-known customers | Known customers |
+| How they sell | Sales channels |
+| Started | Founded |
+| Number of people / People | Team size |
+| About their size | Size note |
+| How we know | Evidence & review |
+| Charged | Licence |
+| Prices checked | Prices updated |
+| Check again by | Next review |
+
+## Layout (follows the design mock-up)
+- **Under the title:** tiles for Competes with, Competitor type (both editable here), Founded, Headquarters and Employees. A tile with nothing in it is left out. Who added the record and when it last changed sit under the website.
+- **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
+- **First row:** Company details and Customers & market, two equal cards.
+- **Second row:** To do and Evidence & review.
+- **Bottom:** Strengths and Weaknesses & risks, side by side, one point per line. A line written as "Price: about $37 a user" shows "Price" as the title and the rest underneath it. If only one side has text it takes the full width and the other becomes an "Add" link. Each side has its own Edit.
+- Cards in a row always have the same height, so there is no hole beside a short card; on a phone they stack in one column.
+
+| Card | Rows | Comes from |
+|---|---|---|
+| Company details | Website, legal name, products, founded, head office, team size, ownership, funding | Typed in. Products are the competitor's product lines (each with its own plans on the Plans & pricing tab); "+ Add product" adds one here |
+| Customers & market | Customer size (tick any of Individuals, Small business, Mid-size companies, Large companies), target market (regions or industries, typed as tags), target customers (a few words), shared with us, known customers, sales channels | Typed in |
+| Evidence & review | Sources (amber "None yet" when there are none), files, notes, last checked, next review (amber "overdue" after the date). Link: Open sources | Counted from the competitor's own sources, files and notes |
+| To do | What is still missing on this competitor | The existing to-do list |
+
+Left out of the mock-up on purpose: the left menu (the page already has tabs), the "keep claims linked to a source" note, the data-confidence line (the amber "None yet" next to Sources says the same) and the Products & pricing card (it repeated the Plans & pricing tab).
+
+## Your planning document, point by point
+
+Kept
+- The same fields for every competitor, so they can be compared.
+- Facts kept apart from opinion.
+- Who they aim at kept apart from customers they have confirmed.
+- A source and a date on every number that can go stale, and a last-checked date.
+- Threat level, kept on the list card.
+- Short profile; the feature-by-feature comparison stays in Compare and the Plans tab.
+- A short card for each competitor in the list.
+
+Changed, and why
+- **Full profile for all 10 to 15 competitors.** Only the ones we meet head to head (tier 1) deserve the full page. For the rest, the card and a few facts are enough, and nobody keeps 15 full profiles up to date.
+- **Revenue, funding, investors, acquisitions, technology stack as separate sections.** Most vendors publish none of it, so these would read "not shared" on every competitor. They are one row each under Company.
+- **Four competitor types.** We already keep seven, which carries more meaning.
+- **Threat and priority typed in by hand beside our tier.** Two scales drift apart. Threat is worked out from tier and overlap.
+- **Pricing written again in the profile.** The Plans tab already holds it with source and date; the overview reads from there.
+- **The recommendation near the end.** Strengths and weaknesses come first on the page.
+- **A confidence rating on every field.** Sixty ratings per competitor is more bookkeeping than value. The source and date carry it.
+- **Thirteen fields on the list card.** Too wide to read. The card shows who they are, a few facts and the threat.
+
+Still to come (these need new fields in the data): recommended action and priority, an owner and next step, a threat override with a reason, revenue as a number, industries, and customer complaints with their source.

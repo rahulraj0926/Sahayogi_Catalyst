@@ -17,10 +17,10 @@ export function Field({ label, children, help }: { label: string; children: Reac
   return <div className="f" style={{ marginBottom: 10 }}><label style={{ display: 'block', fontWeight: 600, fontSize: 12.5, marginBottom: 3 }}>{label}</label>{children}{help && <div className="xs muted">{help}</div>}</div>;
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   return (
     <div className="modal-bg" style={{ position: 'fixed', zIndex: 50 }} onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className={wide ? 'modal wide' : 'modal'} onClick={(e) => e.stopPropagation()}>
         <div className="modal-h"><h2>{title}</h2><button className="btn sm ghost" onClick={onClose}>Close</button></div>
         <div className="modal-b">{children}</div>
       </div>

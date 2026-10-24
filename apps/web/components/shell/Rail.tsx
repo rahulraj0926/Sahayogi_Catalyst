@@ -25,8 +25,8 @@ export function globalLinks(path: string, pid?: string): RailLink[] {
 export const howToUseLink: RailLink = { href: '/help', label: 'How to use', icon: HelpCircle, active: false, hue: '#64748b' };
 
 const ITEM = 'group tap-pop no-underline hover:no-underline flex shrink-0 flex-col items-center gap-1 screen-sm:w-full';
-const ICON = 'flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 group-hover:scale-110';
-const LABEL = 'hidden min-h-[1.5rem] w-full overflow-hidden text-center text-[0.6875rem] font-medium leading-[0.875rem] tracking-tight [overflow-wrap:anywhere] screen-sm:[display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]';
+const ICON = 'flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-110';
+const LABEL = 'hidden min-h-[1.5rem] w-full overflow-hidden text-center text-[0.625rem] font-medium leading-[0.875rem] tracking-tight [overflow-wrap:anywhere] screen-sm:[display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]';
 
 function Item({ l }: { l: RailLink }) {
   const hue = l.hue ?? 'var(--sd-accent)';
@@ -59,11 +59,11 @@ export function Rail({ path }: { path: string }) {
     <aside ref={asideRef} onMouseOver={(e) => { const el = (e.target as HTMLElement).closest<HTMLElement>('[data-rail-item]'); if (el) place(el); }} onMouseLeave={rest} aria-label="Primary navigation" data-workspace-rail=""
       className="fixed inset-x-0 bottom-0 z-40 flex h-[4rem] w-full flex-row items-center justify-around gap-1 overflow-x-auto bg-[var(--shell-bg)] px-1 py-1 no-scrollbar screen-sm:relative screen-sm:h-full screen-sm:w-[var(--sidebar-w)] screen-sm:flex-col screen-sm:items-center screen-sm:justify-start screen-sm:gap-1 screen-sm:overflow-visible screen-sm:px-0 screen-sm:py-0">
       <span aria-hidden className="pointer-events-none absolute left-0 hidden w-[3px] rounded-r-full transition-[top,height,background-color,opacity] duration-300 ease-out screen-sm:block" style={{ top: bar.top, height: bar.height, background: bar.hue, opacity: bar.show ? 1 : 0 }} />
-      <Link href="/" aria-label="Sahayogi portfolio" className="hidden w-full shrink-0 items-center justify-center screen-sm:flex screen-sm:h-[var(--header-h)]">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--sd-accent)] text-base font-bold text-[var(--sd-accent-ink)]">S</span>
+      <Link href="/" aria-label="Sahayogi Catalyst home" className="hidden w-full shrink-0 items-center justify-center screen-sm:flex screen-sm:h-[var(--header-h)]">
+        <img src="/logo.png" alt="" width={36} height={36} className="h-9 w-9 object-contain" />
       </Link>
       <nav className="relative flex w-full flex-row items-center justify-around gap-1 no-scrollbar screen-sm:min-h-0 screen-sm:flex-1 screen-sm:flex-col screen-sm:justify-start screen-sm:gap-2.5 screen-sm:overflow-y-auto screen-sm:overflow-x-hidden screen-sm:px-1 screen-sm:pt-1">
-        {globalLinks(path, here || last).map((l) => <Item key={l.href} l={l} />)}
+        {globalLinks(path, here || last).map((l) => <Item key={l.label} l={l} />)}
         <div className="hidden screen-sm:mb-2 screen-sm:mt-auto screen-sm:block screen-sm:w-full screen-sm:pt-2"><Item l={help} /></div>
       </nav>
     </aside>

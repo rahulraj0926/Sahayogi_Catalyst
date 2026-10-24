@@ -7,8 +7,10 @@ import { seedPortfolio } from '../legacy/scripts/seed_portfolio';
 import { exportPlans, importCompetitors, parseCsv, parseMoney, template } from '../legacy/engine/competitor_import';
 import { overview } from '../legacy/engine/competitor_overview';
 import { importSample } from '../legacy/engine/competitor_sample';
-import { comparePlans, ourPlans } from '../legacy/engine/competitor_plans';
+import { comparePlans, ourPlans, plans as compPlans, setPlanFeature, setOurPlanFeature, addOurFeatures, pickFeatures } from '../legacy/engine/competitor_plans';
 import { cellsOf, hasModules, inScope, scopeNames } from '../legacy/engine/competitor_owner';
+import * as agent from '../legacy/engine/agent';
+import * as selfcheck from '../legacy/engine/selfcheck';
 import { done, ok } from './helpers';
 
 async function main() {
@@ -237,6 +239,85 @@ async function main() {
     importCompetitors(old, { filename: 'm.csv', buffer: file('Competitor,Module\nAcme,CRM\n') }, { commit: true });
     assert.equal(hasModules(old), true);
     assert.deepEqual(scopeNames(pf4.store(one.id)), []);
+  });
+
+  await ok('many features at once: our list, our plans, and a competitor plan', () => {
+    const pf7: any = seedPortfolio(fs.mkdtempSync(path.join(os.tmpdir(), 'sd-cimp7-')));
+    const st7 = pf7.store(pf7.list()[0].id);
+    importSample(st7, { commit: true });
+    // add many features to our list; a repeated name is reused, and a plan can take them all
+    const plan = st7.create('PricingPlan', { title: 'Starter', currency: 'INR', billing_period: 'yearly' }, { actor: 't' });
+    const r = addOurFeatures(st7, { features: [{ name: 'Zeta alpha one', category: 'Bulk' }, { name: 'zeta alpha one' }, { name: 'Zeta alpha two', category: 'Bulk' }, { name: '  ' }], plan_ids: [plan.id] }, 't');
+    assert.deepEqual([r.added, r.existing, r.linked], [2, 1, 2], 'two new features, the repeated name reused, both put into the plan');
+    assert.throws(() => addOurFeatures(st7, { features: [] }, 't'), /at least one/);
+    assert.throws(() => addOurFeatures(st7, { features: [{ name: 'x' }], plan_ids: ['CMP-001'] }, 't'), /not one of our plans/);
+    // untick and tick many on one of our plans in one call
+    setOurPlanFeature(st7, { plan_id: plan.id, capability_ids: r.ids, included: false }, 't');
+    assert.equal(ourPlans(st7).plans.find((p: any) => p.id === plan.id)!.feature_count, 0);
+    setOurPlanFeature(st7, { plan_id: plan.id, capability_ids: r.ids, included: true }, 't');
+    assert.equal(ourPlans(st7).plans.find((p: any) => p.id === plan.id)!.feature_count, 2);
+    // a competitor plan: tick many features in one call
+    const comp = st7.list('Competitor').find((c: any) => compPlans(st7, { competitor: c.id }).plans.length > 0);
+    const d: any = compPlans(st7, { competitor: comp.id });
+    const caps = d.features.filter((f: any) => f.capability_id).slice(0, 5).map((f: any) => ({ capability_id: f.capability_id }));
+    assert.ok(caps.length >= 2, 'the sample competitor has features on our list');
+    setPlanFeature(st7, { competitor: comp.id, price_ids: d.plans[0].price_ids, features: caps, included: true }, 't');
+    const after: any = compPlans(st7, { competitor: comp.id });
+    assert.ok(caps.every((c: any) => after.features.find((f: any) => f.capability_id === c.capability_id).in_plans.includes(d.plans[0].key)), 'every ticked feature is in the plan');
+    assert.throws(() => setPlanFeature(st7, { competitor: comp.id, price_ids: d.plans[0].price_ids, features: [{}], included: true }, 't'), /capability_id or a rating_id/);
+  });
+
+  await ok('an administrator may check a price they typed themselves, nobody else may', () => {
+    const pf8: any = seedPortfolio(fs.mkdtempSync(path.join(os.tmpdir(), 'sd-cimp8-')));
+    const st8 = pf8.store(pf8.list()[0].id);
+    const comp = st8.list('Competitor')[0];
+    const mk = () => { const p = st8.create('PricePoint', { title: 'Own price', plan: 'Own', amount: 100, currency: 'INR', unit: 'plan/month', price_type: 'list', billing_model: 'subscription', value_metric: 'seat', tax_basis: 'excl_gst', captured_on: st8.today(), origin: 'human' }, { actor: 'Asha' }); st8.link('contains', comp.id, p.id, {}, { actor: 'Asha' }); return p; };
+    const a = mk();
+    selfcheck.configure(null);
+    assert.throws(() => agent.verify(st8, a.id, 'Asha', 'opened the vendor price page'), /different person/);
+    selfcheck.configure((who) => who === 'Asha'); // Asha is an administrator
+    assert.ok(agent.verify(st8, a.id, 'Asha', 'opened the vendor price page').includes(a.id), 'an administrator can check their own price');
+    const b = mk();
+    assert.throws(() => agent.verify(st8, b.id, 'Ravi', 'x'), /3|source note|different person/, 'a note is still needed');
+    selfcheck.configure(null);
+  });
+
+  await ok('picking features from competitors: same feature once, counted, only what is not ours, filtered', () => {
+    const pf9: any = seedPortfolio(fs.mkdtempSync(path.join(os.tmpdir(), 'sd-cimp9-')));
+    const st9 = pf9.store(pf9.list()[0].id);
+    const [c1, c2] = st9.list('Competitor');
+    const rate = (c: any, tag: string) => { const r = st9.create('CompetitorCapability', { title: `${c.title}: ${tag}`, capability_tag: tag, level: 'unknown', importance: 3, captured_on: st9.today() }, { actor: 't' }); st9.link('contains', c.id, r.id, {}, { actor: 't' }); return r; };
+    const base = pickFeatures(st9, { limit: 500 }).total;
+    rate(c1, 'Zeta pick one'); rate(c2, 'zeta  PICK one'); rate(c1, 'Zeta pick two');
+    const all: any = pickFeatures(st9, { limit: 500 });
+    assert.equal(all.total, base + 2, 'two new features: the two spellings of the first are one row');
+    const first = all.features.find((f: any) => /zeta pick one/i.test(f.name));
+    assert.equal(first.count, 2, 'both competitors have it');
+    assert.equal(all.features[0].count >= all.features[all.features.length - 1].count, true, 'most common first');
+    assert.equal(pickFeatures(st9, { q: 'pick two' }).total, 1, 'search by name');
+    assert.equal(pickFeatures(st9, { competitor: c2.id, q: 'zeta' }).total, 1, 'only one competitor');
+    assert.equal(pickFeatures(st9, { q: 'zeta', limit: 1, offset: 1 }).features.length, 1, 'paging');
+    assert.ok((pickFeatures(st9, { q: 'zeta', names_only: '1' }) as any).names.length === 2, 'every matching name');
+    assert.equal(pickFeatures(st9, { tier: 'free', q: 'zeta' }).total, 0, 'ratings tied to no plan of that level do not show under a level');
+    assert.throws(() => pickFeatures(st9, { tier: 'gold' }), /tier must be one of/);
+    // once added to our list under that name, it is no longer offered
+    addOurFeatures(st9, { features: [{ name: 'Zeta pick two' }] }, 't');
+    assert.equal(pickFeatures(st9, { q: 'pick two' }).total, 0);
+  });
+
+  await ok('our plans carry a monthly price, a yearly price and the users they cover; older single prices still show', () => {
+    const pf10: any = seedPortfolio(fs.mkdtempSync(path.join(os.tmpdir(), 'sd-cimp10-')));
+    const st10 = pf10.store(pf10.list()[0].id);
+    const both = st10.create('PricingPlan', { title: 'Team', currency: 'INR', amount: 499, billing_period: 'monthly', price_monthly: 499, price_yearly: 4999, seat_model: 'multi_user', max_users: 3 }, { actor: 't' });
+    const old = st10.create('PricingPlan', { title: 'Old yearly', currency: 'INR', amount: 3000, billing_period: 'yearly' }, { actor: 't' });
+    const other = st10.create('PricingPlan', { title: 'Old quarterly', currency: 'INR', amount: 900, billing_period: 'quarterly' }, { actor: 't' });
+    const list: any[] = ourPlans(st10).plans;
+    const t: any = list.find((p) => p.id === both.id);
+    assert.deepEqual([t.price_monthly, t.price_yearly, t.seat_model, t.max_users], [499, 4999, 'multi_user', 3]);
+    const o: any = list.find((p) => p.id === old.id);
+    assert.deepEqual([o.price_monthly, o.price_yearly, o.seat_model, o.max_users], [null, 3000, null, null], 'a plan saved with one yearly price shows it as the yearly price');
+    assert.equal(list.find((p) => p.id === other.id).price_monthly, null);
+    assert.throws(() => st10.update(both.id, { seat_model: 'a crowd' }, { actor: 't' }), /seat_model|one of/i, 'only the known user kinds are accepted');
   });
 
   done();

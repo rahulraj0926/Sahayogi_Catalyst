@@ -2,9 +2,10 @@
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/breadcrumbs';
 import { useApi } from '@/lib/api';
 import { PHASE_SHORT, screenLabel, sectionFor } from './groups';
+import { ProductSwitcher } from './ProductSwitcher';
 
 const TOP: Record<string, string> = { tasks: 'Tasks', notes: 'Notes', approvals: 'Approvals', members: 'Members', reports: 'Reports', help: 'How to use', 'api-docs': 'API docs' };
-const COMPETITOR_VIEW: Record<string, string> = { list: 'All competitors', plans: 'Plans', planner: 'Plans and features', grid: 'Compare competitors', catalog: 'Match feature names', prices: 'Prices', compare: 'Compare', sources: 'Sources', queue: 'Review queue', effort: 'Effort' };
+const COMPETITOR_VIEW: Record<string, string> = { list: 'Competitors', plans: 'Plans', planner: 'Our plans', grid: 'Competitors', catalog: 'Match feature names', prices: 'Prices', compare: 'Compare', sources: 'Sources', queue: 'Review queue', effort: 'Effort' };
 const NAMED = new Set(Object.keys(COMPETITOR_VIEW));
 
 /** The trail above a page: Home › Products › <product> › <section> › <page>. Built from the address, so every screen has one without doing anything itself. */
@@ -24,7 +25,7 @@ export function crumbsFor(path: string, productName: string | undefined, competi
     if (rest.length === 1) { out.push({ label: 'Competitors' }); return out; }
     out.push({ label: 'Competitors', href: cb });
     if (NAMED.has(rest[1])) out.push({ label: COMPETITOR_VIEW[rest[1]] });
-    else { out.push({ label: 'All competitors', href: `${cb}/list` }); out.push({ label: competitorName || rest[1] }); }
+    else out.push({ label: competitorName || rest[1] });
     return out;
   }
   const id = rest[0];
@@ -51,6 +52,12 @@ export function Crumbs({ path, productName }: { path: string; productName?: stri
   const item = useApi<any>(compId ? `/items/${compId}` : null, pid);
   const d = item.data;
   const items = crumbsFor(path, productName, d?.item?.title ?? d?.title ?? d?.fields?.title ?? undefined);
+  // the product's name in the trail switches to another product, from any page that depends on the product
+  const pf = useApi<any>(pid ? '/portfolio' : null);
+  const prods: any[] = pf.data?.products || [];
+  if (pid && prods.length > 1 && items[2]) {
+    items[2] = { ...items[2], render: <ProductSwitcher compact name={items[2].label} pid={pid} path={path} items={prods.map((p: any) => ({ slug: p.slug || p.id, name: p.name, readiness: p.readiness_percent }))} /> };
+  }
   if (items.length < 2) return null;
   return <Breadcrumbs items={items} className="mb-2 shrink-0 text-xs" />;
 }

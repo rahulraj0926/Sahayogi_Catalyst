@@ -26,15 +26,9 @@ export const gatesDocs: DocSet = {
   routes: {
     'GET /api/lifecycle': { summary: 'Overview of Phases 0-12', response: obj({}, [], { additionalProperties: true }) },
     'GET /api/lifecycle/framework': {
-      summary: 'The 13 phases and 70 steps of the lifecycle framework, with weighted completion',
-      description: 'Each step counts toward its phase by its level (biggest 8, big 5, medium 3, small 1 points by default) and is complete when the records it needs exist; the phase percent is the weighted sum. `phase` (product phase number) adds the full framework text and the evidence of that phase.',
+      summary: 'The 13 phases and 70 steps of the lifecycle framework, with completion',
+      description: 'A step is complete when the records it needs exist (a reviewed record counts fully, a draft counts half, a sample counts nothing). Every step counts the same: the phase percent is the plain average of its steps. `phase` (product phase number) adds the full framework text and the evidence of that phase.',
       query: { phase: { description: 'Product phase number 0-12: include the full text and evidence of its steps.', schema: { type: 'integer', minimum: 0, maximum: 12 } } },
-      response: obj({}, [], { additionalProperties: true }),
-    },
-    'POST /api/lifecycle/framework/weights': {
-      summary: 'Change how much lifecycle steps count',
-      description: 'Send step + tier (core, major, support, light) for one step, and/or points per level, or reset: true to go back to the framework defaults. Returns the framework with the new percentages.',
-      body: obj({ step: str('Step id such as P5.3.'), tier: str('core, major, support or light.', { enum: ['core', 'major', 'support', 'light'] }), points: { type: 'object', additionalProperties: { type: 'number' }, description: 'Points per level, 1-100.' }, reset: bool('Put the framework defaults back.') }, []),
       response: obj({}, [], { additionalProperties: true }),
     },
     'GET /api/lifecycle/gates': {

@@ -1,13 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowDown, ArrowUp, Bot, Plus, ChevronLeft, ChevronRight, CircleAlert, FileCheck2, ListChecks, Search, Timer, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bot, ChevronLeft, ChevronRight, CircleAlert, FileCheck2, ListChecks, Search, Timer, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ErrorBox, Loading } from '@/components/ui';
 import { api, go, useApi } from '@/lib/api';
 import { PHASE_SHORT } from '@/components/shell/groups';
 import { ColumnHead, OptionList } from '@/features/home/ColumnFilter';
-import { NewTask, type NewTaskResult } from '@/features/tasks/NewTask';
 
 type Prio = 'high' | 'medium' | 'low';
 type Task = { productId: string; productName: string; owner: string; id: string; title: string; why: string; minutes: number; route?: any; kind: string; phase: number | null; blocks: number; doer: string; score: number; prio: Prio; rank: number };
@@ -17,7 +16,7 @@ const PRIO: Record<Prio, { label: string; color: string; weight: number }> = {
   medium: { label: 'Medium', color: 'var(--status-warning-fg)', weight: 2 },
   low: { label: 'Low', color: 'var(--status-neutral-fg)', weight: 1 },
 };
-const KIND: Record<string, string> = { manual: 'Added by hand', data_request: 'Answer a question', document_approval: 'Approve a document', agent_task: 'Assistant task', verification: 'Verify a fact', suspect_review: 'Review a change', stale_refresh: 'Refresh a value' };
+const KIND: Record<string, string> = { data_request: 'Answer a question', document_approval: 'Approve a document', agent_task: 'Assistant task', verification: 'Verify a fact', suspect_review: 'Review a change', stale_refresh: 'Refresh a value' };
 const PER = 10;
 let TASK_CACHE: Task[] | null = null; // kept while the app is open, so coming back to this page is instant
 
@@ -37,24 +36,18 @@ export default function Tasks() {
   const [prio, setPrio] = useState('all'); const [product, setProduct] = useState('all'); const [phase, setPhase] = useState('all'); const [kind, setKind] = useState('all');
   const [quick, setQuick] = useState(false); const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ key: 'prio' | 'time' | 'product'; dir: 1 | -1 }>({ key: 'prio', dir: 1 });
-  const [page, setPage] = useState(1); const [adding, setAdding] = useState(false);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!portfolio.data) return;
     const products = (portfolio.data.products as any[]).filter((p) => !p.archived);
     let live = true; const parts: Task[][] = []; let left = products.length; setWaiting(left);
     products.forEach((p, i) => {
-      Promise.all([
-        api<any>('/next-actions?limit=8', { product: p.id }),
-        api<any>('/items?type=Question&limit=100', { product: p.id }).catch(() => ({ items: [] })),
-      ])
-        .then(([r, qs]) => [...(qs.items || []).filter((q: any) => (q.fields?.category ?? q.category) === 'other' && !['Answered', 'Withdrawn', 'Waived'].includes(q.status)).map((q: any): Task => {
-          const f = q.fields || q; const pr = f.priority; const who = f.owner || f.asked_of || '';
-          return { productId: p.id, productName: p.name, owner: who, id: `ITEM:${q.id}`, title: q.title || f.title, why: f.due_on ? `Due ${f.due_on}` : 'Added by hand', minutes: 0, route: undefined, kind: 'manual', phase: typeof f.needed_by_gate === 'number' ? f.needed_by_gate : null, blocks: 0, doer: '', score: pr === 'Must' ? 2 : pr === 'Should' ? 1 : 0, prio: pr === 'Must' ? 'high' : pr === 'Should' ? 'medium' : 'low', rank: 0 };
-        }), ...(r.actions || []).map((a: any): Task => {
+      api<any>('/next-actions?limit=8', { product: p.id })
+        .then((r) => (r.actions || []).map((a: any): Task => {
           const score = Number(a.value_per_minute) || 0; const blocks = (a.blocks || []).length;
           return { productId: p.id, productName: p.name, owner: p.owner || '', id: a.id, title: a.plain_title || a.title, why: a.why || a.detail || '', minutes: a.minutes || 0, route: a.route, kind: a.kind, phase: typeof a.phase === 'number' ? a.phase : null, blocks, doer: a.owner_kind || '', score, prio: priorityOf(score, blocks), rank: a.rank || 99 };
-        })])
+        }))
         .catch(() => [] as Task[])
         .then((list) => {
           if (!live) return;
@@ -77,11 +70,6 @@ export default function Tasks() {
     return [...l].sort((a, b) => cmp(a, b) * sort.dir);
   }, [all, prio, product, phase, kind, quick, q, sort]);
 
-  const added = (n: NewTaskResult) => {
-    const score = n.priority === 'Must' ? 2 : n.priority === 'Should' ? 1 : 0;
-    const t: Task = { productId: n.productId, productName: n.productName, owner: n.assignee, id: `ITEM:${n.id}`, title: n.title, why: n.due ? `Due ${n.due}` : 'Added by hand', minutes: 0, route: undefined, kind: 'manual', phase: n.phase, blocks: 0, doer: '', score, prio: n.priority === 'Must' ? 'high' : n.priority === 'Should' ? 'medium' : 'low', rank: 0 };
-    const next = [t, ...(tasks || [])]; TASK_CACHE = next; setTasks(next); setAdding(false);
-  };
   if (portfolio.loading || (!tasks && !error)) return <Loading />;
   if (portfolio.error || error) return <ErrorBox message={portfolio.error || error || 'No data'} />;
 
@@ -109,7 +97,7 @@ export default function Tasks() {
   return (
     <div className="flex flex-col gap-4 pb-4">
       <header>
-        <div className="flex items-center justify-between gap-3"><h1 className="text-xl font-semibold text-[var(--text-heading)]">Tasks</h1><button type="button" className="btn primary inline-flex items-center gap-1.5" onClick={() => setAdding(true)}><Plus size={16} />Add task</button></div>
+        <div className="flex items-center justify-between gap-3"><h1 className="text-xl font-semibold text-[var(--text-heading)]">Tasks</h1></div>
         {waiting > 0 && <p className="text-sm text-[var(--text-muted)]">{`Loading ${waiting} more ${waiting === 1 ? 'product' : 'products'}…`}</p>}
       </header>
 
@@ -200,7 +188,6 @@ export default function Tasks() {
             </span>
           </div>)}
       </section>
-      {adding && <NewTask products={((portfolio.data?.products as any[]) || []).filter((p) => !p.archived).map((p): [string, string] => [p.id, p.name])} defaultProduct={product === 'all' ? undefined : product} onClose={() => setAdding(false)} onCreated={added} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { isActive, type NavGroupDef, type NavLinkDef } from './groups';
 
 const ROW = 'flex items-center gap-2 rounded-lg px-2 py-1 text-[13px] transition-colors';
@@ -69,6 +69,7 @@ function Group({ g, path, counts, phase, percents }: { g: NavGroupDef; path: str
   );
 }
 
+
 export interface DrawerProduct { name: string; stageLabel?: string; readinessPercent?: number; kind?: string; phase?: number }
 
 const MIN_W = 168; const MAX_W = 340; const DEF_W = 196; const ICON_W = 56;
@@ -82,7 +83,7 @@ interface Tip { label: string; hint?: string; x: number; y: number }
 /** Icon-only link for the narrow sidebar. The name of the option shows beside it on hover or keyboard focus. */
 function IconLink({ href, label, hint, active, n, icon: Icon, glyph, show, hide }: { href: string; label: string; hint?: string; active: boolean; n: number; icon?: NavLinkDef['icon']; glyph?: string; show: (e: React.SyntheticEvent<HTMLElement>, label: string, hint?: string) => void; hide: () => void }) {
   return (
-    <Link href={href} aria-label={label} aria-current={active ? 'page' : undefined} onMouseEnter={(e) => show(e, label, hint)} onMouseLeave={hide} onFocus={(e) => show(e, label, hint)} onBlur={hide}
+    <Link href={href} aria-label={label} aria-current={active ? 'page' : undefined} onMouseEnter={(e) => show(e, label)} onMouseLeave={hide} onFocus={(e) => show(e, label)} onBlur={hide}
       className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${active ? 'bg-[var(--sd-accent-soft)] text-[var(--sd-accent)]' : 'text-[var(--text-secondary)] hover:bg-[var(--search-bg)] hover:text-[var(--text-heading)]'}`}>
       {Icon ? <Icon size={17} /> : <span aria-hidden className={`flex h-[20px] w-[20px] items-center justify-center rounded-md text-[10px] font-semibold ${active ? 'bg-[var(--sd-accent)] text-[var(--sd-accent-ink)]' : 'bg-[var(--surface-muted)] text-[var(--text-muted)]'}`}>{glyph}</span>}
       {n > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-[var(--sd-accent)] px-1 text-center text-[9px] font-semibold leading-4 text-[var(--sd-accent-ink)]">{n}</span>}
@@ -91,7 +92,7 @@ function IconLink({ href, label, hint, active, n, icon: Icon, glyph, show, hide 
 }
 
 /** The product's own sidebar. Beside the page on desktop (drag its edge to resize, or shrink it to icons); a sheet on a phone. */
-export function Drawer({ product, groups, path, counts, percents, open, onClose }: { product?: DrawerProduct | null; groups: NavGroupDef[]; path: string; counts: Record<string, number>; percents?: number[]; open: boolean; onClose: () => void }) {
+export function Drawer({ product, groups, path, counts, percents, open, onClose, collapseOnPick, title }: { product?: DrawerProduct | null; groups: NavGroupDef[]; path: string; counts: Record<string, number>; percents?: number[]; open: boolean; onClose: () => void; collapseOnPick?: boolean; title?: string }) {
   const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(DEF_W);
   const [tip, setTip] = useState<Tip | null>(null);
@@ -105,11 +106,11 @@ export function Drawer({ product, groups, path, counts, percents, open, onClose 
   const expanded = (
     <>
       <div className="flex items-center gap-2 border-b border-[var(--divider)] px-2.5 py-2">
-        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Menu</span>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--text-heading)]">{title || product?.name || 'Menu'}</span>
         <button type="button" onClick={onClose} aria-label="Close menu" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--search-bg)] screen-sm:hidden"><X size={16} /></button>
-        <button type="button" onClick={toggle} aria-label="Shrink the menu to icons" title="Shrink to icons" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--search-bg)] hover:text-[var(--text-heading)] screen-sm:inline-flex" style={{ minHeight: 0, padding: 0 }}><PanelLeftClose size={16} /></button>
+        <button type="button" onClick={toggle} aria-label="Shrink the menu to icons" title="Shrink to icons" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--search-bg)] hover:text-[var(--text-heading)] screen-sm:inline-flex" style={{ minHeight: 0, padding: 0 }}><ChevronLeft size={16} /></button>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 px-1.5 py-2">
+      <nav className="flex flex-1 flex-col gap-1 px-1.5 py-2" onClick={(e) => { if (collapseOnPick && (e.target as HTMLElement).closest('a')) { setTip(null); setCollapsed(true); onClose(); } }}>
         {groups.map((g) => g.key === 'history' ? <div key={g.key} className="mt-auto border-t border-[var(--divider)] pt-1"><Group g={g} path={path} counts={counts} phase={product?.phase} percents={percents} /></div> : <Group key={g.key} g={g} path={path} counts={counts} phase={product?.phase} percents={percents} />)}
       </nav>
     </>
@@ -118,7 +119,7 @@ export function Drawer({ product, groups, path, counts, percents, open, onClose 
   const narrow = (
     <div className="hidden flex-1 flex-col items-center gap-1 px-1.5 py-2.5 screen-sm:flex">
       <button type="button" onClick={toggle} aria-label="Widen the menu" onMouseEnter={(e) => show(e, 'Widen the menu')} onMouseLeave={hide} onFocus={(e) => show(e, 'Widen the menu')} onBlur={hide}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--search-bg)] hover:text-[var(--text-heading)]" style={{ minHeight: 0, padding: 0 }}><PanelLeftOpen size={17} /></button>
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--search-bg)] hover:text-[var(--text-heading)]" style={{ minHeight: 0, padding: 0 }}><ChevronRight size={17} /></button>
       {groups.map((g) => {
         const chip = g.phases ? (g.phases.find((c) => isActive(path, c)) || g.phases[product?.phase ?? 0] || g.phases[0]) : null;
         return (

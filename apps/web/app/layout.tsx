@@ -8,7 +8,7 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 
 const inter = localFont({ src: '../theme/fonts/InterVariable.woff2', weight: '100 900', style: 'normal', display: 'swap', variable: '--font-inter' });
 
-export const metadata: Metadata = { title: 'Sahayogi Platform', description: 'Product lifecycle, Phase 0 to 12' };
+export const metadata: Metadata = { title: 'Sahayogi Catalyst', description: 'Product lifecycle, Phase 0 to 12' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

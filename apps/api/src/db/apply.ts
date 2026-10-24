@@ -26,6 +26,9 @@ async function main() {
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'todo_done'")).rowCount) await run('0009_competitor_todo');
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'scopes'")).rowCount) await run('0010_competitor_scopes');
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_product' AND column_name = 'structure'")).rowCount) await run('0011_product_structure');
+    if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'todo_items'")).rowCount) await run('0012_competitor_todo_items');
+    if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_pricing_plan' AND column_name = 'price_yearly'")).rowCount) await run('0013_our_plan_prices_users');
+    if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'target_market'")).rowCount) await run('0014_competitor_customer_size_market');
     await c.query('COMMIT');
   } catch (e) { await c.query('ROLLBACK'); throw e; } finally { await c.end(); }
 }

@@ -23,6 +23,23 @@ export async function logOperator(db: { query: (sql: string, params?: any[]) => 
   catch (e: any) { console.error(`(could not write the audit record: ${e.message})`); }
 }
 
+/**
+ * Columns the code expects that a table does not have yet. Only a plain nullable column can be added safely on start-up;
+ * anything else (a required column, a counter) is returned under `blocked` so a person looks at it.
+ */
+export function missingColumns(specs: TableSpec[], existing: Map<string, Set<string>>): { add: { table: string; col: ColSpec }[]; blocked: string[] } {
+  const add: { table: string; col: ColSpec }[] = []; const blocked: string[] = [];
+  for (const t of specs) {
+    const have = existing.get(t.table);
+    if (!have) { blocked.push(`table ${t.table}`); continue; }
+    for (const col of t.cols) {
+      if (have.has(col.name)) continue;
+      if (col.notNull || col.serial) blocked.push(`${t.table}.${col.name}`); else add.push({ table: t.table, col });
+    }
+  }
+  return { add, blocked };
+}
+
 export interface ProductState { snapshot: Snapshot; auditCount: number }
 
 const REGISTRY_TABLES = ['portfolio', 'portfolio_counters', 'portfolio_settings', 'portfolio_extra_fields', 'ideas', 'feedback_notes', 'members', 'ai_usage_log'];
@@ -50,6 +67,15 @@ export function makePool(connectionString?: string, max = Number(process.env.DB_
     // DATE comes back as the text 'YYYY-MM-DD' (not a JS Date at local midnight); BIGINT as a number
     types: { getTypeParser: ((oid: number, fmt?: any) => (oid === 1082 ? (v: string) => v : oid === 20 ? (v: string) => Number(v) : types.getTypeParser(oid, fmt))) as any },
   });
+}
+
+/**
+ * The column that ties a row to one product: the products table is keyed by its own `id`, every other product table by `product_id`.
+ * (Looking only for `product_id` once made "load one product" return every product, so a reload put the wrong one in memory.)
+ */
+export function productKey(spec: TableSpec): string | null {
+  if (spec.table === 'products') return 'id';
+  return spec.cols.some((c) => c.name === 'product_id') ? 'product_id' : null;
 }
 
 function readRow(spec: TableSpec, r: Row): Row {
@@ -88,6 +114,21 @@ export class Repository {
   async ensureTables() {
     await this.pool.query(MEMBERS_SQL);
   }
+  /**
+   * The code and the database must agree on every column. A column the code writes but the table lacks made every save of that
+   * kind fail ("column does not exist"). Missing nullable columns are added here (nothing is changed or dropped); anything
+   * else stops start-up with a clear message, instead of failing later on somebody's save.
+   * Returns the columns it added.
+   */
+  async ensureColumns(): Promise<string[]> {
+    const r = await this.pool.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'");
+    const existing = new Map<string, Set<string>>();
+    for (const x of r.rows) (existing.get(x.table_name) || existing.set(x.table_name, new Set()).get(x.table_name)!).add(x.column_name);
+    const { add, blocked } = missingColumns(ALL_TABLES, existing);
+    if (blocked.length) throw new Error(`The database does not match this version of the program: ${blocked.join(', ')} ${blocked.length === 1 ? 'is' : 'are'} missing. Run \`npm run db:apply\` in apps/api and start again.`);
+    for (const { table: t, col } of add) await this.pool.query(`ALTER TABLE ${q(t)} ADD COLUMN IF NOT EXISTS ${q(col.name)} ${col.type}`);
+    return add.map((a) => `${a.table}.${a.col.name}`);
+  }
   async close() { await this.pool.end(); }
 
   /** Is the real schema installed (migration 0002 applied)? */
@@ -103,8 +144,9 @@ export class Repository {
   // ------------------------------------------------------------ reading
   private async selectAll(spec: TableSpec, productId?: string): Promise<Row[]> {
     const order = spec.pk.map(q).join(',');
-    const r = productId && spec.cols.some((c) => c.name === 'product_id')
-      ? await this.pool.query(`SELECT * FROM ${q(spec.table)} WHERE product_id = $1 ORDER BY ${order}`, [productId])
+    const key = productId ? productKey(spec) : null;
+    const r = productId && key
+      ? await this.pool.query(`SELECT * FROM ${q(spec.table)} WHERE ${q(key)} = $1 ORDER BY ${order}`, [productId])
       : await this.pool.query(`SELECT * FROM ${q(spec.table)} ORDER BY ${order}`);
     return r.rows.map((x) => readRow(spec, x));
   }
@@ -115,6 +157,7 @@ export class Repository {
     for (const spec of PRODUCT_TABLES) {
       for (const row of await this.selectAll(spec, only)) {
         const pid = spec.table === 'products' ? row.id : row.product_id;
+        if (only && pid !== only) continue; // a request for one product never returns another
         let set = per.get(pid);
         if (!set) per.set(pid, (set = new Map()));
         put(set, spec.table, row);
@@ -136,6 +179,7 @@ export class Repository {
     }
     const out = [];
     for (const [id, set] of per) {
+      if (!rowsOf(set, 'products').length) continue; // rows without their product (a half-deleted product) are not a product
       const audit = auditBy.get(id) || [];
       const bundle = rowsToProduct(set, audit);
       out.push({ bundle, state: { snapshot: snapshotOf(set), auditCount: audit.length }, position: rowsOf(set, 'products')[0].position });

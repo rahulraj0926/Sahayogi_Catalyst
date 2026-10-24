@@ -5418,126 +5418,12 @@
             }
           }
         },
-        "summary": "The 13 phases and 70 steps of the lifecycle framework, with weighted completion",
+        "summary": "The 13 phases and 70 steps of the lifecycle framework, with completion",
         "tags": [
           "Product"
         ],
         "x-engine": true,
-        "description": "Each step counts toward its phase by its level (biggest 8, big 5, medium 3, small 1 points by default) and is complete when the records it needs exist; the phase percent is the weighted sum. `phase` (product phase number) adds the full framework text and the evidence of that phase. Also answers at its old address /api/lifecycle/framework, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
-        "x-documented": true
-      }
-    },
-    "/api/v1/lifecycle/framework/weights": {
-      "post": {
-        "operationId": "ProductBasicsController_lifecycleFrameworkWeights",
-        "parameters": [
-          {
-            "name": "product",
-            "required": false,
-            "in": "query",
-            "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FrameworkWeightsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No name was sent in X-Actor (code actor_required).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown record, product or route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The change conflicts with the current state (for example stale_edit or stale_gate).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The input is not valid; the message says what to change.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many requests (see the Retry-After header).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error; quote the requestId.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Change how much lifecycle steps count",
-        "tags": [
-          "Product"
-        ],
-        "x-engine": true,
-        "description": "Send step + tier (core, major, support, light) for one step, and/or points per level, or reset: true to go back to the framework defaults. Returns the framework with the new percentages. Also answers at its old address /api/lifecycle/framework/weights, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "A step is complete when the records it needs exist (a reviewed record counts fully, a draft counts half, a sample counts nothing). Every step counts the same: the phase percent is the plain average of its steps. `phase` (product phase number) adds the full framework text and the evidence of that phase. Also answers at its old address /api/lifecycle/framework, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -11847,7 +11733,7 @@
         ],
         "x-engine": true,
         "summary": "Say a competitor plan includes (or no longer includes) a feature",
-        "description": "Applies to every term of the plan (price_ids). Give capability_id (a feature on our list) or rating_id. If the competitor has no row for the feature yet, an unrated one is created. Also answers at its old address /api/competitors/plans/features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Applies to every term of the plan (price_ids). Give capability_id (a feature on our list) or rating_id, or a list `features` of those to change many at once (up to 500). If the competitor has no row for the feature yet, an unrated one is created. Also answers at its old address /api/competitors/plans/features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -12044,109 +11930,6 @@
         "x-documented": true
       }
     },
-    "/api/v1/competitors/our-plans/from-recommendation": {
-      "post": {
-        "operationId": "CompetitorViewsController_fromRecommendation",
-        "parameters": [
-          {
-            "name": "product",
-            "required": false,
-            "in": "query",
-            "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No name was sent in X-Actor (code actor_required).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown record, product or route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The change conflicts with the current state (for example stale_edit or stale_gate).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unknown level, or no competitor plan is tagged with that level.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many requests (see the Retry-After header).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error; quote the requestId.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Competitors"
-        ],
-        "x-engine": true,
-        "summary": "Create one of our plans from the recommendation for a level",
-        "description": "Creates a draft plan at the level, priced at the average yearly price, with the recommended features switched on. Features still in a competitor's own wording (not matched to our feature list) are reported, not added. Also answers at its old address /api/competitors/our-plans/from-recommendation, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
-        "x-documented": true
-      }
-    },
     "/api/v1/competitors/compare-plans": {
       "get": {
         "operationId": "CompetitorViewsController_comparePlans",
@@ -12336,7 +12119,256 @@
         ],
         "x-engine": true,
         "summary": "Our plans and the features each includes",
-        "description": "Our plans, our common features as rows with the plans that include them and what competitors give at each level, and per plan the features the market gives at its level that it lacks. Also answers at its old address /api/competitors/our-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Our plans, and our features as rows with the plans that include them. Each plan has price_monthly and price_yearly (empty when not sold that way), seat_model and max_users (how many users it covers), and its level. Also answers at its old address /api/competitors/our-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
+    "/api/v1/competitors/our-plans/pick-features": {
+      "get": {
+        "operationId": "CompetitorViewsController_pickFeatures",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {}
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tier",
+            "in": "query",
+            "required": false,
+            "description": "Only competitor plans at this level: free, entry, mid, top or enterprise.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "competitor",
+            "in": "query",
+            "required": false,
+            "description": "Only this competitor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Words the feature name contains.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Rows to skip. Default 0.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Rows to return, 1 to 500. Default 30.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "names_only",
+            "in": "query",
+            "required": false,
+            "description": "Set to 1 to get every matching name (up to 5000) and nothing else.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "description": "Only competitors that matter for this part of our product.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown record, product or route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "summary": "Features competitors have that are not on our list yet, to pick from",
+        "description": "Nothing is suggested or added. The same feature written in slightly different ways is one row, with how many competitors have it, most common first. Add the ones you choose with POST /api/competitors/our-plans/features/new. Also answers at its old address /api/competitors/our-plans/pick-features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
+    "/api/v1/competitors/our-plans/features/new": {
+      "post": {
+        "operationId": "CompetitorViewsController_addOurFeatures",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {}
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No name was sent in X-Actor (code actor_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown record, product or route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The change conflicts with the current state (for example stale_edit or stale_gate).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No names given, more than 300, or a plan id is not one of our plans.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "summary": "Add many features to our list at once, and switch them on in some of our plans",
+        "description": "Give a list of names (each with an optional group). A name already on our list is reused, not added twice. Optionally put every one of them into the listed plans. Up to 300 at a time. Also answers at its old address /api/competitors/our-plans/features/new, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
@@ -19595,7 +19627,7 @@
     }
   },
   "info": {
-    "title": "Sahayogi Platform API",
+    "title": "Sahayogi Catalyst API",
     "description": "Typed, versioned API under /api/v1, plus the older /api routes (deprecated) listed from the route table.",
     "version": "0.1.0",
     "contact": {}
@@ -20714,30 +20746,6 @@
           }
         }
       },
-      "FrameworkWeightsDto": {
-        "type": "object",
-        "properties": {
-          "step": {
-            "type": "string",
-            "description": "Step id such as P5.3. Send together with `tier`."
-          },
-          "tier": {
-            "type": "string",
-            "description": "core, major, support or light: how much the step counts toward its phase."
-          },
-          "points": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "number"
-            },
-            "description": "Points per level, for example { core: 10 }."
-          },
-          "reset": {
-            "type": "boolean",
-            "description": "Put the framework's own weights back."
-          }
-        }
-      },
       "ImportDto": {
         "type": "object",
         "properties": {
@@ -21251,6 +21259,10 @@
           "approval_expiry_days": {
             "type": "number",
             "description": "How many days a link lives (1 to 365)."
+          },
+          "admins_check_own": {
+            "type": "boolean",
+            "description": "An administrator may check values they typed in themselves (default: yes). Never applies to what the assistant found."
           }
         }
       },

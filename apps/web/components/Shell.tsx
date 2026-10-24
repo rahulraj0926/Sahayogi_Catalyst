@@ -31,7 +31,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   useEffect(() => { const el = mainRef.current; if (!el) return; const m = () => setSbw(el.offsetWidth - el.clientWidth); m(); const ro = new ResizeObserver(m); ro.observe(el); return () => ro.disconnect(); }, [pid]);
   useEffect(() => { setMenuOpen(false); }, [path]);
   const ai = useAssistant(pid);
-  const life = useApi<any>(pid ? '/lifecycle' : null, pid); // each phase's weighted completion, shown beside the phase in the menu
+  const life = useApi<any>(pid ? '/lifecycle' : null, pid); // each phase's completion (plain average of its steps), shown beside the phase in the menu
   const percents: number[] | undefined = life.data?.phases?.map((p: any) => p.percent);
   const product = cur ? { name: cur.name, stageLabel: cur.stage_label, readinessPercent: cur.readiness_percent, phase: /^P(\d+)/.test(String(cur.stage ?? '')) ? Number(/^P(\d+)/.exec(String(cur.stage))![1]) : /^(handoff|done)$/.test(String(cur.stage ?? '')) ? 5 : undefined } : null;
 
@@ -43,13 +43,10 @@ export default function Shell({ children }: { children: ReactNode }) {
           inert={ai.mode === 'fullscreen' ? true : undefined} style={{ flexGrow: ai.mode === 'fullscreen' ? 0 : 1, flexBasis: 0 }}>
           <Header edge={sbw} pid={pid} who={who} onWho={setWho} approvals={counts.approvals} onMenu={pid ? () => setMenuOpen((o) => !o) : undefined} />
           <div className="relative flex min-h-0 flex-1">
-            {pid && <Drawer product={product} groups={groups} path={path} counts={counts} percents={percents} open={menuOpen} onClose={() => setMenuOpen(false)} />}
+            {pid && <Drawer product={product} groups={groups} path={path} counts={counts} percents={percents} open={menuOpen} onClose={() => setMenuOpen(false)} collapseOnPick={isCompetitorsPath(path)} title={isCompetitorsPath(path) ? 'Competitors' : undefined} />}
             <main className="no-scrollbar flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto px-[var(--page-pad-x)] pb-20 pt-[var(--page-pad-y)] [scrollbar-gutter:stable] screen-sm:pb-[var(--page-pad-y)]" ref={mainRef}>
               <Crumbs path={path} productName={cur?.name} />
               <div className="w-full min-w-0 flex-1 page-transition" key={path}><div className="main">{children}</div></div>
-              <footer className="shrink-0 py-3 text-xs text-[var(--text-muted)]">
-                Every number is computed from the saved records. Nothing is typed in twice.
-              </footer>
             </main>
           </div>
         </div>

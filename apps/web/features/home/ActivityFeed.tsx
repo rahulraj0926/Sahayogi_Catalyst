@@ -40,7 +40,7 @@ export function ActivityFeed() {
   }, [rows]);
 
   return (
-    <Card title="Recent activity" description="What people did, newest first." action={<button type="button" aria-label="Refresh activity" title="Refresh" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--surface-muted)]" onClick={() => load()} disabled={busy}><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /></button>}>
+    <Card title="Recent activity" action={<button type="button" aria-label="Refresh activity" title="Refresh" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--surface-muted)]" onClick={() => load()} disabled={busy}><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /></button>}>
       {error && <ErrorBox message={error} />}
       {rows && rows.length === 0 && <EmptyState title={C.activityEmpty} />}
       <div className="-mr-1 max-h-[26rem] overflow-y-auto pr-1">

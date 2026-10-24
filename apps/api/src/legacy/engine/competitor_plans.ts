@@ -80,6 +80,7 @@ function plans(store, query: any = {}) {
 
 /** Say that a plan (all of its terms) includes, or no longer includes, a feature. Creates the competitor's unrated row for the feature if it has none. */
 function setPlanFeature(store, body: any, actor) {
+  if (Array.isArray(body.features)) return setPlanFeatures(store, body, actor);
   const comp = store.get(body.competitor);
   if (!comp || comp.type !== 'Competitor') throw httpErr(404, 'competitor not found');
   const priceIds: string[] = Array.isArray(body.price_ids) ? body.price_ids : [];
@@ -105,6 +106,15 @@ function setPlanFeature(store, body: any, actor) {
     if (!body.included && existing) store.unlink(existing.id, { actor });
   }
   return { ok: true, rating_id: rating.id };
+}
+
+/** Many features at once for one plan: `features` is a list of { capability_id } or { rating_id }; `included` applies to all of them. */
+function setPlanFeatures(store, body: any, actor) {
+  const list: any[] = body.features;
+  if (list.length > 500) throw httpErr(422, 'Change at most 500 features at a time.');
+  for (const f of list) if (!f || (!f.capability_id && !f.rating_id)) throw httpErr(422, 'every feature needs a capability_id or a rating_id');
+  for (const f of list) setPlanFeature(store, { competitor: body.competitor, price_ids: body.price_ids, included: body.included, capability_id: f.capability_id, rating_id: f.rating_id }, actor);
+  return { ok: true, count: list.length };
 }
 
 /** Across all competitors: for each plan level, how many of the plans that list features include each feature. */
@@ -140,26 +150,80 @@ function planLevelFeatures(store, scope = '') {
   return { levels, features, note: levels.every((l) => l.plans_with_features === 0) ? 'No plan lists its features yet. Open "Plans and features", pick a competitor and tick what each plan includes.' : null };
 }
 
-const MARKET_SHARE = 50;
-/** Our plans, which of our common features each includes, and what competitors give at the same level. */
+/** Our plans and which of our features each includes. */
 function ourPlans(store) {
   const plans = store.list('PricingPlan', (p) => !['Deprecated', 'Rejected'].includes(p.status)).sort((a, b) => (LEVELS.indexOf(a.tier_tag || '') + 1 || 9) - (LEVELS.indexOf(b.tier_tag || '') + 1 || 9) || (a.amount ?? 0) - (b.amount ?? 0));
-  const market = planLevelFeatures(store);
-  const mk = new Map(market.features.map((f) => [f.key, f]));
   const caps = store.list('Capability', (c) => c.status !== 'Retired');
-  const features = caps.map((cap) => {
-    const m = mk.get(cap.id);
-    return { capability_id: cap.id, name: cap.title, category: cap.category || null, market: m ? { by_level: m.by_level, overall_pct: m.overall_pct } : null, in_plans: plans.filter((p) => store.out(p.id, 'offers').some((l) => l.target === cap.id)).map((p) => p.id) };
-  }).sort((a, b) => ((b.market ? b.market.overall_pct : -1) - (a.market ? a.market.overall_pct : -1)) || a.name.localeCompare(b.name));
-  const outPlans = plans.map((p) => {
-    const have = new Set(features.filter((f) => f.in_plans.includes(p.id)).map((f) => f.capability_id));
-    const below = p.tier_tag ? features.filter((f) => !have.has(f.capability_id) && f.market && f.market.by_level[p.tier_tag] && f.market.by_level[p.tier_tag].pct !== null && f.market.by_level[p.tier_tag].pct >= MARKET_SHARE).map((f) => f.name) : [];
-    return { id: p.id, title: p.title, status: p.status, amount: p.amount ?? null, currency: p.currency || null, billing_period: p.billing_period || null, unit: p.unit || null, is_free: !!p.is_free, tier_tag: p.tier_tag || null, feature_count: have.size, below_market: below };
-  });
-  return { plans: outPlans, features, market_share_threshold: MARKET_SHARE, levels: market.levels };
+  const features = caps.map((cap) => ({ capability_id: cap.id, name: cap.title, category: cap.category || null, in_plans: plans.filter((p) => store.out(p.id, 'offers').some((l) => l.target === cap.id)).map((p) => p.id) }))
+    .sort((a, b) => (a.category || '~').localeCompare(b.category || '~') || a.name.localeCompare(b.name));
+  // plans saved before there were separate monthly and yearly prices keep their one price under the period they had
+  const outPlans = plans.map((p) => ({
+    id: p.id, title: p.title, status: p.status, amount: p.amount ?? null, currency: p.currency || null, billing_period: p.billing_period || null, unit: p.unit || null, is_free: !!p.is_free, tier_tag: p.tier_tag || null,
+    price_monthly: p.price_monthly ?? (p.billing_period === 'monthly' ? p.amount ?? null : null),
+    price_yearly: p.price_yearly ?? (p.billing_period === 'yearly' ? p.amount ?? null : null),
+    seat_model: p.seat_model || null, max_users: p.max_users ?? null,
+    feature_count: features.filter((f) => f.in_plans.includes(p.id)).length,
+  }));
+  return { plans: outPlans, features };
+}
+
+const nameKey = (n: unknown) => String(n || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '');
+
+/**
+ * Features competitors have that are not on our list yet, to pick from when building our own plans. Nothing is added or suggested:
+ * the same feature under slightly different spellings is one row, with how many competitors have it.
+ * query: tier (free…enterprise: only plans at that level), competitor (one competitor), q (search), offset, limit (default 30, at most 500),
+ * names_only (every matching name, at most 5000, for "pick all").
+ */
+function pickFeatures(store, query: any = {}) {
+  const tier = String(query.tier || '');
+  if (tier && !LEVELS.includes(tier)) throw httpErr(422, `tier must be one of ${LEVELS.join(', ')}`);
+  const q = String(query.q || '').trim().toLowerCase();
+  const idx = catalogIndex(store);
+  const comps = liveCompetitors(store, query.scope);
+  const one = String(query.competitor || '');
+  const rows = new Map<string, { name: string; competitors: Map<string, string> }>();
+  const counts = new Map<string, number>();
+  for (const c of comps) {
+    const names = new Set<string>();
+    if (tier) {
+      for (const g of groupsOf(store, c, idx)) {
+        if (g.tier_tag !== tier) continue;
+        for (const k of g.feature_keys) if (String(k).startsWith('r:')) names.add(String(k).slice(2));
+      }
+    }
+    // the name as the competitor wrote it
+    for (const r of cellsOf(store, c).filter((x) => x.type === 'CompetitorCapability' && live(x))) {
+      const f = featureKey(store, r, idx);
+      if (f.capability_id) continue; // already one of ours
+      if (tier && !names.has(String(f.key).slice(2))) continue;
+      const nk = nameKey(r.capability_tag); if (!nk) continue;
+      counts.set(c.id, (counts.get(c.id) || 0) + 1);
+      if (one && c.id !== one) continue;
+      const row = rows.get(nk) || { name: String(r.capability_tag).trim(), competitors: new Map<string, string>() };
+      row.competitors.set(c.id, c.title); rows.set(nk, row);
+    }
+  }
+  let list = [...rows.values()];
+  if (q) list = list.filter((r) => r.name.toLowerCase().includes(q));
+  list.sort((a, b) => b.competitors.size - a.competitors.size || a.name.localeCompare(b.name));
+  const total = list.length;
+  if (query.names_only) return { total, names: list.slice(0, 5000).map((r) => r.name) };
+  const limit = Math.max(1, Math.min(500, Number(query.limit) || 30));
+  const offset = Math.max(0, Number(query.offset) || 0);
+  return {
+    total, offset, limit,
+    competitors: comps.map((c) => ({ id: c.id, title: c.title, features: counts.get(c.id) || 0 })).filter((c) => c.features > 0).sort((a, b) => a.title.localeCompare(b.title)),
+    features: list.slice(offset, offset + limit).map((r) => ({ name: r.name, count: r.competitors.size, competitors: [...r.competitors.values()].slice(0, 4) })),
+  };
 }
 
 function setOurPlanFeature(store, body: any, actor) {
+  if (Array.isArray(body.capability_ids)) {
+    if (body.capability_ids.length > 500) throw httpErr(422, 'Change at most 500 features at a time.');
+    for (const capability_id of body.capability_ids) setOurPlanFeature(store, { plan_id: body.plan_id, capability_id, included: body.included }, actor);
+    return { ok: true, count: body.capability_ids.length };
+  }
   const plan = store.get(body.plan_id); const cap = store.get(body.capability_id);
   if (!plan || plan.type !== 'PricingPlan') throw httpErr(404, 'plan not found');
   if (!cap || cap.type !== 'Capability') throw httpErr(422, 'capability_id must be a feature on our list');
@@ -167,6 +231,30 @@ function setOurPlanFeature(store, body: any, actor) {
   if (body.included && !existing) store.link('offers', plan.id, cap.id, {}, { actor });
   if (!body.included && existing) store.unlink(existing.id, { actor });
   return { ok: true };
+}
+
+/**
+ * Add many features to OUR list in one go, optionally switching them on in some of our plans. A name that is already on the list
+ * is not added twice (the existing feature is used, so it can still be put into the plans).
+ */
+function addOurFeatures(store, body: any, actor) {
+  const raw: any[] = Array.isArray(body && body.features) ? body.features : [];
+  const clean = raw.map((f) => ({ name: String(f && f.name || '').trim(), category: String(f && f.category || '').trim() })).filter((f) => f.name);
+  if (!clean.length) throw httpErr(422, 'Give at least one feature name.');
+  if (clean.length > 300) throw httpErr(422, 'Add at most 300 features at a time.');
+  const planIds: string[] = Array.isArray(body.plan_ids) ? body.plan_ids : [];
+  const plans = planIds.map((id) => { const p = store.get(id); if (!p || p.type !== 'PricingPlan') throw httpErr(422, `${id} is not one of our plans`); return p; });
+  const byName = new Map<string, any>();
+  for (const c of store.list('Capability', (x) => x.status !== 'Retired')) byName.set(String(c.title).trim().toLowerCase(), c);
+  const out = { added: 0, existing: 0, linked: 0, ids: [] as string[] };
+  for (const f of clean) {
+    let cap = byName.get(f.name.toLowerCase());
+    if (cap) out.existing++;
+    else { cap = store.create('Capability', { title: f.name, ...(f.category ? { category: f.category } : {}), status: 'Active' }, { actor }); byName.set(f.name.toLowerCase(), cap); out.added++; }
+    out.ids.push(cap.id);
+    for (const p of plans) if (!store.out(p.id, 'offers').some((l) => l.target === cap.id)) { store.link('offers', p.id, cap.id, {}, { actor }); out.linked++; }
+  }
+  return out;
 }
 
 const LEVEL_NAME = { free: 'Free', entry: 'Entry', mid: 'Mid', top: 'Top', enterprise: 'Enterprise' };
@@ -207,24 +295,6 @@ function recommended(store, query: any = {}) {
   return { threshold, users, scope: scope || null, levels, note: market.note };
 }
 
-/** Make one of OUR plans from the recommendation for a level: priced at the average yearly price, with the recommended features switched on. */
-function createFromRecommendation(store, body: any, actor) {
-  const tier = String(body && body.tier_tag || '');
-  if (!LEVELS.includes(tier)) throw httpErr(422, 'tier_tag must be one of free, entry, mid, top, enterprise');
-  const rec = recommended(store, { threshold: body.threshold, users: body.users, scope: body.scope });
-  const lvl = rec.levels.find((l) => l.tier_tag === tier);
-  if (!lvl) throw httpErr(422, `No competitor plan is tagged ${LEVEL_NAME[tier]} yet, so there is nothing to recommend.`);
-  const title = String(body.title || '').trim() || `${LEVEL_NAME[tier]} (recommended)`;
-  const fields: any = { title, currency: 'INR', tier_tag: tier, billing_period: 'yearly', is_free: tier === 'free' };
-  if (tier === 'free') fields.amount = 0; else if (lvl.price.avg_yearly_inr !== null) fields.amount = lvl.price.avg_yearly_inr;
-  const plan = store.create('PricingPlan', fields, { actor });
-  let linked = 0; const notMatched: string[] = [];
-  for (const f of lvl.features) {
-    if (f.capability_id) { store.link('offers', plan.id, f.capability_id, {}, { actor }); linked++; } else notMatched.push(f.name);
-  }
-  return { plan_id: plan.id, title, amount: fields.amount ?? null, features_linked: linked, features_not_matched: notMatched };
-}
-
 /**
  * Plans of different competitors side by side at ONE level (e.g. everyone's Entry plan): one column per plan with its price and
  * the features it includes. A competitor with several plans at the level gets several columns.
@@ -261,4 +331,4 @@ function comparePlans(store, query: any = {}) {
   return { level, label: LEVEL_NAME[level], fallback: fallback || null, fallback_label: fallback ? LEVEL_NAME[fallback] : null, fallback_used: fallbackUsed, users, columns, features, without_plan: without, columns_with_features: counted };
 }
 
-export { plans, setPlanFeature, planLevelFeatures, ourPlans, setOurPlanFeature, recommended, createFromRecommendation, comparePlans, groupsOf, featureKey, catalogIndex, LEVELS, LEVEL_NAME };
+export { plans, setPlanFeature, planLevelFeatures, ourPlans, setOurPlanFeature, addOurFeatures, pickFeatures, recommended, comparePlans, groupsOf, featureKey, catalogIndex, LEVELS, LEVEL_NAME };

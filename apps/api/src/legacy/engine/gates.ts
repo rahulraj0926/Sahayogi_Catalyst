@@ -22,6 +22,7 @@ import * as lintLib from './lint';
 import * as freshness from './freshness';
 import * as questions from './questions';
 import * as suspectLib from './suspect';
+import * as selfcheck from './selfcheck';
 import { APPROVED_LIKE } from './schema';
 import { addDays, dayOf } from './units';
 import * as stages from './stages';
@@ -260,7 +261,7 @@ const OPS = {
     for (const it of items) {
       const why = [];
       if (!it.verified_by) why.push('no verifier recorded');
-      else if (it.verified_by === it.proposed_by) why.push('verified by the person who proposed it');
+      else if (it.verified_by === it.proposed_by && !(it.origin === 'human' && selfcheck.allowed(it.verified_by))) why.push('verified by the person who proposed it');
       else if (suspectLib.isAgentActor(it.verified_by)) why.push('verified by an AI agent');
       if (!ctx.store.out(it.id, 'supported_by').some((l) => ctx.store.get(l.target))) why.push('no supporting Evidence');
       if (why.length) offenders.push(off(it, why.join('; ')));

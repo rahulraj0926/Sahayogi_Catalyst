@@ -23,8 +23,8 @@ const Tree = ({ list, empty, pid }: { list: any[]; empty: string; pid: string })
 export function Chains({ d, pid }: { d: any; pid: string }) {
   return (
     <div className="grid g2">
-      <Card title="Upstream" sub="what this item rests on"><Tree pid={pid} list={d.upstream} empty="Nothing upstream: this item does not derive from anything." /></Card>
-      <Card title="Downstream" sub="what depends on this item"><Tree pid={pid} list={d.downstream} empty="Nothing downstream yet." /></Card>
+      <Card title="Upstream"><Tree pid={pid} list={d.upstream} empty="Nothing upstream: this item does not derive from anything." /></Card>
+      <Card title="Downstream"><Tree pid={pid} list={d.downstream} empty="Nothing downstream yet." /></Card>
     </div>
   );
 }

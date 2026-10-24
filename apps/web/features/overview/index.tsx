@@ -45,7 +45,7 @@ export default function Overview({ pid, query }: FeatureProps) {
 
       <Journey pid={pid} stage={st !== null && st !== '' ? Number(st) : null} openEdit={query.get('edit') === '1'} />
 
-      <Card title="Recent activity" description="The last few changes. The full history is under History, at the bottom of the menu." action={<Link href={`/products/${pid}/history`} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-heading)]">See all</Link>}>
+      <Card title="Recent activity" action={<Link href={`/products/${pid}/history`} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-heading)]">See all</Link>}>
         {activity.loading ? <p className="text-sm text-[var(--text-muted)]">Loading…</p> : (activity.data?.entries || []).length === 0 ? <p className="text-sm text-[var(--text-muted)]">Nothing has happened yet.</p> : (
           <ul className="flex flex-col divide-y divide-[var(--divider)]">
             {(activity.data.entries as any[]).slice(0, 5).map((e, i) => (

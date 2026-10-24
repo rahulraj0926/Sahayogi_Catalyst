@@ -1,241 +1,202 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Badge, Card, Empty, ErrorBox, Loading } from '@/components/ui';
+import { ChevronRight, LayoutGrid, List, Search } from 'lucide-react';
+import { Empty, ErrorBox, Loading } from '@/components/ui';
 import { Pager, usePaged } from '@/components/kit';
 import { api, clearApiCache, useApi } from '@/lib/api';
-import { NumberPick } from './NumberPick';
+import { THREAT_COLOR, tint } from './Overview';
+import { suggestThreat } from './overviewBlocks';
 
-const rs = (n: any) => (n === null || n === undefined ? '-' : `₹${Math.round(n).toLocaleString('en-IN')}`);
-const BAND: Record<string, { label: string; color: string }> = {
-  must: { label: 'Must-have', color: 'var(--ok)' },
-  common: { label: 'Common', color: 'var(--sd-accent)' },
-  niche: { label: 'Some have it', color: 'var(--sd-muted)' },
-};
-/** Quick picks only. Every number can also be typed in, and nothing below depends on these lists. */
-const SHARES = [50, 60, 80, 100];
-const USERS = [1, 5, 10, 25];
+const TIER_KEYS = ['T1', 'T2', 'T3', 'S', 'unassigned'];
+const HUES = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#f43f5e', '#6366f1', '#06b6d4'];
+export const hueOf = (s: string) => HUES[[...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % HUES.length];
+/** Same rule as the server: "People & Payroll" and "people and payroll" are one module. */
+const key = (s: unknown) => String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '');
 
-function Tile({ value, label, hint }: { value: React.ReactNode; label: string; hint?: string }) {
-  return (
-    <div className="card" style={{ minWidth: 0 }}>
-      <div className="card-b" style={{ padding: '12px 16px' }}>
-        <div className="strong" style={{ fontSize: 26, lineHeight: 1.1 }}>{value}</div>
-        <div className="small">{label}</div>
-        {hint && <div className="xs muted" style={{ marginTop: 2 }}>{hint}</div>}
-      </div>
-    </div>
-  );
+const KIND: Record<string, string> = { direct: 'Direct competitor', indirect: 'Indirect competitor', alternative: 'Alternative', in_house: 'In-house' };
+const host = (w?: string) => String(w || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+
+/** "Updated today", "Updated 3 days ago", or the date once it is older than a month. */
+export function ago(day?: string | null) {
+  if (!day) return 'Not updated yet';
+  const days = Math.floor((Date.now() - new Date(day).getTime()) / 86400000);
+  if (Number.isNaN(days)) return String(day);
+  if (days <= 0) return 'Updated today';
+  if (days === 1) return 'Updated yesterday';
+  if (days < 31) return `Updated ${days} days ago`;
+  return `Updated ${new Date(day).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
-/** A competitor as a small chip; the thin bar under the name shows how much of its profile is filled in. */
-function Chip({ href, c }: { href: string; c: any }) {
-  return (
-    <Link href={href} title={`${c.plans} plan${c.plans === 1 ? '' : 's'} · ${c.plans_with_features} with features listed · profile ${c.completeness}% complete`} style={{ display: 'inline-flex', flexDirection: 'column', gap: 3, padding: '6px 10px', border: '1px solid var(--divider)', borderRadius: 8, textDecoration: 'none', minWidth: 0, maxWidth: '100%' }}>
-      <span className="strong" style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</span>
-      <span aria-hidden style={{ height: 3, borderRadius: 99, background: 'var(--surface-muted)' }}><span style={{ display: 'block', width: `${Math.max(4, c.completeness)}%`, height: 3, borderRadius: 99, background: c.completeness >= 70 ? 'var(--ok)' : c.completeness >= 35 ? 'var(--warn)' : 'var(--bad)' }} /></span>
-    </Link>
-  );
-}
-
-/** Where we stand: how much has been analysed, the features most competitors share, what we should build, and what that is likely to cost. */
+/**
+ * Competitors: every competitor in one searchable list. A product built from modules also gets a list of its parts on the left,
+ * each with the number of competitors recorded for it (0 means nobody is covered yet). A competitor tied to no part competes with the whole product and is listed under every part.
+ */
 export default function Dashboard({ pid, scope, onScope, onAdd }: { pid: string; scope: string; onScope: (v: string) => void; onAdd: () => void }) {
-  const [share, setShare] = useState(60);
-  const [users, setUsers] = useState(1);
-  const [band, setBand] = useState('all');
-  const [cat, setCat] = useState('');
+  const { data, error, loading, reload } = useApi<any>('/competitors/tiers', pid, { keep: true });
+  const parts = useApi<any>('/competitors/scopes', pid);
+  const people = useApi<any>('/items?type=Competitor&limit=5000', pid);
+  const lines = useApi<any>('/competitors/product-lines', pid);
+  const [view, setView] = useState<'list' | 'cards'>('list');
+  useEffect(() => { try { if (localStorage.getItem('sd_comp_view') === 'cards') setView('cards'); } catch { /* storage blocked */ } }, []);
+  const pickView = (v: 'list' | 'cards') => { setView(v); try { localStorage.setItem('sd_comp_view', v); } catch { /* storage blocked */ } };
+  const more = new Map<string, any>(((people.data?.items as any[]) || []).map((x) => [x.id, x]));
+  const sells = new Map<string, string[]>(((lines.data as any[]) || []).map((x) => [x.id, (x.product_lines || []).map((l: any) => l.product_name).filter(Boolean)]));
   const [q, setQ] = useState('');
-  const [open, setOpen] = useState<string | null>(null);
-  const [must, setMust] = useState(80);
-  const [common, setCommon] = useState(50);
-  const [sizes, setSizes] = useState('1, 5, 10, 25');
-  const [sizesText, setSizesText] = useState('1, 5, 10, 25');
-  const [sampling, setSampling] = useState<string | null>(null);
+  const [pq, setPq] = useState('');
+  const [sort, setSort] = useState<'name' | 'recent'>('name');
+  const [sampling, setSampling] = useState(false);
   const [err, setErr] = useState('');
-  // keep: changing a number below updates the figures in place; the page never blanks and redraws
-  const { data: d, error, loading, reload } = useApi<any>(`/competitors/overview?threshold=${share}&users=${users}&must=${must}&common=${Math.min(common, must - 1)}&compare_users=${encodeURIComponent(sizes.replace(/\s+/g, ''))}${scope ? `&scope=${encodeURIComponent(scope)}` : ''}`, pid, { keep: true });
-  const addSample = async () => { setErr(''); setSampling('Adding…'); try { await api('/competitors/sample', { method: 'POST', product: pid }); clearApiCache(); reload(); setSampling(null); } catch (e: any) { setSampling(null); setErr(String(e?.message || e)); } };
-  const sampleButton = <button type="button" className="btn" disabled={!!sampling} onClick={addSample} title="Adds nine invented companies with plans, prices and features, so you can see how the dashboard works. Safe to press twice.">{sampling || 'Add sample competitors (fictional)'}</button>;
-
-  const all: any[] = d?.common.features || [];
-  const shown = all.filter((f) => (band === 'all' || f.band === band) && (!cat || (f.category || 'Other') === cat) && (!q || f.name.toLowerCase().includes(q.toLowerCase())));
+  const all: any[] = data ? TIER_KEYS.flatMap((t) => data.tiers[t] || []) : [];
+  const scopesOf = (c: any): string[] => (Array.isArray(c.scopes) ? c.scopes : []);
+  const modules: { name: string; n: number }[] = (parts.data?.has_modules ? (parts.data.scopes as any[]) : []).map((s) => ({ name: s.name, n: all.filter((c) => scopesOf(c).some((x) => key(x) === key(s.name))).length }));
+  const hasParts = modules.length > 0;
+  const scoped = hasParts && scope ? all.filter((c) => scopesOf(c).length === 0 || scopesOf(c).some((x) => key(x) === key(scope))) : all;
+  const order = (a: any, b: any) => (sort === 'recent' ? String(b.last_update || '').localeCompare(String(a.last_update || '')) : 0) || String(a.title).localeCompare(String(b.title));
+  const mix = (['direct', 'indirect', 'alternative', 'in_house'] as const).map((k) => [k, scoped.filter((c) => (c.kind || 'direct') === k).length] as const).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${KIND[k].replace(' competitor', '').toLowerCase()}`).join(' · ');
+  const shown = scoped
+    .filter((c) => !q || `${c.title} ${c.positioning || ''}`.toLowerCase().includes(q.toLowerCase()))
+    .map((c) => ({ ...c, _whole: !!scope && hasParts && scopesOf(c).length === 0 }))
+    .sort((a, b) => Number(a._whole) - Number(b._whole) || order(a, b));
   const pg = usePaged<any>(shown, 10);
-  const mods = usePaged<any>(d?.modules?.rows || [], 10);
-  if (loading && !d) return <Loading />;
-  if (error || !d) return <ErrorBox message={error || 'No data'} />;
+  const addSample = async () => { setErr(''); setSampling(true); try { await api('/competitors/sample', { method: 'POST', product: pid }); clearApiCache(); reload(); parts.reload(); } catch (e: any) { setErr(String(e?.message || e)); } setSampling(false); };
+  if (loading && !data) return <Loading />;
+  if (error || !data) return <ErrorBox message={error || 'No data'} />;
   const base = `/products/${pid}/competitors`;
-  if (!d.analysed.total) {
+  const pick = (v: string) => { onScope(v); pg.setPage(1); };
+  const railParts = modules.filter((m) => !pq || m.name.toLowerCase().includes(pq.toLowerCase()));
+  const uncovered = modules.filter((m) => m.n === 0).length;
+
+  if (!all.length && !hasParts) {
     return (
       <Empty>
-        {scope ? `No competitor is set for “${scope}” yet.` : 'No competitors yet.'}
-        <div className="row wrap" style={{ marginTop: 10, justifyContent: 'center' }}><button className="btn primary" onClick={onAdd}>Add a competitor</button>{sampleButton}</div>{err && <div className="small" style={{ color: 'var(--bad)', marginTop: 6 }}>{err}</div>}
+        No competitors yet.
+        <div className="row wrap" style={{ marginTop: 10, justifyContent: 'center' }}>
+          <button className="btn primary" onClick={onAdd}>Add a competitor</button>
+          <button type="button" className="btn" disabled={sampling} onClick={addSample} title="Adds nine invented companies so you can see how this page works. Safe to press twice.">{sampling ? 'Adding…' : 'Add sample competitors (fictional)'}</button>
+        </div>
+        {err && <div className="small" style={{ color: 'var(--bad)', marginTop: 6 }}>{err}</div>}
       </Empty>
     );
   }
-  const a = d.analysed; const rec = d.recommended; const bundle = rec.bundle;
-  const maxLadder = Math.max(1, ...rec.ladder.map((l: any) => l.price.avg_yearly_inr || 0));
-  const tiers = d.tiers.filter((t: any) => t.competitors.length || ['T1', 'T2', 'T3'].includes(t.key));
 
-  return (
-    <div style={{ opacity: loading ? 0.65 : 1, transition: 'opacity .15s' }} aria-busy={loading}>
-      {/* ---- 1. how much has been analysed */}
-      <div className="grid g4" style={{ marginBottom: 14 }}>
-        <Tile value={a.total} label={`competitor${a.total === 1 ? '' : 's'} analysed`} hint={`${a.with_plans} with plans · ${a.with_features} with features listed`} />
-        <Tile value={a.plans} label="plans recorded" hint={d.plan_levels.length ? d.plan_levels.map((l: any) => `${l.plans} ${l.label.toLowerCase()}`).join(' · ') : 'no plan has a level yet'} />
-        <Tile value={d.common.bands.must + d.common.bands.common} label="common features" hint={`${d.common.bands.must} must-have (${d.common.cut_offs.must}%+) · ${d.common.bands.common} common (${d.common.cut_offs.common}%+)`} />
-        <Tile value={a.avg_completeness === null ? '-' : `${a.avg_completeness}%`} label="average profile filled in" hint="the bar under each name below" />
+  const rail = (
+    <>
+      <div className="screen-lg:hidden" style={{ marginBottom: 10 }}>
+        <select value={scope} onChange={(e) => pick(e.target.value)} aria-label="Part of our product" style={{ width: '100%' }}>
+          <option value="">All competitors ({all.length})</option>
+          {modules.map((m) => <option key={m.name} value={m.name}>{m.name} ({m.n})</option>)}
+        </select>
       </div>
-
-      {/* ---- 1b. module by module (BoSS has many modules, each with its own competitors and prices) */}
-      {!scope && d.modules.rows.length > 0 && (
-        <>
-          <Card title="By module" sub={`${d.modules.rows.length} modules · cheapest plan of each competitor, yearly, 1 user${d.modules.whole_product ? ` · ${d.modules.whole_product} competitor${d.modules.whole_product === 1 ? '' : 's'} not tied to a module count in every module` : ''}`} flush>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="tbl">
-                <thead><tr><th>Module</th><th>Tier 1</th><th>Tier 2</th><th>Tier 3</th><th>With plans</th><th>With a price</th><th>Average</th><th>Range</th></tr></thead>
-                <tbody>
-                  {mods.rows.map((m: any) => (
-                    <tr key={m.name}>
-                      <td><button type="button" className="btn sm ghost" onClick={() => onScope(m.name)} title={`Show only ${m.name}`}>{m.name}</button>{m.competitors === 0 && <span className="xs muted"> no competitors yet</span>}</td>
-                      <td>{m.T1 || '-'}</td><td>{m.T2 || '-'}</td><td>{m.T3 || '-'}</td>
-                      <td>{m.with_plans ? `${m.with_plans} of ${m.competitors}` : '-'}</td>
-                      <td>{m.priced ? `${m.priced} of ${m.competitors}` : '-'}</td>
-                      <td>{rs(m.avg_yearly_inr)}</td>
-                      <td className="small">{m.priced ? `${rs(m.min_yearly_inr)} – ${rs(m.max_yearly_inr)}` : '-'}</td>
-                    </tr>))}
-                </tbody>
-              </table>
-            </div>
-            <Pager {...mods} />
-          </Card>
-          <div style={{ height: 14 }} />
-        </>)}
-
-      {/* ---- 2. who, by tier */}
-      <Card title="Who we compared" sub={scope ? `for ${scope}` : undefined} right={<Link className="btn sm" href={`${base}/list`}>All competitors</Link>}>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14 }}>
-          {tiers.map((t: any) => (
-            <div key={t.key} style={{ minWidth: 0 }}>
-              <div className="row" style={{ marginBottom: 6, gap: 6 }}><span className="strong">{t.label}</span><Badge>{t.competitors.length}</Badge></div>
-              <div className="xs muted" style={{ marginBottom: 6 }}>{t.hint}</div>
-              {t.competitors.length === 0 ? <div className="small muted">None yet.</div> : <div className="row wrap" style={{ gap: 6 }}>{t.competitors.map((c: any) => <Chip key={c.id} href={`${base}/${c.id}`} c={c} />)}</div>}
-            </div>
-          ))}
+      <nav aria-label="Parts of our product" className="hidden w-60 shrink-0 screen-lg:block">
+        <div>
+          <div className="border-b border-[var(--divider)] px-3 py-2.5">
+            <div className="strong" style={{ fontSize: 13 }}>Parts of our product</div>
+            <div className="xs muted">{uncovered ? `${uncovered} of ${modules.length} have no competitor yet` : `All ${modules.length} have a competitor`}</div>
+          </div>
+          {modules.length > 10 && (
+            <label className="relative block border-b border-[var(--divider)] p-2">
+              <Search size={14} aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+              <input type="search" value={pq} onChange={(e) => setPq(e.target.value)} placeholder="Find a part" aria-label="Find a part of our product" className="h-8 w-full rounded-md border border-[var(--divider)] bg-[var(--search-bg)] pr-2 text-sm" style={{ paddingLeft: 30 }} />
+            </label>)}
+          <ul className="m-0 max-h-[60vh] list-none overflow-y-auto p-1.5">
+            {[{ name: '', n: all.length }, ...railParts].map((m) => {
+              const on = (scope || '') === m.name;
+              return (
+                <li key={m.name || 'all'}>
+                  <button type="button" onClick={() => pick(m.name)} aria-current={on ? 'true' : undefined}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors ${on ? 'bg-[var(--sd-accent-soft)] font-semibold text-[var(--sd-accent)]' : 'text-[var(--text-secondary)] hover:bg-[var(--search-bg)]'}`} style={{ minHeight: 0 }}>
+                    <span className="min-w-0 flex-1 truncate">{m.name || 'All competitors'}</span>
+                    {m.name && m.n === 0 ? <span className="shrink-0 rounded-full px-1.5 text-[10px] font-semibold leading-4" style={{ color: 'var(--warn)', background: 'color-mix(in srgb, var(--warn) 15%, transparent)' }} title="No competitor recorded for this part yet">none yet</span> : <span className="shrink-0 text-[11px] tabular-nums text-[var(--text-muted)]">{m.n}</span>}
+                  </button>
+                </li>);
+            })}
+            {railParts.length === 0 && <li className="px-2 py-1.5 text-[12px] text-[var(--text-muted)]">No part matches.</li>}
+          </ul>
         </div>
-        {d.unassigned.length > 0 && <div className="small" style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--divider)' }}><span className="muted">No tier yet: </span>{d.unassigned.map((c: any, i: number) => <span key={c.id}>{i > 0 && ', '}<Link href={`${base}/${c.id}`}>{c.title}</Link></span>)}</div>}
-      </Card>
-      <div style={{ height: 14 }} />
-
-      {/* ---- 3. common features, and what we recommend */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-start' }}>
-        <div style={{ flex: '2 1 460px', minWidth: 0 }}>
-          <Card title="Features competitors share" sub={`share of the ${d.common.competitor_count} competitors that offer each`} flush>
-            <div className="card-b" style={{ display: 'flex', flexDirection: 'column', gap: 10, borderBottom: '1px solid var(--divider)' }}>
-              <div className="row wrap" style={{ gap: 8 }}>
-                <div className="seg" role="group" aria-label="How common">
-                  {[['all', 'All'], ['must', 'Must-have'], ['common', 'Common'], ['niche', 'Some have it']].map(([k, l]) => <button key={k} type="button" className={band === k ? 'on' : ''} onClick={() => { setBand(k); pg.setPage(1); }}>{l}</button>)}
-                </div>
-                {d.common.categories.length > 1 && (
-                  <select value={cat} onChange={(e) => { setCat(e.target.value); pg.setPage(1); }} aria-label="Feature group"><option value="">All groups</option>{d.common.categories.map((c: any) => <option key={c.name} value={c.name}>{c.name} ({c.count})</option>)}</select>)}
-                <input type="search" placeholder="Search features" aria-label="Search features" value={q} onChange={(e) => { setQ(e.target.value); pg.setPage(1); }} style={{ width: 170 }} />
-              </div>
-              <div className="xs muted row wrap" style={{ gap: 10 }}>
-                <span><b style={{ color: BAND.must.color }}>Must-have</b>: offered by</span>
-                <input type="number" min={2} max={100} value={must} aria-label="Must-have from this share" onChange={(e) => e.target.value !== '' && setMust(Math.min(100, Math.max(2, Number(e.target.value))))} style={{ width: 60 }} /><span>% or more.</span>
-                <span><b style={{ color: BAND.common.color }}>Common</b>: from</span>
-                <input type="number" min={1} max={must - 1} value={Math.min(common, must - 1)} aria-label="Common from this share" onChange={(e) => e.target.value !== '' && setCommon(Math.min(must - 1, Math.max(1, Number(e.target.value))))} style={{ width: 60 }} /><span>%. <b>Some have it</b>: less than that.</span>
-              </div>
-            </div>
-            {all.length === 0 ? (
-              <div className="card-b small muted">No feature is recorded yet. Import a file or open a competitor&apos;s “Plans and prices” tab and tick what each plan includes.</div>
-            ) : shown.length === 0 ? <div className="card-b small muted">No feature matches.</div> : (
-              <div role="list">
-                {pg.rows.map((f) => {
-                  const isRec = f.pct >= share; const b = BAND[f.band];
-                  return (
-                    <div key={f.key} role="listitem" style={{ borderBottom: '1px solid var(--divider)' }}>
-                      <button type="button" onClick={() => setOpen(open === f.key ? null : f.key)} aria-expanded={open === f.key} style={{ all: 'unset', boxSizing: 'border-box', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(90px, 38%) 74px', alignItems: 'center', gap: 12, width: '100%', padding: '9px 16px', cursor: 'pointer', borderLeft: `3px solid ${isRec ? 'var(--sd-accent)' : 'transparent'}` }}>
-                        <span style={{ minWidth: 0 }}>
-                          <span className="strong" style={{ fontSize: 13 }}>{f.name}</span>
-                          {f.category && <span className="xs muted"> · {f.category}</span>}
-                        </span>
-                        <span aria-hidden style={{ height: 8, borderRadius: 99, background: 'var(--surface-muted)' }}><span style={{ display: 'block', width: `${f.pct}%`, height: 8, borderRadius: 99, background: b.color }} /></span>
-                        <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}><span className="strong">{f.pct}%</span> <span className="xs muted">{f.offered_by}/{f.of_total}</span></span>
-                      </button>
-                      {open === f.key && (
-                        <div className="small" style={{ padding: '0 16px 10px 19px' }}>
-                          <Badge kind={f.band === 'must' ? 'ok' : ''}>{b.label}</Badge>{' '}
-                          {f.missing.length === 0 ? <span className="muted">Every competitor offers it.</span> : <><span className="muted">Not offered by </span>{f.missing.map((m: any, i: number) => <span key={m.id}>{i > 0 && ', '}<Link href={`${base}/${m.id}`}>{m.title}</Link></span>)}{f.of_total - f.offered_by > f.missing.length && <span className="muted"> and {f.of_total - f.offered_by - f.missing.length} more</span>}</>}
-                        </div>)}
-                    </div>
-                  );
-                })}
-                <Pager {...pg} />
-              </div>
-            )}
-            <div className="card-b xs muted">A competitor counts as offering a feature when a plan of it includes the feature, or it is rated strong, same as ours or partial. The accent mark on the left means the feature is in our recommendation.{d.common.not_offered.length > 0 && <> {d.common.not_offered.length} feature{d.common.not_offered.length === 1 ? '' : 's'} on our list {d.common.not_offered.length === 1 ? 'is' : 'are'} offered by nobody yet.</>}</div>
-          </Card>
-        </div>
-
-        <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Card title="What we recommend" sub={`${rec.count} feature${rec.count === 1 ? '' : 's'}`}>
-            <div className="small" style={{ marginBottom: 6 }}>Recommend a feature when at least</div>
-            <div style={{ marginBottom: 12 }}><NumberPick value={share} onChange={(v) => { setShare(v); pg.setPage(1); }} presets={SHARES} min={1} max={100} label="Share of competitors" suffix="%" /></div>
-            <div className="small" style={{ marginBottom: 6 }}>offer it. Price for</div>
-            <div style={{ marginBottom: 14 }}><NumberPick value={users} onChange={setUsers} presets={USERS} min={1} max={100000} label="Number of users" plural /></div>
-
-            {bundle ? (
-              <>
-                <div className="xs muted">Typical price of a plan with these features</div>
-                <div className="strong" style={{ fontSize: 28, lineHeight: 1.15 }}>{rs(bundle.avg_yearly_inr)} <span className="small muted">a year</span></div>
-                <div className="small muted">about {rs(bundle.avg_monthly_inr)} a month · range {rs(bundle.min_yearly_inr)} to {rs(bundle.max_yearly_inr)} · middle value {rs(bundle.median_yearly_inr)}</div>
-                <div className="xs muted" style={{ marginTop: 6 }}>From {bundle.count} of {bundle.of} competitors: the cheapest plan of each that includes at least {bundle.coverage_min}% of the recommended features.</div>
-                <details style={{ marginTop: 8 }}><summary className="small" style={{ cursor: 'pointer' }}>Which plans</summary>
-                  <ul style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'grid', gap: 3 }}>{bundle.contributors.map((x: any) => <li key={x.competitor.id} className="small row" style={{ gap: 6 }}><span style={{ flex: 1, minWidth: 0 }}><Link href={`${base}/${x.competitor.id}`}>{x.competitor.title}</Link> <span className="muted">{x.plan}</span></span><span className="xs muted">{x.coverage}%</span><span className="strong">{rs(x.yearly_inr)}</span></li>)}</ul></details>
-              </>
-            ) : <div className="small muted">{rec.count === 0 ? 'No feature is offered by that many competitors. Try a lower share.' : 'No plan holds enough of these features with a price yet. Tick the features each plan includes on the competitor pages.'}</div>}
-          </Card>
-
-          {rec.by_users && rec.by_users.length > 0 && (
-            <Card title="Price by team size" sub="typical yearly price of a plan that has the recommended features" flush>
-              <table className="tbl compact">
-                <thead><tr><th>Users</th><th>A year</th><th>Per user a month</th><th>Based on</th></tr></thead>
-                <tbody>{rec.by_users.map((r: any) => (
-                  <tr key={r.users} style={r.users === users ? { fontWeight: 600 } : undefined}>
-                    <td>{r.users}</td><td>{rs(r.avg_yearly_inr)}</td><td>{rs(r.avg_per_user_month_inr)}</td>
-                    <td className="small muted">{r.count ? `${r.count} of ${a.total} competitors` : 'no price yet'}</td>
-                  </tr>))}</tbody>
-              </table>
-              <div className="card-b small row wrap" style={{ gap: 6 }}>Team sizes to show
-                <input type="text" value={sizesText} aria-label="Team sizes, separated by commas" onChange={(e) => setSizesText(e.target.value)}
-                  onBlur={() => { const v = [...new Set(sizesText.split(/[,\s]+/).map(Number).filter((x) => x >= 1))].slice(0, 8); if (v.length) { setSizes(v.join(', ')); setSizesText(v.join(', ')); } else setSizesText(sizes); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} style={{ width: 150 }} />
-                <span className="xs muted">for example 1, 5, 10, 25</span></div>
-            </Card>)}
-
-          <Card title="Price by plan level" sub={`yearly, ${users} user${users === 1 ? '' : 's'}`}>
-            {rec.ladder.length === 0 ? <div className="small muted">No plan has a level yet. Give each plan a level (Free, Entry, Mid, Top, Enterprise) on the competitor page.</div> : (
-              <div className="stack" style={{ gap: 10 }}>
-                {rec.ladder.map((l: any) => (
-                  <div key={l.tier_tag}>
-                    <div className="row" style={{ gap: 8 }}><span className="strong" style={{ width: 82 }}>{l.label}</span>
-                      <span aria-hidden style={{ flex: 1, height: 8, borderRadius: 99, background: 'var(--surface-muted)' }}><span style={{ display: 'block', width: `${l.price.avg_yearly_inr ? Math.max(4, (100 * l.price.avg_yearly_inr) / maxLadder) : 0}%`, height: 8, borderRadius: 99, background: 'var(--sd-accent)' }} /></span>
-                      <span className="strong" style={{ minWidth: 70, textAlign: 'right' }}>{l.tier_tag === 'free' ? 'Free' : rs(l.price.avg_yearly_inr)}</span></div>
-                    <div className="xs muted" style={{ marginLeft: 90 }}>{l.plans} plan{l.plans === 1 ? '' : 's'} · {l.feature_count} common feature{l.feature_count === 1 ? '' : 's'}{l.price.min_yearly_inr !== null && l.tier_tag !== 'free' ? ` · ${rs(l.price.min_yearly_inr)} to ${rs(l.price.max_yearly_inr)}` : ''}{l.price.once_count ? ` · ${l.price.once_count} paid once` : ''}</div>
-                  </div>))}
-              </div>)}
-            <div style={{ marginTop: 12 }}><Link className="btn sm" href={`${base}/planner`}>Plan our own levels</Link></div>
-          </Card>
-        </div>
-      </div>
-
-      {(d.hints.length > 0 || a.with_features < 3) && (
-        <div className="callout" style={{ marginTop: 14 }}>
-          {d.hints.length > 0 && <><div className="small strong" style={{ marginBottom: 4 }}>To trust these numbers more</div>
-          <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{d.hints.map((h: string) => <li key={h}>{h}</li>)}</ul></>}
-          {a.with_features < 3 && <div className="row wrap" style={{ gap: 10, marginTop: d.hints.length ? 10 : 0 }}><span className="small">Want to see how this works with data in it?</span>{sampleButton}</div>}
-          {err && <div className="small" style={{ color: 'var(--bad)', marginTop: 6 }}>{err}</div>}
-        </div>)}
-    </div>
+      </nav>
+    </>
   );
+
+  const list = (
+    <section className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-[11rem] flex-1">
+          <div className="whitespace-nowrap text-xl font-semibold tracking-tight text-[var(--text-heading)]">{scoped.length} competitor{scoped.length === 1 ? '' : 's'}{hasParts && scope ? ` for ${scope}` : ''}</div>
+          {mix && <div className="mt-0.5 text-[13px] text-[var(--text-muted)]">{mix}</div>}
+        </div>
+        <label className="relative block w-full screen-lg:w-52">
+          <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input type="search" value={q} onChange={(e) => { setQ(e.target.value); pg.setPage(1); }} placeholder="Search competitors" aria-label="Search competitors" className="h-9 w-full rounded-lg border border-[var(--divider)] bg-[var(--search-bg)] pr-2 text-sm" style={{ paddingLeft: 32 }} />
+        </label>
+        <div className="seg" role="group" aria-label="How to show">
+          <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => pickView('list')} aria-label="List" title="List" style={{ padding: '5px 9px' }}><List size={15} /></button>
+          <button type="button" className={view === 'cards' ? 'on' : ''} onClick={() => pickView('cards')} aria-label="Cards" title="Cards" style={{ padding: '5px 9px' }}><LayoutGrid size={15} /></button>
+        </div>
+        <div className="seg" role="group" aria-label="Order">
+          <button type="button" className={sort === 'name' ? 'on' : ''} onClick={() => setSort('name')}>A to Z</button>
+          <button type="button" className={sort === 'recent' ? 'on' : ''} onClick={() => setSort('recent')}>Recently updated</button>
+        </div>
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="loading">
+          {q ? `No competitor matches “${q}”.` : hasParts && scope ? `No competitor is recorded for ${scope} yet.` : 'No competitors yet.'}
+          {!q && <div className="row wrap" style={{ marginTop: 10, justifyContent: 'center' }}><button className="btn primary" onClick={onAdd}>Add a competitor{hasParts && scope ? ` for ${scope}` : ''}</button></div>}
+        </div>
+      ) : (
+        <ul role="list" className={view === 'cards' ? 'm-0 grid list-none gap-3 pt-5' : 'm-0 list-none p-0'} style={view === 'cards' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' } : undefined}>
+          {pg.rows.map((c: any, i: number) => {
+            const hue = hueOf(String(c.title));
+            const mine = scopesOf(c);
+            const extra = more.get(c.id) || {};
+            const company = [extra.legal_name && extra.legal_name !== c.title ? extra.legal_name : '', host(extra.website)].filter(Boolean).join(' · ');
+            const made: string[] = sells.get(c.id) || [];
+            const threat = suggestThreat(c.tier, extra.segment_overlap);
+            const facts: [string, string][] = ([['Started', extra.founded_year ? String(extra.founded_year) : ''], ['People', extra.size_band ? String(extra.size_band) : ''], ['Head office', extra.hq_country ? String(extra.hq_country) : '']] as [string, string][]).filter(([, v]) => v);
+            const threatBadge = threat ? <span className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[12px] font-semibold" style={{ background: tint(THREAT_COLOR[threat]), color: THREAT_COLOR[threat] }} title="Worked out from tier and overlap">{threat} threat</span> : null;
+            const avatar = <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-lg font-semibold ${view === 'cards' ? 'h-11 w-11 text-lg' : 'h-10 w-10 text-base'}`} style={{ color: hue, background: `color-mix(in srgb, ${hue} 15%, transparent)` }}>{String(c.title).charAt(0).toUpperCase()}</span>;
+            const kind = <span className="badge">{KIND[c.kind] || 'Competitor'}</span>;
+            const parts = mine.length === 0 ? <span className="badge">Whole product</span> : <>{mine.slice(0, view === 'cards' ? 3 : 2).map((s) => <span key={s} className="badge">{s}</span>)}{mine.length > (view === 'cards' ? 3 : 2) && <span className="xs muted">+{mine.length - (view === 'cards' ? 3 : 2)}</span>}</>;
+            return (
+              <li key={c.id}>
+                {c._whole && (i === 0 || !pg.rows[i - 1]._whole) && <div className={`bg-[var(--search-bg)] px-4 py-1.5 text-[12px] text-[var(--text-muted)] ${view === 'cards' ? 'col-span-full mb-1 rounded-md' : 'border-b border-[var(--divider)]'}`}>These compete with the whole product, so they count for {scope} too</div>}
+                {view === 'cards' ? (
+                  <Link href={`${base}/${c.id}`} className="group flex h-full flex-col gap-2.5 rounded-xl border border-[var(--divider)] p-4 no-underline transition-colors hover:border-[var(--sd-accent)] hover:no-underline">
+                    <span className="flex items-center gap-3">
+                      {avatar}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-semibold text-[var(--text-heading)]">{c.title}</span>
+                        <span className="block truncate text-[12px] text-[var(--text-muted)]">{[(KIND[c.kind] || 'Competitor').replace(' competitor', ''), company].filter(Boolean).join(' · ')}</span>
+                      </span>
+                    </span>
+                    {c.positioning && <span className="line-clamp-2 text-[13px] text-[var(--text-secondary)]">{c.positioning}</span>}
+                    {facts.length > 0 && <span className="grid grid-cols-3 gap-2 border-t border-[var(--divider)] pt-2.5 text-[12px]">{facts.map(([l, v]) => <span key={l} className="min-w-0"><span className="block text-[11px] text-[var(--text-muted)]">{l}</span><span className="block truncate font-medium text-[var(--text-heading)]" title={v}>{v}</span></span>)}</span>}
+                    {made.length > 0 && <span className="text-[12px] text-[var(--text-muted)]"><span className="font-medium text-[var(--text-secondary)]">Sells </span>{made.slice(0, 3).join(', ')}{made.length > 3 ? ` +${made.length - 3}` : ''}</span>}
+                    {hasParts && mine.length > 0 && <span className="flex flex-wrap items-center gap-1">{parts}</span>}
+                    <span className="mt-auto flex items-center justify-between gap-2 pt-1 text-[12px] text-[var(--text-muted)]">{threatBadge}<span>{ago(c.last_update)}</span></span>
+                  </Link>
+                ) : (
+                  <Link href={`${base}/${c.id}`} className="group flex items-center gap-3 border-b border-[var(--divider)] px-4 py-3 no-underline transition-colors hover:bg-[var(--search-bg)] hover:no-underline">
+                    {avatar}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2"><span className="truncate text-[15px] font-semibold text-[var(--text-heading)]">{c.title}</span><span className="hidden screen-lg:inline-flex">{kind}</span></span>
+                      <span className="block truncate text-[13px] text-[var(--text-muted)]">{[company, made.length ? `Sells ${made.slice(0, 3).join(', ')}${made.length > 3 ? ` +${made.length - 3}` : ''}` : ''].filter(Boolean).join(' · ') || 'Company not added'}</span>
+                      <span className="block truncate text-[13px] text-[var(--text-secondary)]">{c.positioning || 'No description yet.'}</span>
+                      {facts.length > 0 && <span className="block truncate text-[12px] text-[var(--text-muted)]">{facts.map(([l, v], i) => <span key={l}>{i > 0 && ' · '}{l} <span className="text-[var(--text-secondary)]">{v}</span></span>)}</span>}
+                      <span className="block truncate text-[12px] text-[var(--text-muted)] screen-lg:hidden">{ago(c.last_update)}</span>
+                    </span>
+                    {hasParts && <span className="hidden shrink-0 items-center gap-1 screen-lg:flex">{parts}</span>}
+                    <span className="hidden w-40 shrink-0 flex-col items-end gap-1 text-right text-[13px] text-[var(--text-muted)] screen-lg:flex">{threatBadge}<span>{ago(c.last_update)}</span></span>
+                    <ChevronRight size={16} aria-hidden className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                )}
+              </li>);
+          })}
+        </ul>)}
+      <div className="[&_.pager]:border-t-0! [&_.pager]:px-0! [&_.pager]:pt-5!"><Pager {...pg} /></div>
+    </section>
+  );
+
+  return hasParts ? <div className="screen-lg:flex screen-lg:items-start screen-lg:gap-4">{rail}{list}</div> : list;
 }

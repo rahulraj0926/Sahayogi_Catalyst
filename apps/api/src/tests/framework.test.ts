@@ -1,4 +1,4 @@
-/* Lifecycle framework: 13 phases, 70 steps, weighted completion. No database needed. Run: ts-node --transpile-only src/tests/framework.test.ts */
+/* Lifecycle framework: 13 phases, 70 steps, completion (plain average, no weights). No database needed. Run: ts-node --transpile-only src/tests/framework.test.ts */
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -23,24 +23,17 @@ async function main() {
     assert.deepEqual(fw.phases.map((p: any) => p.engine).sort((a: number, b: number) => a - b), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   });
 
-  await ok('every phase percent is the weighted share of its steps', () => {
+  await ok('every phase percent is the plain average of its steps, with no weights', () => {
     const r = framework.evaluate(store);
     for (const p of r.phases) {
-      const w = p.steps.reduce((a: number, s: any) => a + s.weight, 0);
-      const e = p.steps.reduce((a: number, s: any) => a + s.weight * s.fraction, 0);
-      assert.equal(p.weightTotal, w);
-      assert.equal(p.percent, Math.round((e / w) * 100), `phase ${p.n}`);
+      const avg = p.steps.reduce((a: number, s: any) => a + s.fraction, 0) / p.steps.length;
+      assert.equal(p.percent, Math.round(avg * 100), `phase ${p.n}`);
       assert.ok(p.percent >= 0 && p.percent <= 100);
-      assert.ok(Math.abs(p.steps.reduce((a: number, s: any) => a + s.share, 0) - 100) <= 3, 'shares add up to about 100');
+      for (const s of p.steps) assert.ok(s.weight === undefined && s.tier === undefined && s.share === undefined, 'no weight fields on a step');
+      assert.equal(p.weightTotal, undefined);
     }
-  });
-
-  await ok('a bigger step moves its phase more than a small one (wireframes vs visual style)', () => {
-    const p5 = framework.evaluate(store).phases.find((p: any) => p.n === 5);
-    const wire = p5.steps.find((s: any) => s.id === 'P5.3');
-    const style = p5.steps.find((s: any) => s.id === 'P5.4');
-    assert.ok(wire.weight > style.weight);
-    assert.ok(wire.share > style.share);
+    assert.equal(r.overall, Math.round(r.phases.reduce((a: number, p: any) => a + p.percent, 0) / r.phases.length));
+    assert.equal((r as any).tiers, undefined);
   });
 
   await ok('a new record raises the percent; a sample or an unreviewed drafted record does not', () => {
@@ -53,20 +46,10 @@ async function main() {
     assert.equal(pct(), mid, 'a sample record counts for nothing');
   });
 
-  await ok('weights can be changed per product and put back', () => {
-    const base = framework.evaluate(store);
-    const w0 = base.phases.find((p: any) => p.n === 5).steps.find((s: any) => s.id === 'P5.4').weight;
-    framework.setWeights(store, { step: 'P5.4', tier: 'core' });
-    const after = framework.evaluate(store).phases.find((p: any) => p.n === 5).steps.find((s: any) => s.id === 'P5.4');
-    assert.equal(after.tier, 'core');
-    assert.ok(after.weight > w0);
-    framework.setWeights(store, { points: { core: 20 } });
-    assert.equal(framework.evaluate(store).tiers.find((t: any) => t.tier === 'core').points, 20);
-    framework.setWeights(store, { reset: true });
-    assert.equal(framework.evaluate(store).phases.find((p: any) => p.n === 5).steps.find((s: any) => s.id === 'P5.4').weight, w0);
-    assert.throws(() => framework.setWeights(store, { step: 'P9.9', tier: 'core' }));
-    assert.throws(() => framework.setWeights(store, { step: 'P5.4', tier: 'huge' }));
-    assert.throws(() => framework.setWeights(store, { points: { core: 0 } }));
+  await ok('the weights controls are gone', () => {
+    assert.equal((framework as any).setWeights, undefined);
+    assert.equal((framework as any).weights, undefined);
+    assert.ok(!JSON.stringify(framework.FRAMEWORK).includes('"tier"'), 'framework data holds no tiers');
   });
 
   await ok('the detail view carries the framework text and what shows a step is done', () => {
@@ -76,7 +59,7 @@ async function main() {
     assert.equal(framework.evaluate(store).phases.find((x: any) => x.engine === 4).steps[0].what, undefined, 'summary has no long text');
   });
 
-  await ok('the lifecycle overview carries the weighted percent of every phase', () => {
+  await ok('the lifecycle overview carries the percent of every phase', () => {
     const o = lifecycle.overview(store, gates);
     assert.equal(o.phases.length, 13);
     for (const p of o.phases) assert.ok(typeof p.percent === 'number' && p.stepsTotal > 0 && p.title);

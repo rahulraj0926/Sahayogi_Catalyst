@@ -13,7 +13,7 @@ async function main() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { preview: true, abortOnError: false, logger: false });
   configureApp(app);
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  const cfg = new DocumentBuilder().setTitle('Sahayogi Platform API').setDescription('Typed, versioned API under /api/v1, plus the older /api routes (deprecated) listed from the route table.').setVersion(pkg.version).addApiKey({ type: 'apiKey', name: 'X-Actor', in: 'header' }, 'actor').build();
+  const cfg = new DocumentBuilder().setTitle('Sahayogi Catalyst API').setDescription('Typed, versioned API under /api/v1, plus the older /api routes (deprecated) listed from the route table.').setVersion(pkg.version).addApiKey({ type: 'apiKey', name: 'X-Actor', in: 'header' }, 'actor').build();
   const { addLegacyPaths } = await import('./legacy-openapi');
   const { routes } = await import('./legacy/router');
   const doc = addLegacyPaths(SwaggerModule.createDocument(app, cfg), routes as any);

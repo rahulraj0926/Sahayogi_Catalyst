@@ -4,6 +4,7 @@ import { Badge, Bar, ErrorBox, Loading, Page } from '@/components/ui';
 import { useApi } from '@/lib/api';
 import { Pager, usePaged } from '@/components/kit';
 import { PHASE_SHORT } from '@/components/shell/groups';
+import Progress from './Progress';
 import type { FeatureProps } from '../types';
 
 export default function Overview({ pid }: FeatureProps) {
@@ -40,6 +41,7 @@ export default function Overview({ pid }: FeatureProps) {
         </ul>
         <Pager {...pg} />
       </section>
+      <Progress pid={pid} current={data.current} />
     </Page>
   );
 }

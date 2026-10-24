@@ -55,6 +55,8 @@ export class PersistenceService implements OnModuleInit {
     await this.repo.ping();
     if (!(await this.repo.schemaReady())) throw new Error('The database has no tables yet. Run `npm run db:migrate` (then `npm run seed`) and start again.');
     try { await this.repo.ensureTables(); } catch (e: any) { this.log.warn(`Could not create the members table (${e.message}). Run \`npm run db:apply\` in apps/api.`); }
+    const added = await this.repo.ensureColumns();
+    if (added.length) this.log.warn(`added ${added.length} missing database column(s): ${added.join(', ')}`);
     await this.loadAll();
   }
 
@@ -107,8 +109,13 @@ export class PersistenceService implements OnModuleInit {
    */
   async reloadProduct(id: string) {
     const pf = this.portfolio;
-    const [one] = await this.repo.loadProducts(id);
-    if (!one) return;
+    const found = await this.repo.loadProducts(id);
+    // Only ever put back the product that was asked for. Anything else would overwrite another product in memory.
+    const one = found.find((x) => x.bundle.entry?.id === id);
+    if (!one) {
+      this.log.error(`could not reload ${id}: PostgreSQL does not return it (${found.length} other rows ignored); memory is left as it is`);
+      return;
+    }
     const at = pf.reg.products.findIndex((e: any) => e.id === id);
     if (at >= 0) pf.reg.products[at] = one.bundle.entry; else pf.reg.products.push(one.bundle.entry);
     pf.cache.set(id, new Store(one.bundle.data, null));
@@ -136,6 +143,9 @@ export class PersistenceService implements OnModuleInit {
   /** The registry plus every changed product, in ONE transaction: either all of it is stored or none of it. */
   private async doFlush() {
     const pf = this.portfolio;
+    // Never write a registry that lists a product twice: it means memory is wrong, and saving it would copy the mistake into the database.
+    const seen = new Set<string>();
+    for (const p of pf.reg.products) { if (seen.has(p.id)) throw new Error(`refusing to save: product ${p.id} is in memory twice`); seen.add(p.id); }
     const ids: string[] = [...new Set<string>([...pf.dirty, ...pf.reg.products.map((p: any) => p.id).filter((id: string) => !this.states.has(id))])];
     if (!pf.registryDirty && !ids.length && !pf.sysEvents.length) return;
     const events: SystemEvent[] = pf.sysEvents.slice();

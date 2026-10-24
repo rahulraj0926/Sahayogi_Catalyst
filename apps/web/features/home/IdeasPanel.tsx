@@ -59,7 +59,7 @@ export function IdeasPanel() {
   const list = ideas.data?.data ?? [];
 
   return (
-    <Card title={`${C.ideasTitle}${ideas.data ? ` (${list.length})` : ''}`} description={canDecide ? 'Accept, shortlist or reject each one.' : 'The founder accepts or rejects each one.'}>
+    <Card title={`${C.ideasTitle}${ideas.data ? ` (${list.length})` : ''}`}>
       {act.box}
       <div className="mb-3 flex gap-2">
         <input className="h-9 min-w-0 flex-1 rounded-md border border-[var(--card-border)] bg-[var(--surface)] px-3 text-sm" placeholder="Add an idea in one line…" aria-label="New idea" maxLength={200} value={line} onChange={(e) => setLine(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && line.trim().length >= 3 && add()} />

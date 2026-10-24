@@ -139,7 +139,7 @@ export function Header({ pid, who, onWho, approvals, onMenu, edge = 0 }: { edge?
     <header className="relative z-30 flex h-[var(--header-h)] shrink-0 items-center gap-2 bg-[var(--shell-bg)] pl-[var(--page-pad-x)]" style={{ paddingRight: `calc(var(--page-pad-x) - 0.3rem + ${edge}px)` }}>
       {openMenu && <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />}
 
-      <Link href="/" aria-label="Sahayogi portfolio" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--sd-accent)] text-sm font-bold text-[var(--sd-accent-ink)] screen-sm:hidden">S</Link>
+      <Link href="/" aria-label="Sahayogi Catalyst home" className="flex h-8 w-8 shrink-0 items-center justify-center screen-sm:hidden"><img src="/logo.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" /></Link>
 
       {onMenu && <button type="button" onClick={onMenu} aria-label="Product menu" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--search-bg)] screen-sm:hidden"><Menu size={20} /></button>}
 

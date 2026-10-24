@@ -1,7 +1,9 @@
 'use client';
 /** One competitor on one page: overview (editable), prices, capabilities, files, notes, sources. Prototype: cw_profile.js */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 import { Badge, Card, Empty, ErrorBox, Loading, Page } from '@/components/ui';
 import { Field, Modal, Tabs, useAction, useConfirm, fmtDate } from '@/components/kit';
 import { actor, api, useApi } from '@/lib/api';
@@ -9,77 +11,66 @@ import { VerifyDialog } from './Experts';
 import { useAssist } from '../files/Extras';
 import Plans from './Plans';
 import { ImportDialog } from './Import';
+import { ago, hueOf } from './Dashboard';
+import { filled, F } from './profileFields';
+import Overview from './Overview';
 
+const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const sp = (s?: string) => String(s ?? '').replace(/_/g, ' ');
-const filled = (v: any) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0);
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (d: string, n: number) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? '' : `${c === 'INR' ? 'Rs' : c} ${Number(a).toLocaleString('en-IN')}`);
 
-type FD = { kind: 'text' | 'longtext' | 'enum' | 'list' | 'number'; label: string; options?: [string, string][] };
-const OVERLAP: [string, string][] = [['high', 'High overlap'], ['medium', 'Some overlap'], ['low', 'Little overlap']];
-const SIZES = ['1-10', '11-50', '51-200', '201-1000', '1001-5000', '5000+'];
-const OWN: [string, string][] = [['private', 'Private'], ['public', 'Listed company'], ['subsidiary', 'Part of a bigger group'], ['state', 'State owned'], ['unknown', 'Not known']];
-const F: Record<string, FD> = {
-  tier: { kind: 'enum', label: 'Tier', options: [['T1', 'Tier 1: head to head'], ['T2', 'Tier 2: nearby'], ['T3', 'Tier 3: watch'], ['S', 'Substitute or alternative']] },
-  website: { kind: 'text', label: 'Website' }, legal_name: { kind: 'text', label: 'Legal name' },
-  positioning: { kind: 'longtext', label: 'How they position themselves' }, target_customers: { kind: 'longtext', label: 'Who they sell to' },
-  segment_overlap: { kind: 'enum', label: 'Overlap with our customers', options: OVERLAP },
-  strengths: { kind: 'longtext', label: 'What they are good at' }, weaknesses: { kind: 'longtext', label: 'Where they are weak' },
-  gtm_channels: { kind: 'list', label: 'How they sell' }, technology_notes: { kind: 'longtext', label: 'Technology notes' },
-  certifications: { kind: 'list', label: 'Certifications' }, key_customers: { kind: 'list', label: 'Well-known customers' },
-  founded_year: { kind: 'number', label: 'Founded' }, hq_country: { kind: 'text', label: 'Head office' },
-  size_band: { kind: 'enum', label: 'Number of people', options: SIZES.map((s) => [s, `${s} people`]) }, headcount_note: { kind: 'text', label: 'About their size' },
-  funding_summary: { kind: 'longtext', label: 'Funding' }, ownership: { kind: 'enum', label: 'Ownership', options: OWN },
-  pricing_na_reason: { kind: 'longtext', label: 'Why there is no price' },
-  scopes: { kind: 'list', label: 'Competes with (part of our product)' },
-};
-const SECTIONS: { id: string; title: string; fields: string[]; more: string[] }[] = [
-  { id: 'about', title: 'About them', fields: ['tier', 'scopes', 'positioning', 'target_customers', 'website', 'segment_overlap'], more: ['legal_name'] },
-  { id: 'sw', title: 'Strengths and weaknesses', fields: ['strengths', 'weaknesses'], more: [] },
-  { id: 'sell', title: 'How they sell and build', fields: ['gtm_channels', 'technology_notes', 'certifications', 'key_customers'], more: [] },
-  { id: 'facts', title: 'Company facts', fields: ['founded_year', 'hq_country', 'size_band', 'ownership'], more: ['headcount_note', 'funding_summary'] },
-];
-const TIERS: [string, string][] = [['T1', 'Tier 1: head to head'], ['T2', 'Tier 2: nearby'], ['T3', 'Tier 3: watch'], ['S', 'Substitute or alternative']];
 
-function Control({ d, value, onChange }: { d: FD; value: any; onChange: (v: any) => void }) {
-  if (d.kind === 'enum') return <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}><option value="">Not filled in</option>{d.options!.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
-  if (d.kind === 'longtext') return <textarea rows={3} style={{ width: '100%' }} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
-  if (d.kind === 'list') return <input type="text" style={{ width: '100%' }} value={Array.isArray(value) ? value.join(', ') : value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder="separate with commas" />;
-  if (d.kind === 'number') return <input type="number" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
-  return <input type="text" style={{ width: '100%' }} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
-}
-const norm = (d: FD, v: any) => (d.kind === 'number' ? (v === '' || v === undefined ? '' : Number(v)) : d.kind === 'list' ? (Array.isArray(v) ? v : String(v ?? '').trim() ? String(v).split(/[;,]/).map((s) => s.trim()).filter(Boolean) : '') : typeof v === 'string' ? v.trim() : v);
-const show = (k: string, v: any) => {
-  if (!filled(v)) return <dd className="muted">Not filled in yet</dd>;
-  const d = F[k];
-  if (d?.kind === 'enum') return <dd>{d.options!.find(([x]) => x === v)?.[1] ?? String(v)}</dd>;
-  if (k === 'website') return <dd><a href={/^https?:/.test(v) ? v : `https://${v}`} target="_blank" rel="noopener noreferrer">{v}</a></dd>;
-  if (Array.isArray(v)) return <dd>{v.map((x) => <Badge key={x}>{x}</Badge>)}</dd>;
-  return <dd>{String(v)}</dd>;
-};
-
-function Section({ sec, c, onSaved }: { sec: (typeof SECTIONS)[number]; c: any; onSaved: () => void }) {
+/** Which part of our product they compete with, changed right where it is shown. Pick the parts we already know, or type a new one. */
+function CompetesWith({ c, known, onSaved }: { c: any; known: string[]; onSaved: () => void }) {
+  const own: string[] = Array.isArray(c.scopes) ? c.scopes : [];
   const [edit, setEdit] = useState(false);
-  const [vals, setVals] = useState<Record<string, any>>({});
+  const [pick, setPick] = useState<string[]>([]);
+  const [extra, setExtra] = useState<string[]>([]);
+  const [typed, setTyped] = useState('');
   const act = useAction();
-  const keys = [...sec.fields, ...sec.more];
-  const start = () => { setVals(Object.fromEntries(keys.map((k) => [k, c[k]]))); setEdit(true); };
+  const key = (x: string) => x.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '');
+  const options = Array.from(new Map([...known, ...own, ...extra].map((x) => [key(x), x])).values()).filter((x) => key(x));
+  const start = () => { setPick(own); setExtra([]); setTyped(''); setEdit(true); };
+  const add = () => { const v = typed.trim(); if (!v) return; const hit = options.find((x) => key(x) === key(v)) || v; setExtra((e) => (e.some((x) => key(x) === key(hit)) ? e : [...e, hit])); setPick((p) => (p.some((x) => key(x) === key(hit)) ? p : [...p, hit])); setTyped(''); };
+  if (!edit) {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        {own.length ? own.map((x) => <span key={x} className="badge">{x}</span>) : 'Whole product'}
+        <button type="button" className="text-[13px] font-normal text-[var(--text-muted)] hover:text-[var(--text-heading)]" onClick={start}>Edit</button>
+      </span>
+    );
+  }
   return (
-    <Card title={sec.title} right={edit ? undefined : <button className="btn sm" onClick={start}>Edit</button>}>
-      {!edit ? <dl className="kv">{keys.map((k) => <div key={k} style={{ display: 'contents' }}><dt>{F[k].label}</dt>{show(k, c[k])}</div>)}</dl> : (
-        <div>
-          {keys.map((k) => <Field key={k} label={F[k].label}><Control d={F[k]} value={vals[k]} onChange={(v) => setVals({ ...vals, [k]: v })} /></Field>)}
-          {act.box}
-          <div className="row"><button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
-            const fields: any = {};
-            for (const k of keys) { const v = norm(F[k], vals[k]); if (JSON.stringify(v ?? '') !== JSON.stringify(c[k] ?? '')) fields[k] = v; }
-            if (Object.keys(fields).length) await api(`/items/${c.id}`, { method: 'PATCH', body: { fields } });
-            setEdit(false); onSaved();
-          })}>Save</button><button className="btn" onClick={() => setEdit(false)}>Cancel</button></div>
-        </div>
-      )}
-    </Card>
+    <div className="flex min-w-[16rem] max-w-[24rem] flex-col gap-2 rounded-xl border border-[var(--divider)] p-3 font-normal">
+      <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={pick.length === 0} onChange={() => setPick([])} />Whole product</label>
+      {options.map((x) => (
+        <label key={x} className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={pick.some((y) => key(y) === key(x))} onChange={(e) => setPick((p) => (e.target.checked ? [...p, x] : p.filter((y) => key(y) !== key(x))))} />{x}</label>
+      ))}
+      <div className="flex gap-2">
+        <input type="text" value={typed} onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} placeholder="Add a part of our product" aria-label="Add a part of our product" className="min-w-0 flex-1" style={{ height: 32, minHeight: 0, fontSize: 13 }} />
+        <button type="button" className="btn sm" disabled={!typed.trim()} onClick={add}>Add</button>
+      </div>
+      {act.box}
+      <div className="flex gap-2">
+        <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => act.run(async () => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { scopes: pick.length ? pick : '' } } }); setEdit(false); onSaved(); })}>Save</button>
+        <button type="button" className="btn sm" onClick={() => setEdit(false)}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/** Change a competitor's name. */
+function RenameCompetitor({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () => void }) {
+  const [name, setName] = useState(c.title || '');
+  const act = useAction();
+  return (
+    <Modal title={`Rename ${c.title}`} onClose={onClose}>
+      <Field label="Name"><input type="text" autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) e.currentTarget.form?.requestSubmit(); }} /></Field>
+      {act.box}
+      <button className="btn primary" disabled={act.busy || !name.trim() || name.trim() === c.title} onClick={() => act.run(async () => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { title: name.trim() } } }); onDone(); })}>Save</button>
+    </Modal>
   );
 }
 
@@ -92,7 +83,7 @@ function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lin
   const choices: any[] = (units.data?.choices || []).filter((x: any) => !x.usage || units.data?.sells_usage !== false);
   const set = (k: string, x: any) => setV({ ...v, [k]: x });
   return (
-    <Modal title={`Add a price for ${c.title}`} onClose={onClose}>
+    <Modal title={`Add a plan for ${c.title}`} onClose={onClose}>
       <Field label="Name of the plan or product"><input type="text" value={v.plan} onChange={(e) => set('plan', e.target.value)} placeholder="Pro plan" /></Field>
       <div className="row"><Field label="Amount"><input type="number" min={0} value={v.amount} onChange={(e) => set('amount', e.target.value)} /></Field><Field label="Currency"><select value={v.currency} onChange={(e) => set('currency', e.target.value)}>{['INR', 'USD', 'EUR', 'GBP'].map((x) => <option key={x}>{x}</option>)}</select></Field></div>
       <Field label="What is the price for?" help="This decides how the cost is scaled in comparisons."><select value={v.for} onChange={(e) => set('for', e.target.value)}><option value="">Choose one</option>{choices.map((x) => <option key={x.v} value={x.v}>{x.label}</option>)}</select></Field>
@@ -193,6 +184,11 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   const [newFeature, setNewFeature] = useState('');
   const [newTag, setNewTag] = useState(''); const [newNote, setNewNote] = useState(''); const [naWhy, setNaWhy] = useState<string | null>(null);
   const [assistMsg, setAssistMsg] = useState<string | null>(null);
+  const [editDesc, setEditDesc] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const router = useRouter();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [showDone, setShowDone] = useState(false); const [newTodo, setNewTodo] = useState(''); const [editTodo, setEditTodo] = useState<{ i: number; text: string } | null>(null);
   if (loading || prices.loading || caps.loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error || 'Not found'} />;
   const c = data.item;
@@ -222,63 +218,121 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   const server = ((comp.data as any[]) || []).find((x) => x.id === id);
   const pct = server ? server.score : Math.round((checks.filter((x) => x.done).length / checks.length) * 100);
   const toggleTodo = (key: string, on: boolean) => { const cur = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []); if (on) cur.add(key); else cur.delete(key); patch(id, { todo_done: cur.size ? [...cur] : '' }); };
+  const myTodos: string[] = Array.isArray(c.todo_items) ? c.todo_items : [];
+  const doneSet = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []);
+  const saveTodos = (items: string[], done: Set<string>) => patch(id, { todo_items: items.length ? items : '', todo_done: done.size ? [...done] : '' });
+  const addTodo = () => { const t = newTodo.trim(); if (!t || myTodos.includes(t)) { setNewTodo(''); return; } setNewTodo(''); saveTodos([...myTodos, t], doneSet); };
+  const removeTodo = (i: number) => { const d = new Set(doneSet); d.delete(`my:${myTodos[i]}`); saveTodos(myTodos.filter((_, j) => j !== i), d); };
+  const renameTodo = (i: number, text: string) => { const t = text.trim(); if (!t) return; const d = new Set(doneSet); if (d.delete(`my:${myTodos[i]}`)) d.add(`my:${t}`); setEditTodo(null); saveTodos(myTodos.map((x, j) => (j === i ? t : x)), d); };
+  type Todo = { key: string; label: string; done: boolean; auto: boolean; mine?: number };
+  const todoAll: Todo[] = [
+    ...((server?.items || []) as any[]).map((x) => ({ key: x.key, label: x.label, done: !!x.done, auto: !!x.auto })),
+    ...myTodos.map((t, i) => ({ key: `my:${t}`, label: t, done: doneSet.has(`my:${t}`), auto: false, mine: i })),
+  ];
+  const todoOpen = todoAll.filter((x) => !x.done); const todoDone = todoAll.filter((x) => x.done);
+  const todoRow = (x: Todo) => (
+    <li key={x.key} className="flex items-center gap-2 py-0.5 text-[13px]">
+      {x.mine !== undefined && editTodo?.i === x.mine ? (
+        <span className="row" style={{ gap: 6, flex: 1 }}>
+          <input autoFocus value={editTodo.text} onChange={(e) => setEditTodo({ i: x.mine!, text: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') renameTodo(x.mine!, editTodo.text); if (e.key === 'Escape') setEditTodo(null); }} aria-label="Edit this to-do" style={{ flex: 1, minWidth: 0 }} />
+          <button type="button" className="btn xs primary" disabled={act.busy || !editTodo.text.trim()} onClick={() => renameTodo(x.mine!, editTodo.text)}>Save</button>
+          <button type="button" className="btn xs" onClick={() => setEditTodo(null)}>Cancel</button>
+        </span>
+      ) : (
+        <>
+          <input type="checkbox" checked={x.done} disabled={x.auto || act.busy} onChange={(e) => toggleTodo(x.key, e.target.checked)} aria-label={x.label} title={x.auto ? 'Done by itself once the details are filled in' : undefined} />
+          <span className="min-w-0 flex-1" style={{ textDecoration: x.done ? 'line-through' : 'none', opacity: x.done ? 0.6 : 1 }}>{x.label}</span>
+          {x.mine !== undefined && <><button type="button" className="btn xs ghost" onClick={() => setEditTodo({ i: x.mine!, text: x.label })}>Edit</button><button type="button" className="btn xs ghost" disabled={act.busy} onClick={() => removeTodo(x.mine!)}>Remove</button></>}
+        </>)}
+    </li>
+  );
   const patch = (iid: string, fields: any) => act.run(async () => { await api(`/items/${iid}`, { method: 'PATCH', body: { fields } }); refreshAll(); });
   const runAssist = (a: any, goal: string, label: string) => act.run(async () => {
     const r = await assist.run(a.id, { goal, target: c.id });
     if (r) setAssistMsg(`${a.filename}: ${(r.added || []).length} proposals added to the review inbox${(r.rejected_hallucinations || []).length ? `, ${r.rejected_hallucinations.length} thrown away (quote not in the file)` : ''}${(r.dropped || []).length ? `, ${r.dropped.length} incomplete` : ''}. Nothing is saved until you accept it there.`);
   });
   return (
-    <Page title={c.title} sub={c.tier ? `Tier ${c.tier}` : 'No tier yet'}>
+    <Page title={c.title} right={<>
+      <button type="button" className="btn sm" onClick={() => setRenaming(true)}>Rename</button>
+      <button type="button" className="btn sm danger" disabled={act.busy} onClick={async () => { if (await ask(`Delete “${c.title}” with its plans, ratings and notes? It is kept in history but no longer counted.`, 'Delete')) act.run(async () => { await api(`/items/${id}/status`, { method: 'POST', body: { status: 'Retired' } }); router.push(`/products/${pid}/competitors`); }); }}>Delete</button>
+    </>}>
       {dialog}{assist.dialog}{act.box}
-      <div className="row wrap small" style={{ marginBottom: 10, gap: 16 }}>
-        {c.website && <span><span className="muted">Website </span><a href={/^https?:/.test(c.website) ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer">{c.website}</a></span>}
-      </div>
-      <Tabs value={tab} onChange={setTab} tabs={[['overview', 'Overview'], ['prices', `Plans and prices (${myPrices.length})`], ['files', `Files (${myFiles.length})`], ['notes', `Notes (${myNotes.length})`], ['sources', 'Sources']]} />
-      <div style={{ marginTop: 12 }}>
-        {tab === 'overview' && (
-          <div className="grid g2">
-            <div className="stack">{SECTIONS.map((s) => <Section key={s.id} sec={modScopes.data?.has_modules ? s : { ...s, fields: s.fields.filter((f) => f !== 'scopes') }} c={c} onSaved={refreshAll} />)}</div>
-            <div className="stack">
-              <Card title="How complete is this profile?"><div className="strong" style={{ fontSize: 22 }}>{pct}%</div><div className="small muted">{server ? 'The important items count more.' : ''}</div></Card>
-              <Card title="To do" sub={server ? `${server.done_count} of ${server.total_count} done` : undefined}>
-                <ul className="list" style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>{(server?.items || []).map((x: any) => (
-                  <li key={x.key} style={{ padding: '3px 0' }}>
-                    <label className="row" style={{ gap: 8, alignItems: 'center', cursor: x.auto ? 'default' : 'pointer' }}>
-                      <input type="checkbox" checked={x.done} disabled={x.auto || act.busy} onChange={(e) => toggleTodo(x.key, e.target.checked)} />
-                      <span style={{ textDecoration: x.done ? 'line-through' : 'none', opacity: x.done ? 0.6 : 1 }}>{x.label}</span>
-                      {x.auto && <span className="xs muted">done from what is filled in</span>}
-                    </label>
-                  </li>))}</ul>
-              </Card>
+      <div className="mb-3">
+        <div className="min-w-0">
+        {editDesc !== null ? (
+          <div className="max-w-[70ch]">
+            <textarea autoFocus rows={3} className="w-full" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Say in a line how they compete" aria-label="Description" />
+            <div className="mt-2 flex gap-2">
+              <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => act.run(async () => { await api(`/items/${id}`, { method: 'PATCH', body: { fields: { positioning: editDesc.trim() || null } } }); setEditDesc(null); refreshAll(); })}>Save</button>
+              <button type="button" className="btn sm" onClick={() => setEditDesc(null)}>Cancel</button>
             </div>
           </div>
+        ) : (
+          <p className="m-0 max-w-[70ch] text-[15px] text-[var(--text-heading)]">
+            {c.positioning || <span className="text-[var(--text-muted)]">No description yet.</span>}
+            <button type="button" className="ml-2 text-[13px] text-[var(--text-muted)] hover:text-[var(--text-heading)]" onClick={() => setEditDesc(c.positioning || '')}>{c.positioning ? 'Edit' : 'Add one'}</button>
+          </p>
+        )}
+        {c.website && <a className="mt-1 inline-block text-[13px]" href={/^https?:/.test(c.website) ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer">{c.website}</a>}
+        <div className="mt-1 text-[12px] text-[var(--text-muted)]">Added {c.created_at ? niceDate(c.created_at) : 'on an unknown date'}{c.created_by ? ` by ${c.created_by}` : ''}. Changed {(() => { const t = ago(c.updated_at || c.created_at).replace('Updated ', ''); return t; })()}.</div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-stretch gap-3">
+          {([
+            ['Competes with', <CompetesWith key="scopes" c={c} known={((modScopes.data?.scopes as any[]) || []).map((x) => x.name)} onSaved={refreshAll} />],
+            ['Competitor type', <select key="kind" value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>],
+            ...(filled(c.founded_year) ? [['Founded', String(c.founded_year)]] : []),
+            ...(filled(c.hq_country) ? [['Headquarters', c.hq_country]] : []),
+            ...(filled(c.size_band) ? [['Employees', String(c.size_band)]] : []),
+          ] as [string, React.ReactNode][]).map(([l, v]) => <div key={l} className="min-w-[12rem] rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] px-3.5 py-2.5 [box-shadow:var(--card-shadow)]"><div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{l}</div><div className="mt-1 text-[15px] font-bold text-[var(--text-heading)]">{v}</div></div>)}
+        </div>
+      </div>
+      <div role="tablist" className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-1.5 [box-shadow:var(--card-shadow)]">
+        {([['overview', 'Overview'], ['prices', `Plans & pricing${myPrices.length ? ` (${myPrices.length})` : ''}`], ['files', `Files${myFiles.length ? ` (${myFiles.length})` : ''}`], ['notes', `Notes${myNotes.length ? ` (${myNotes.length})` : ''}`], ['sources', 'Sources']] as [string, string][]).map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            className={`whitespace-nowrap rounded-lg border-0 px-4 py-2 text-[14px] transition-colors ${tab === id ? 'bg-[var(--sd-accent-soft)] font-bold text-[var(--sd-accent)]' : 'bg-transparent font-medium text-[var(--text-muted)] hover:text-[var(--text-heading)]'}`} style={{ minHeight: 0 }}>{label}</button>))}
+      </div>
+      <div>
+        {tab === 'overview' && (
+          <Overview c={c} onOpen={setTab} onAddProduct={() => setAddLine(true)} links={data.links} prices={myPrices} files={myFiles} notes={myNotes} lines={myLines} onSaved={refreshAll} todo={(<>
+            {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}
+            <section className="@container h-full rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-6 [box-shadow:var(--card-shadow)]"><div>
+              <div className="mb-4 flex items-baseline gap-2"><h3 className="m-0 flex-1 text-[18px] font-bold">To do</h3><span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span></div>
+              {todoOpen.length === 0 && <div className="small muted" style={{ marginBottom: 6 }}>Nothing left to do.</div>}
+              <ul className="m-0 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoOpen.map(todoRow)}</ul>
+              {todoDone.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <button type="button" className="btn xs ghost" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>{showDone ? 'Hide' : 'Show'} {todoDone.length} done</button>
+                  {showDone && <ul className="m-0 mt-1 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoDone.map(todoRow)}</ul>}
+                </div>)}
+              <form className="row" style={{ gap: 6, marginTop: 12 }} onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
+                <input value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Add a to-do" aria-label="Add a to-do" style={{ flex: 1, minWidth: 0 }} />
+                <button type="submit" className="btn sm primary" disabled={act.busy || !newTodo.trim()}>Add</button>
+              </form>
+            </div></section>
+          </>)} />
         )}
         {tab === 'prices' && (
           <div className="stack">
-            <div className="row"><span className="small muted">{myLines.length ? `${myLines.length} product${myLines.length === 1 ? '' : 's'}: ${myLines.map((l) => l.product_name).join(', ')}` : 'Only one product? You can skip products and just add prices.'}</span><span className="spacer" /><button className="btn" onClick={() => setAddLine(true)}>Add a product</button><button className="btn" onClick={() => setFromFile(true)}>Add plans from a file</button><a className="btn" href={`/api/v1/competitors/export?id=${encodeURIComponent(id)}&product=${encodeURIComponent(pid)}`} title="Download this competitor's plans as an Excel / CSV file">Download plans</a><button className="btn primary" onClick={() => setAddPrice(true)}>Add a price</button></div>
-            <Plans key={myPrices.map((p) => `${p.id}${p.tier_tag || ''}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} />
-            <Card title="Price records" sub={`${myPrices.length}`} flush>
-              {myPrices.length === 0 ? <Empty>No prices recorded.</Empty> : (
-                <table className="tbl compact"><thead><tr><th>Plan</th>{myLines.length > 0 && <th>Product</th>}<th>Level</th><th>Price</th><th>Kind</th><th>Seen</th><th>Checked</th><th /></tr></thead><tbody>
-                  {myPrices.map((p) => (
-                    <tr key={p.id}><td><Link href={`/products/${pid}/item/${p.id}`}>{p.plan || p.title}</Link></td>{myLines.length > 0 && <td className="small">{lineOf.get(p.id) || <span className="muted">General</span>}</td>}<td><select value={p.tier_tag || ''} onChange={(e) => patch(p.id, { tier_tag: e.target.value || null })} aria-label="Plan level">{TIER_TAGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></td><td>{money(p.amount, p.currency)} <span className="muted small">/ {p.unit}</span></td><td className="small">{sp(p.price_type)}</td>
-                      <td className="small">{fmtDate(p.captured_on)} {p._freshness && p._freshness !== 'fresh' && <Badge kind="warn">{p._freshness}</Badge>}</td>
-                      <td>{unchecked(p) ? <Badge kind="warn">needs a second person</Badge> : p.status === 'Reviewed' ? <Badge kind="ok">{p.verified_by ? `Checked by ${p.verified_by}` : 'Checked'}</Badge> : p.status === 'Disputed' ? <Badge kind="bad">Disputed</Badge> : <Badge kind="warn">Not checked yet</Badge>}</td>
-                      <td className="nowrap">{(unchecked(p) || p.status === 'Draft') && <button className="btn xs" onClick={() => setVerify({ ids: [p.id], label: `${p.plan || p.title}: ${money(p.amount, p.currency)}` })}>Mark as checked</button>} <button className="btn xs danger" onClick={async () => { if (await ask(`Remove "${p.plan || p.id}"? It is kept in history but no longer counted.`, 'Remove')) act.run(async () => { await api(`/items/${p.id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); }); }}>Remove</button></td></tr>
-                  ))}
-                </tbody></table>
-              )}
-            </Card>
-            <Card title="No price published?" sub="If they publish no price, say why">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="spacer" />
+              <a className="btn" href={`/api/v1/competitors/export?id=${encodeURIComponent(id)}&product=${encodeURIComponent(pid)}`} title="Download this competitor's plans as an Excel / CSV file">Download plans</a>
+              <button className="btn" onClick={() => setFromFile(true)} title="Fill in plans from an Excel / CSV file">Import from a file</button>
+              <button className="btn primary" onClick={() => setAddPrice(true)}>Add a plan</button>
+            </div>
+            <Plans key={myPrices.map((p) => `${p.id}${p.tier_tag || ''}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
+            <Card title="No price published?">
               <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="Price on request only" />
               <button className="btn sm" style={{ marginTop: 6 }} onClick={() => patch(id, { pricing_na_reason: (naWhy ?? c.pricing_na_reason ?? '').trim() })}>Save</button>
             </Card>
           </div>
         )}
         {tab === 'files' && (
-          <Card title="Source files" sub="Decks, price lists and PDFs about this competitor. Upload them on the Files page." right={<Link className="btn sm" href={`/products/${pid}/files`}>Upload on Files</Link>}>
+          <Card title="Source files" right={<>
+            <input ref={fileInput} type="file" multiple hidden onChange={(e) => { const fl = e.target.files; if (fl && fl.length) act.run(async () => { for (const file of Array.from(fl)) { const res = await fetch(`/api/v1/attachments?target=${encodeURIComponent(id)}&name=${encodeURIComponent(file.name)}&product=${encodeURIComponent(pid)}`, { method: 'POST', headers: { 'x-actor': actor(), 'content-type': file.type || 'application/octet-stream' }, body: file }); const j = await res.json().catch(() => ({})); if (!res.ok) throw new Error(j.error || `Could not upload ${file.name} (${res.status})`); } refreshAll(); }); e.target.value = ''; }} />
+            <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => fileInput.current?.click()}>{act.busy ? 'Uploading…' : 'Upload a file'}</button>
+          </>}>
             {assistMsg && <div className="callout ok" style={{ marginBottom: 8 }}>{assistMsg} <Link href={`/products/${pid}/inbox`}>Open the review inbox</Link></div>}
-            {myFiles.length === 0 ? <Empty>No files attached to this competitor yet.</Empty> : myFiles.map((a) => (
+            {myFiles.length === 0 ? <Empty>No files yet. Use “Upload a file” for a price list, deck or PDF.</Empty> : myFiles.map((a) => (
               <div key={a.id} className="row wrap" style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
                 <div style={{ flex: 1 }}><div className="strong">{a.filename}</div><div className="small muted">{Math.round(a.size_bytes / 1024)} KB · uploaded {a.uploaded_on} by {a.uploaded_by}</div><Badge kind={a.extracted_text_status === 'ok' ? 'ok' : 'warn'}>{a.extracted_text_status}</Badge></div>
                 <Link className="btn sm" href={`/products/${pid}/files/${a.id}`}>Open in viewer</Link>
@@ -291,7 +345,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
           </Card>
         )}
         {tab === 'notes' && (
-          <Card title="Notes" sub="Things you heard or noticed that do not fit anywhere else">
+          <Card title="Notes">
             <textarea rows={3} style={{ width: '100%' }} value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="What did you notice?" />
             <button className="btn primary" style={{ margin: '6px 0 10px' }} disabled={!newNote.trim()} onClick={() => act.run(async () => { const r = await api<any>('/items', { method: 'POST', body: { type: 'CompetitorNote', fields: { title: `${c.title}: ${newNote.trim().slice(0, 60)}`, text: newNote.trim(), importance: 'medium' } } }); await api('/links', { method: 'POST', body: { type: 'note_on', source: r.item.id, target: id } }); setNewNote(''); refreshAll(); })}>Add note</button>
             {myNotes.length === 0 ? <Empty>No notes yet.</Empty> : myNotes.map((n) => (
@@ -304,6 +358,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
       {addLine && <AddProductLine c={c} onClose={() => setAddLine(false)} onDone={() => { setAddLine(false); refreshAll(); }} />}
       {fromFile && <ImportDialog pid={pid} fixedCompetitor={c.title} onClose={() => setFromFile(false)} onDone={() => { setFromFile(false); refreshAll(); }} />}
       {addPrice && <AddPrice pid={pid} c={c} lines={myLines} onClose={() => setAddPrice(false)} onDone={() => { setAddPrice(false); refreshAll(); }} />}
+      {renaming && <RenameCompetitor c={c} onClose={() => setRenaming(false)} onDone={() => { setRenaming(false); refreshAll(); }} />}
       {verify && <VerifyDialog ids={verify.ids} label={verify.label} onClose={() => setVerify(null)} onDone={() => { setVerify(null); refreshAll(); }} />}
       {cand && <Candidates att={cand} c={c} onClose={() => setCand(null)} onDone={refreshAll} />}
     </Page>
@@ -315,7 +370,7 @@ function SourcesTab({ links, pid }: { links: any[]; pid: string }) {
   const ids = new Set(links.map((l) => l.other));
   const list = ((ev.data?.items as any[]) || []).filter((e) => ids.has(e.id));
   return (
-    <Card title="Sources" sub="Evidence that backs what we know about this competitor" flush>
+    <Card title="Sources" flush>
       {list.length === 0 ? <Empty>No evidence is linked to this competitor yet. Evidence is added when a file or web page is used for a price or capability.</Empty> : (
         <table className="tbl compact"><thead><tr><th>ID</th><th>Evidence</th><th>Grade</th><th>Retrieved</th></tr></thead><tbody>
           {list.map((e) => <tr key={e.id}><td><Link href={`/products/${pid}/item/${e.id}`}>{e.id}</Link></td><td>{e.url ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.title}</a> : e.title}</td><td><Badge kind="info">{e.grade || '?'}</Badge></td><td>{fmtDate(e.retrieved_on)}</td></tr>)}

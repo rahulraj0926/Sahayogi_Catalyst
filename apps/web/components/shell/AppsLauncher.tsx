@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Star } from 'lucide-react';
-import { LAUNCHER_APPS, type LauncherApp } from '@/lib/launcher-apps';
+import { LAUNCHER_APPS, isLinked, type LauncherApp } from '@/lib/launcher-apps';
 import { useLauncherState } from '@/lib/use-launcher-state';
 
 type SortMode = 'alpha' | 'recent';
@@ -31,7 +31,7 @@ function AppIcon({ app, size }: { app: LauncherApp; size: number }) {
   const Icon = app.icon;
   return (
     <span className="pointer-events-none flex shrink-0 items-center justify-center rounded-xl text-sm font-semibold" style={{ width: size, height: size, background: `color-mix(in srgb, ${tint} 14%, transparent)`, color: tint }}>
-      {Icon ? <Icon size={Math.round(size * 0.5)} /> : app.name.charAt(0).toUpperCase()}
+      {Icon ? <Icon size={Math.round(size * 0.5)} /> : (app.mark ?? app.name.charAt(0).toUpperCase())}
     </span>
   );
 }
@@ -132,6 +132,7 @@ export default function AppsLauncher({ onClose }: { onClose: () => void }) {
   function handleTileClick(app: LauncherApp) {
     if (dragMoved.current) { dragMoved.current = false; return; }
     if (editMode) { toggleFavorite(app.id); return; }
+    if (!isLinked(app)) return;
     openApp(app);
   }
 
@@ -161,7 +162,7 @@ export default function AppsLauncher({ onClose }: { onClose: () => void }) {
               {favoriteApps.map((app, index) => (
                 <button key={app.id} ref={(el) => registerTile(app.id, el)} type="button" onClick={() => handleTileClick(app)} onPointerDown={(e) => handlePointerDown(e, app)}
                   style={{ touchAction: dragEnabled ? 'none' : undefined, minHeight: 0, ...jiggleStyle(index) }}
-                  className={`tap-pop flex flex-col items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-3 text-center transition-colors hover:bg-[var(--surface)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : ''}`}>
+                  className={`tap-pop flex flex-col items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-3 text-center transition-colors hover:bg-[var(--surface)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : !isLinked(app) ? 'opacity-60' : ''}`} title={isLinked(app) ? undefined : 'Not linked yet'}>
                   <span className="relative">
                     <AppIcon app={app} size={52} />
                     {editMode && <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--kpi-bad)] text-[0.5rem] text-white">&minus;</span>}
@@ -187,7 +188,7 @@ export default function AppsLauncher({ onClose }: { onClose: () => void }) {
             <div key={app.id} ref={(el) => registerTile(app.id, el)} role="button" tabIndex={0} onClick={() => handleTileClick(app)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTileClick(app); } }} onPointerDown={(e) => handlePointerDown(e, app)}
               style={{ touchAction: dragEnabled ? 'none' : undefined, ...jiggleStyle(index) }}
-              className={`group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg px-2 py-3 text-center transition-colors hover:bg-[var(--search-bg)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : ''}`}>
+              className={`group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg px-2 py-3 text-center transition-colors hover:bg-[var(--search-bg)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : !isLinked(app) ? 'opacity-60' : ''}`} title={isLinked(app) ? undefined : 'Not linked yet'}>
               <button type="button" title="Add to favorites" aria-label={`Add ${app.name} to favorites`} onClick={(e) => { e.stopPropagation(); toggleFavorite(app.id); }}
                 className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-0 bg-transparent text-[var(--text-muted)] opacity-0 transition-opacity hover:text-[var(--sd-accent)] focus-visible:opacity-100 group-hover:opacity-100" style={{ minHeight: 0, padding: 0 }}>
                 <Star size={12} />

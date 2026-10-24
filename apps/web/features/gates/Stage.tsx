@@ -111,7 +111,7 @@ export default function Stage({ pid, n }: FeatureProps & { n: number }) {
             </tbody></table>
           )}
         </Card>
-        <Card title="Saved snapshots" sub="a frozen picture of the records, used to spot later changes" flush>
+        <Card title="Saved snapshots" flush>
           {(g.baselines || []).length === 0 ? <Empty>No snapshot yet. One is saved each time a stage is signed off.</Empty> : (
             <table className="tbl"><thead><tr><th>Stage</th><th>Why</th><th>Saved</th><th>Records</th></tr></thead><tbody>
               {(g.baselines as any[]).map((b) => <tr key={b.id}><td>Stage {b.gate}</td><td>{b.purpose === 'gate' ? 'Saved when the stage was signed off' : b.purpose}</td><td>{fmtDate(b.created_at)} by {b.created_by}</td><td>{b.approved_count} approved of {b.item_count}</td></tr>)}

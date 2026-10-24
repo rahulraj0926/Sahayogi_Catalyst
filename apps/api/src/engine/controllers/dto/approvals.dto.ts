@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class ApprovalNoteDto {
   @IsOptional() @IsString() note?: string;
@@ -18,4 +18,6 @@ export class SharingDto {
   @IsOptional() @IsString() public_url?: string;
   /** How many days a link lives (1 to 365). */
   @IsOptional() approval_expiry_days?: number;
+  /** An administrator may check values they typed in themselves (default: yes). Never applies to what the assistant found. */
+  @IsOptional() @IsBoolean() admins_check_own?: boolean;
 }

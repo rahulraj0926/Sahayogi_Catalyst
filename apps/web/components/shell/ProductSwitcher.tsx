@@ -10,7 +10,7 @@ export interface SwitchItem { slug: string; name: string; readiness?: number }
  * The product's name as the page title, as a drop-down that jumps to another product.
  * It keeps the same screen (or the same phase) when the other product has it.
  */
-export function ProductSwitcher({ name, pid, items, path }: { name: string; pid: string; items: SwitchItem[]; path: string }) {
+export function ProductSwitcher({ name, pid, items, path, compact }: { name: string; pid: string; items: SwitchItem[]; path: string; compact?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -25,18 +25,21 @@ export function ProductSwitcher({ name, pid, items, path }: { name: string; pid:
   }, [open]);
   const list = useMemo(() => items.filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase())), [items, q]);
   const go = (slug: string) => {
-    const rest = path.replace(/^\/products\/[^/]+/, '');
+    const rest = path.replace(/^\/products\/[^/]+/, '').split('?')[0];
     const m = /^\/(phase\/\d+|[a-z-]+)/.exec(rest);
-    const keep = m && !/^\/(work|item)/.test(rest) ? `/${m[1]}` : '';
+    let keep = m && !/^\/(work|item)/.test(rest) ? `/${m[1]}` : '';
+    // inside Competitors keep the screen (Plans, Our plans, Compare…) but not a single competitor, which belongs to one product
+    const view = /^\/competitors\/([a-z-]+)$/.exec(rest);
+    if (view) keep = `/competitors/${view[1]}`;
     setOpen(false); setQ(''); router.push(`/products/${slug}${keep}`);
   };
   return (
     <div ref={box} className="relative">
       <button type="button" onClick={() => { const r = box.current?.getBoundingClientRect(); if (r) setPos({ top: r.bottom + 6, left: Math.max(8, Math.min(r.left, window.innerWidth - 280)) }); setOpen((o) => !o); }}
         aria-haspopup="listbox" aria-expanded={open} title="Switch product"
-        className="-ml-2 flex max-w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-0.5 text-xl font-semibold text-[var(--text-heading)] transition-colors hover:bg-[var(--search-bg)]" style={{ minHeight: 0 }}>
-        <h1 className="m-0 truncate text-xl font-semibold">{name}</h1>
-        <ChevronsUpDown size={16} className="shrink-0 text-[var(--text-muted)]" />
+        className={compact ? 'flex max-w-[14rem] items-center gap-1 rounded-md border-0 bg-transparent px-1.5 py-0.5 text-xs font-medium text-[var(--text-heading)] transition-colors hover:bg-[var(--search-bg)]' : '-ml-2 flex max-w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-0.5 text-xl font-semibold text-[var(--text-heading)] transition-colors hover:bg-[var(--search-bg)]'} style={{ minHeight: 0 }}>
+        {compact ? <span className="truncate">{name}</span> : <h1 className="m-0 truncate text-xl font-semibold">{name}</h1>}
+        <ChevronsUpDown size={compact ? 12 : 16} className="shrink-0 text-[var(--text-muted)]" />
       </button>
       {open && (
         <div role="listbox" aria-label="Switch product" style={{ top: pos.top, left: pos.left }} className="fixed z-50 w-[17rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-[var(--divider)] bg-[var(--surface)] text-sm shadow-xl">

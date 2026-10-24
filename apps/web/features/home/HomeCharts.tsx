@@ -66,10 +66,10 @@ export function HomeCharts() {
   const note = (m: string) => <p className="text-sm text-[var(--text-muted)]">{m}</p>;
   return (
     <div className="grid grid-cols-1 items-stretch gap-[var(--space-md)] screen-sm:grid-cols-2">
-      <Card title="Products by health" description="Click a row to list those products." className="min-h-[clamp(10rem,24vh,17rem)]">
+      <Card title="Products by health" className="min-h-[clamp(10rem,24vh,17rem)]">
         {loading ? note('Loading…') : error ? note('This chart could not be loaded.') : products.length === 0 ? <EmptyState title="No products yet" description="Create a product to see its health here." /> : <HealthBreakdown products={products} />}
       </Card>
-      <Card title="Readiness by product" description={products.length ? `All ${products.length} products, most ready first.` : 'How close each product is to its next sign-off.'} className="min-h-[clamp(10rem,24vh,17rem)]">
+      <Card title="Readiness by product" className="min-h-[clamp(10rem,24vh,17rem)]">
         {loading ? note('Loading…') : error ? note('This chart could not be loaded.') : products.length === 0 ? <EmptyState title="No products yet" description="Create a product to see its progress here." /> : (
           <>
           <ul className="flex flex-col gap-2.5">

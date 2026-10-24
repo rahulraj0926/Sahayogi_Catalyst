@@ -7,7 +7,7 @@ interface Step { route: string; target?: string; title: string; body: string; si
 
 /** The walk-through. Each step may move to another page first, then points at one part of it. */
 export const TOUR_STEPS: Step[] = [
-  { route: '/', title: 'Welcome to Sahayogi', body: 'A two-minute walk through the platform. Use Next and Back, or the arrow keys. Press Esc any time to leave.' },
+  { route: '/', title: 'Welcome to Sahayogi Catalyst', body: 'A two-minute walk through the platform. Use Next and Back, or the arrow keys. Press Esc any time to leave.' },
   { route: '/', target: '[data-workspace-rail]', side: 'right', title: 'Your places', body: 'The bar on the left takes you to Home, Products, Tasks, Notes, Approvals, Members and Reports. The coloured marker shows where you are.' },
   { route: '/', target: '[aria-label="Quick actions"]', side: 'bottom', title: 'Quick actions', body: 'The + button holds your shortcuts: add a member, start a note, open your tasks, or take this tour again.' },
   { route: '/', target: '[data-tour="kpis"]', side: 'bottom', title: 'The numbers', body: 'Each tile is computed from the saved records. Click one to see the products behind it.' },

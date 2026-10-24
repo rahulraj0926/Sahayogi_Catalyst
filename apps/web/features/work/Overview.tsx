@@ -31,7 +31,7 @@ function AutoPanel({ sess, pid, reload }: { sess: any; pid: string; reload: () =
   const done = items.filter((a) => a.status === 'done').length;
   const run = (a: any) => act.run(async () => { await api(`/sessions/${a.session.code}/steps/${a.request_id}`, { method: 'POST', body: { action: 'derive' }, product: pid }); reload(); });
   return (
-    <Card title="Done for you by the tool" sub="drafts and documents prepared by themselves">
+    <Card title="Done for you by the tool">
       {act.box}
       <p className="small muted">{done} of {items.length} steps are done. The tool prepares these by itself as soon as it has what it needs, so you never have to press anything on an Advanced page.</p>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>{items.map((a) => {

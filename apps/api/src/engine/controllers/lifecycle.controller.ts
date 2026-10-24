@@ -16,7 +16,7 @@ import * as freshness from '../../legacy/engine/freshness';
 import * as plain from '../../legacy/engine/plain';
 import { localDate } from '../../legacy/engine/units';
 import { resetToSeed } from '../../legacy/router';
-import { CreateItemDto, FrameworkWeightsDto, ImportDto, ItemStatusDto, NoteDto, PatchItemDto, ReviewDto, SettingsDto, CreateLinkDto } from './dto/lifecycle.dto';
+import { CreateItemDto, ImportDto, ItemStatusDto, NoteDto, PatchItemDto, ReviewDto, SettingsDto, CreateLinkDto } from './dto/lifecycle.dto';
 
 export const brief = (i: any) => ({ id: i.id, type: i.type, subtype: i.subtype || null, title: i.title, status: i.status, phase: i.phase, origin: i.origin, verification: i.verification || null, priority: i.priority || null });
 
@@ -59,20 +59,11 @@ export class ProductBasicsController {
   @Get('lifecycle') @EngineRoute()
   lifecycle(@Ctx() c: EngineCtx) { return lifecycleMod.overview(c.store, gates); }
 
-  /** The 13 phases and 70 steps of the framework with each phase's weighted completion. `phase` (product phase number) adds the full text and evidence of that phase's steps. */
+  /** The 13 phases and 70 steps of the framework with each phase's completion (the plain average of its steps). `phase` (product phase number) adds the full text and evidence of that phase's steps. */
   @Get('lifecycle/framework') @EngineRoute()
   lifecycleFramework(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) {
     const n = query.phase === undefined || query.phase === '' ? undefined : Number(query.phase);
     return framework.evaluate(c.store, { detail: n !== undefined && Number.isInteger(n) ? n : undefined });
-  }
-
-  /** Change how much one step counts (tier) or the points of a level; reset puts the framework defaults back. */
-  @Post('lifecycle/framework/weights') @EngineRoute()
-  lifecycleFrameworkWeights(@Ctx() c: EngineCtx, @Body() body: FrameworkWeightsDto) {
-    const { store, actor } = c;
-    framework.setWeights(store, body);
-    store.audit('settings', null, `${actor} changed how much lifecycle steps count ${JSON.stringify(body)}`, { actor });
-    return framework.evaluate(store);
   }
 
   @Get('lifecycle/gates') @EngineRoute()

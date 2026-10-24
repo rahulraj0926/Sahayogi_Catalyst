@@ -145,7 +145,7 @@ export default function Plan({ pid, query }: FeatureProps) {
           </Card>
         </div>)}</Fold>
       <Fold title="Details: the four kinds of question">{() => (
-        <Card title="The four layers" sub="only the first two cost human time"><div className="grid g4">
+        <Card title="The four layers"><div className="grid g4">
           {([['HUMAN', 'Only the company can answer. Costs human minutes. Done in a session.'], ['DOCUMENT', 'Existing material (a policy, a spreadsheet). Paste it; no new thinking.'], ['AGENT_RESEARCH', 'Claude researches public facts. Comes back unverified; a different person verifies.'], ['DERIVED', 'The tool generates it from earlier answers. One click, then a person reviews.']] as [string, string][]).map(([k, t]) => <div key={k}><Badge kind={KIND_TONE[k]}>{KIND_NAME[k]}</Badge><div className="small" style={{ marginTop: 4 }}>{t}</div></div>)}</div></Card>)}</Fold>
       {na && <NaModal pid={pid} r={na} onClose={() => setNa(null)} onDone={(m: string) => { setNa(null); setMsg(m); reload(); }} />}
       {agent && <AgentModal pid={pid} id={agent} onClose={() => setAgent(null)} onDone={(m: string) => { setAgent(null); setMsg(m); reload(); }} />}

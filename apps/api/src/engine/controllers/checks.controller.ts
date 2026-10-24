@@ -191,9 +191,10 @@ export class CompetitorViewsController {
   @Post('plans/features') @EngineRoute() setPlanFeature(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.setPlanFeature(c.store, body || {}, c.actor); }
   @Get('plan-level-features') @EngineRoute() planLevelFeatures(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.planLevelFeatures(c.store, query.scope); }
   @Get('recommended') @EngineRoute() recommended(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.recommended(c.store, query); }
-  @Post('our-plans/from-recommendation') @EngineRoute() fromRecommendation(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.createFromRecommendation(c.store, body || {}, c.actor); }
   @Get('compare-plans') @EngineRoute() comparePlans(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.comparePlans(c.store, query); }
   @Get('our-plans') @EngineRoute() ourPlans(@Ctx() c: EngineCtx) { return competitorPlans.ourPlans(c.store); }
+  @Get('our-plans/pick-features') @EngineRoute() pickFeatures(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorPlans.pickFeatures(c.store, query); }
+  @Post('our-plans/features/new') @EngineRoute() addOurFeatures(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.addOurFeatures(c.store, body || {}, c.actor); }
   @Post('our-plans/features') @EngineRoute() setOurPlanFeature(@Ctx() c: EngineCtx, @Body() body: Record<string, any>) { return competitorPlans.setOurPlanFeature(c.store, body || {}, c.actor); }
   @Get('must-have') @EngineRoute() mustHave(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitors.mustHaveCapabilities(c.store, Math.min(100, Math.max(1, Number(query.threshold) || 80)), query.scope); }
 

@@ -33,7 +33,7 @@ export function LifecycleLine() {
   const note = (m: string) => <p className="text-sm text-[var(--text-muted)]">{m}</p>;
 
   return (
-    <Card title="Product lifecycle" description="The 13 phases a product goes through. The number under each phase name is how many products are in that phase. Pick a phase to see them.">
+    <Card title="Product lifecycle">
       {loading ? note('Loading…') : error ? note('The lifecycle could not be loaded.') : products.length === 0 ? <EmptyState title="No products yet" description="Create a product to see where it sits in the lifecycle." /> : (
         <div className="flex flex-col gap-4">
           {/* ---- the line: it scrolls sideways on a narrow screen, it never wraps or grows */}

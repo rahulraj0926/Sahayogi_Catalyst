@@ -56,14 +56,3 @@ export class HandoffCreateDto { @IsString() story!: string; }
 export class DemoGotoDto { @IsOptional() @IsNumber() index?: number; }
 
 export class NaDto { @IsOptional() @IsString() @MaxLength(2000) reason?: string; }
-
-export class FrameworkWeightsDto {
-  /** Step id such as P5.3. Send together with `tier`. */
-  @IsOptional() @IsString() step?: string;
-  /** core, major, support or light: how much the step counts toward its phase. */
-  @IsOptional() @IsString() tier?: string;
-  /** Points per level, for example { core: 10 }. */
-  @IsOptional() @IsObject() points?: Record<string, number>;
-  /** Put the framework's own weights back. */
-  @IsOptional() @IsBoolean() reset?: boolean;
-}

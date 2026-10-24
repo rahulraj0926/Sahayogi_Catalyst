@@ -1007,6 +1007,8 @@ CREATE TABLE "item_competitor" (
     "ownership" TEXT,
     "funding_summary" TEXT,
     "target_customers" TEXT,
+    "customer_size" TEXT[],
+    "target_market" TEXT[],
     "strengths" TEXT,
     "weaknesses" TEXT,
     "gtm_channels" TEXT[],
@@ -1018,6 +1020,7 @@ CREATE TABLE "item_competitor" (
     "last_reviewed_on" DATE,
     "review_by" DATE,
     "todo_done" TEXT[],
+    "todo_items" TEXT[],
     "scopes" TEXT[],
     CONSTRAINT "item_competitor_pkey" PRIMARY KEY ("product_id","id")
 );
@@ -1233,6 +1236,10 @@ CREATE TABLE "item_pricing_plan" (
     "audience" TEXT,
     "is_free" BOOLEAN,
     "tier_tag" TEXT,
+    "price_monthly" DOUBLE PRECISION,
+    "price_yearly" DOUBLE PRECISION,
+    "seat_model" TEXT,
+    "max_users" INTEGER,
     CONSTRAINT "item_pricing_plan_pkey" PRIMARY KEY ("product_id","id")
 );
 

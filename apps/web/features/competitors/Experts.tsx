@@ -17,7 +17,7 @@ export function Sources({ pid }: { pid: string }) {
   const tos = (v?: string) => <Badge kind={v === 'allows_manual' || v === 'allows' ? 'ok' : v === 'forbids' || v === 'prohibits' ? 'bad' : 'warn'}>{sp(v || 'unknown')}</Badge>;
   return (
     <div className="stack">
-      <Card title="Tracked sources" sub="pages we are allowed to watch, and how" flush>
+      <Card title="Tracked sources" flush>
         {d.tracked.length === 0 ? <Empty>No tracked sources registered.</Empty> : (
           <table className="tbl compact"><thead><tr><th>ID</th><th>Source</th><th>URL pattern</th><th>Type</th><th>Grade</th><th>Access</th><th>Login</th><th>Terms verdict</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
             {d.tracked.map((r: any) => <tr key={r.id}><td><Link href={`/products/${pid}/item/${r.id}`}>{r.id}</Link></td><td>{r.title}</td><td className="mono small">{r.url_pattern}</td><td>{sp(r.source_type)}</td><td><Badge kind="info">{r.default_grade || '?'}</Badge></td><td>{sp(r.access_method)}</td><td>{r.login_required ? <Badge kind="warn">required</Badge> : 'no'}</td><td>{tos(r.tos_verdict)} {r.tos_checked_on && <span className="small muted">{r.tos_checked_on}</span>}</td><td><Badge>{r.status}</Badge></td><td>{r.evidence}</td></tr>)}

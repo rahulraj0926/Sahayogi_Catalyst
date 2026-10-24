@@ -50,7 +50,7 @@ export function configureApp(app: NestExpressApplication) {
 
 export function setupSwagger(app: NestExpressApplication) {
   const cfg = new DocumentBuilder()
-    .setTitle('Sahayogi Platform API')
+    .setTitle('Sahayogi Catalyst API')
     .setDescription('Typed, versioned API. Everything under /api/v1. Every route of the lifecycle engine is served here too (/api/v1/items, /api/v1/gates ...); the same routes at their old addresses (/api/items ...) still work but are deprecated and stop on the Sunset date (see the Sunset header). Every GET answer has an ETag (send it back as If-None-Match to get 304). Send an Idempotency-Key header (8-100 characters) on a POST, PUT, PATCH or DELETE to make a retry safe: the first answer is replayed with Idempotent-Replayed: true. Lists that grow use a cursor: pass the answer\'s next as cursor. Changes are listed in docs/api/CHANGELOG.md.')
     .setVersion(process.env.npm_package_version || '1.0.0')
     .addApiKey({ type: 'apiKey', name: 'X-Actor', in: 'header' }, 'actor')
