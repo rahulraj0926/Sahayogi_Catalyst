@@ -15,8 +15,8 @@ export type BlockDef = { id: string; title: string; /** one line under the title
 
 /** The two sides of the head-to-head card at the top: what they do well, and where we can beat them. */
 export const SIDES = [
-  { key: 'strengths', title: 'Strengths', tone: 'var(--status-healthy-fg)' },
-  { key: 'weaknesses', title: 'Weaknesses & risks', tone: 'var(--status-warning-fg)' },
+  { key: 'strengths', title: 'Strengths', one: 'strength', tone: 'var(--status-healthy-fg)' },
+  { key: 'weaknesses', title: 'Weaknesses & risks', one: 'weakness', tone: 'var(--status-warning-fg)' },
 ] as const;
 
 export const BLOCKS: BlockDef[] = [
@@ -39,6 +39,8 @@ export const BLOCKS: BlockDef[] = [
     { id: 'website', label: 'Website', key: 'website' },
     { id: 'legal_name', label: 'Legal name', key: 'legal_name' },
     { id: 'products', label: 'Products' },
+    { id: 'competes', label: 'Competes with' },
+    { id: 'kind', label: 'Type' },
     { id: 'founded_year', label: 'Founded', key: 'founded_year' },
     { id: 'hq_country', label: 'Head office', key: 'hq_country' },
     { id: 'size_band', label: 'Team size', key: 'size_band' },

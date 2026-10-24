@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { Field, useAction } from '@/components/kit';
 import { api } from '@/lib/api';
 import { BLOCKS, SIDES, type BlockDef, type Row } from './overviewBlocks';
+import PointList, { toPoints } from './PointList';
 import { Control, F, filled, norm } from './profileFields';
 
 const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -25,30 +26,9 @@ function show(key: string, v: any): ReactNode {
   return String(v);
 }
 
-/** Lines of text become points. "Price: about $37 a user" shows "Price" as the title and the rest underneath. */
-function Points({ text, tone }: { text: string; tone: string }) {
-  const lines = text.split(/\n+/).map((l) => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(Boolean);
-  return (
-    <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
-      {lines.map((l, i) => {
-        const m = l.match(/^([^:.]{2,40}):\s+(.+)$/);
-        return (
-          <li key={i} className="grid grid-cols-[10px_1fr] gap-x-3">
-            <span aria-hidden className="mt-[0.45em] h-2.5 w-2.5 rounded-full" style={{ background: tone }} />
-            <span className="min-w-0 leading-snug">
-              <span className="block text-[15px] font-bold text-[var(--text-heading)]">{m ? m[1] : l}</span>
-              {m && <span className="mt-0.5 block text-[14px] text-[var(--text-secondary)]">{m[2].charAt(0).toUpperCase() + m[2].slice(1)}</span>}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
+type Props = { c: any; onOpen: (tab: string) => void; onAddProduct: () => void; links: any[]; prices: any[]; files: any[]; notes: any[]; lines: any[]; onSaved: () => void; todo: ReactNode; /** the two controls that live in Company details: what part of our product they compete with, and what kind of competitor they are */ competes: ReactNode; kind: ReactNode };
 
-type Props = { c: any; onOpen: (tab: string) => void; onAddProduct: () => void; links: any[]; prices: any[]; files: any[]; notes: any[]; lines: any[]; onSaved: () => void; todo: ReactNode };
-
-export default function Overview({ c, onOpen, onAddProduct, links, prices, files, notes, lines, onSaved, todo }: Props) {
+export default function Overview({ c, onOpen, onAddProduct, links, prices, files, notes, lines, onSaved, todo, competes, kind }: Props) {
   const derived: Record<string, ReactNode> = {
     // the products this company sells (each with its own plans); the Plans tab holds their prices
     products: (
@@ -57,6 +37,8 @@ export default function Overview({ c, onOpen, onAddProduct, links, prices, files
         <button type="button" className="text-[14px] font-semibold text-[var(--sd-accent)]" onClick={onAddProduct}>{lines.length ? '+ Add product' : 'Add a product'}</button>
       </span>
     ),
+    competes,
+    kind,
     evidence: links.filter((l) => l.otherType === 'Evidence').length || <span className="font-medium" style={{ color: 'var(--status-warning-fg)' }}>None yet</span>,
     files: files.length || '',
     notes: notes.length || '',
@@ -84,40 +66,17 @@ export default function Overview({ c, onOpen, onAddProduct, links, prices, files
   );
 }
 
-/** Strengths and weaknesses, side by side at the bottom. A side with nothing in it gives its room to the other. */
+/** Strengths and weaknesses, side by side at the bottom: numbered points, added and changed one at a time. */
 function HeadToHead({ c, onSaved }: { c: any; onSaved: () => void }) {
-  const [editing, setEditing] = useState<string | null>(null);
-  const [text, setText] = useState('');
-  const act = useAction();
-  const filledSides = SIDES.filter((s) => filled(c[s.key]) || editing === s.key);
-  const emptySides = SIDES.filter((s) => !filledSides.includes(s));
-  const save = (key: string) => act.run(async () => {
-    const v = text.trim();
-    if (v !== String(c[key] ?? '')) await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { [key]: v } } });
-    setEditing(null); onSaved();
-  });
   return (
-    <div aria-label="Strengths and weaknesses" className={`grid gap-4 ${filledSides.length > 1 ? '@3xl:grid-cols-2' : ''}`}>
-      {filledSides.map((s) => (
+    <div aria-label="Strengths and weaknesses" className="grid gap-4 @3xl:grid-cols-2">
+      {SIDES.map((s) => (
         <section key={s.key} className={`min-w-0 p-6 ${EVERY}`}>
-          <div className="mb-4 flex items-center gap-2">
-            <h3 className="m-0 flex-1 text-[18px] font-bold text-[var(--text-heading)]">{s.title}</h3>
-            {editing !== s.key && <button type="button" className="text-[14px] font-semibold text-[var(--sd-accent)]" onClick={() => { setText(c[s.key] || ''); setEditing(s.key); }}>Edit</button>}
-          </div>
-          {editing === s.key ? (
-            <>
-              <Field label="One point on each line"><textarea rows={6} style={{ width: '100%' }} value={text} onChange={(e) => setText(e.target.value)} /></Field>
-              {act.box}
-              <div className="row"><button className="btn primary" disabled={act.busy} onClick={() => save(s.key)}>Save</button><button className="btn" onClick={() => setEditing(null)}>Cancel</button></div>
-            </>
-          ) : <Points text={String(c[s.key])} tone={s.tone} />}
+          <h3 className="m-0 mb-4 text-[18px] font-bold text-[var(--text-heading)]">{s.title}</h3>
+          <PointList points={toPoints(c[s.key])} tone={s.tone} one={s.one}
+            onChange={async (next) => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { [s.key]: next.length ? next.join('\n') : null } } }); onSaved(); }} />
         </section>
       ))}
-      {emptySides.length > 0 && (
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
-          {emptySides.map((s) => <button key={s.key} type="button" className="text-[var(--sd-accent)]" onClick={() => { setText(''); setEditing(s.key); }}>Add {s.title.toLowerCase()}</button>)}
-        </div>
-      )}
     </div>
   );
 }
@@ -129,7 +88,7 @@ function Block({ b, c, val, onSaved, onOpen }: { b: BlockDef; c: any; val: (r: R
   const act = useAction();
   const keys = b.rows.filter((r) => r.key && F[r.key]).map((r) => r.key!);
   // a long answer or a row of tags reads better under its label than squeezed beside it
-  const wide = (r: Row) => r.id === 'products' || (r.key && F[r.key]?.kind === 'longtext') || (r.key && Array.isArray(c[r.key]) && c[r.key].length > 2) || (r.key && typeof c[r.key] === 'string' && c[r.key].length > 70);
+  const wide = (r: Row) => r.id === 'products' || r.id === 'competes' || (r.key && F[r.key]?.kind === 'longtext') || (r.key && Array.isArray(c[r.key]) && c[r.key].length > 2) || (r.key && typeof c[r.key] === 'string' && c[r.key].length > 70);
   const rows = b.rows.map((r) => [r, val(r)] as const).filter(([, v]) => v !== '' && v !== undefined && v !== null);
   const start = () => { setVals(Object.fromEntries(keys.map((k) => [k, c[k]]))); setEdit(true); };
   if (!edit && rows.length === 0 && keys.length === 0) return null;

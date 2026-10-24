@@ -276,15 +276,6 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
         {c.website && <a className="mt-1 inline-block text-[13px]" href={/^https?:/.test(c.website) ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer">{c.website}</a>}
         <div className="mt-1 text-[12px] text-[var(--text-muted)]">Added {c.created_at ? niceDate(c.created_at) : 'on an unknown date'}{c.created_by ? ` by ${c.created_by}` : ''}. Changed {(() => { const t = ago(c.updated_at || c.created_at).replace('Updated ', ''); return t; })()}.</div>
         </div>
-        <div className="mt-3 flex flex-wrap items-stretch gap-3">
-          {([
-            ['Competes with', <CompetesWith key="scopes" c={c} known={((modScopes.data?.scopes as any[]) || []).map((x) => x.name)} onSaved={refreshAll} />],
-            ['Competitor type', <select key="kind" value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>],
-            ...(filled(c.founded_year) ? [['Founded', String(c.founded_year)]] : []),
-            ...(filled(c.hq_country) ? [['Headquarters', c.hq_country]] : []),
-            ...(filled(c.size_band) ? [['Employees', String(c.size_band)]] : []),
-          ] as [string, React.ReactNode][]).map(([l, v]) => <div key={l} className="min-w-[12rem] rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] px-3.5 py-2.5 [box-shadow:var(--card-shadow)]"><div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{l}</div><div className="mt-1 text-[15px] font-bold text-[var(--text-heading)]">{v}</div></div>)}
-        </div>
       </div>
       <div role="tablist" className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-1.5 [box-shadow:var(--card-shadow)]">
         {([['overview', 'Overview'], ['prices', `Plans & pricing${myPrices.length ? ` (${myPrices.length})` : ''}`], ['files', `Files${myFiles.length ? ` (${myFiles.length})` : ''}`], ['notes', `Notes${myNotes.length ? ` (${myNotes.length})` : ''}`], ['sources', 'Sources']] as [string, string][]).map(([id, label]) => (
@@ -293,7 +284,10 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
       </div>
       <div>
         {tab === 'overview' && (
-          <Overview c={c} onOpen={setTab} onAddProduct={() => setAddLine(true)} links={data.links} prices={myPrices} files={myFiles} notes={myNotes} lines={myLines} onSaved={refreshAll} todo={(<>
+          <Overview c={c} onOpen={setTab} onAddProduct={() => setAddLine(true)} links={data.links} prices={myPrices} files={myFiles} notes={myNotes} lines={myLines} onSaved={refreshAll}
+            competes={<CompetesWith c={c} known={((modScopes.data?.scopes as any[]) || []).map((x) => x.name)} onSaved={refreshAll} />}
+            kind={<select value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
+            todo={(<>
             {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}
             <section className="@container h-full rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-6 [box-shadow:var(--card-shadow)]"><div>
               <div className="mb-4 flex items-baseline gap-2"><h3 className="m-0 flex-1 text-[18px] font-bold">To do</h3><span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span></div>

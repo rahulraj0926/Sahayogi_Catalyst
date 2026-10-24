@@ -31,11 +31,11 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 | Check again by | Next review |
 
 ## Layout (follows the design mock-up)
-- **Under the title:** tiles for Competes with, Competitor type (both editable here), Founded, Headquarters and Employees. A tile with nothing in it is left out. Who added the record and when it last changed sit under the website.
+- **Under the title:** the description, the website, and who added the record and when it last changed. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
 - **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
 - **First row:** Company details and Customers & market, two equal cards.
 - **Second row:** To do and Evidence & review.
-- **Bottom:** Strengths and Weaknesses & risks, side by side, one point per line. A line written as "Price: about $37 a user" shows "Price" as the title and the rest underneath it. If only one side has text it takes the full width and the other becomes an "Add" link. Each side has its own Edit.
+- **Bottom:** Strengths and Weaknesses & risks, side by side. Each is a numbered list of points. "+ Add strength" / "+ Add weakness" opens a box for one point (Enter adds it); Edit changes one point; Remove deletes one. Every change saves straight away. Stored as text with one point per line. A point written as "Price: about $37 a user" shows "Price" as the title and the rest underneath it.
 - Cards in a row always have the same height, so there is no hole beside a short card; on a phone they stack in one column.
 
 | Card | Rows | Comes from |
