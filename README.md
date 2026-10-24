@@ -25,6 +25,17 @@ Open http://localhost:3000. If the page loads with demo products, everything wor
 - **The web app** needs no settings if the API runs on port 4000. Otherwise copy `apps/web/.env.example` to `apps/web/.env.local` and change `API_URL`.
 - **Checks before you open a pull request:** `npm run check` (types and contract) and `npm test` (needs the database). The same checks run on GitHub for every pull request.
 
+**Which address goes where.** On your own computer you change nothing: the defaults already point at each other. Change one only if you move a part to another port or computer.
+
+| Setting | File | Means | Default (local) |
+|---|---|---|---|
+| `DATABASE_URL` | `apps/api/.env` | Where the database is: `postgresql://user:password@host:port/database` | `postgresql://sahayogi:sahayogi@localhost:5432/sahayogi?schema=public` (the Docker database) |
+| `WEB_ORIGIN` | `apps/api/.env` | The address of the **web app**, so the API accepts its calls | `http://localhost:3000` |
+| `API_URL` | `apps/web/.env.local` | The address of the **API**, so the web app can reach it | `http://localhost:4000` |
+| `PORT` | `apps/api/.env` | The port the API listens on. If you change it, change `API_URL` to match | `4000` |
+
+Rule of thumb: the web app's file names the API, and the API's file names the web app. When both run on one computer, both stay on `localhost`.
+
 | If you see | Do this |
 |---|---|
 | `DATABASE_URL is required` | You skipped the `cp ... .env` step, or you started the API from a different folder. Use `npm run dev:api` from the project root. |
