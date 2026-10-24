@@ -22,45 +22,6 @@ const addDays = (d: string, n: number) => { const x = new Date(d + 'T00:00:00');
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? '' : `${c === 'INR' ? 'Rs' : c} ${Number(a).toLocaleString('en-IN')}`);
 
 
-/** Which part of our product they compete with, changed right where it is shown. Pick the parts we already know, or type a new one. */
-function CompetesWith({ c, known, onSaved }: { c: any; known: string[]; onSaved: () => void }) {
-  const own: string[] = Array.isArray(c.scopes) ? c.scopes : [];
-  const [edit, setEdit] = useState(false);
-  const [pick, setPick] = useState<string[]>([]);
-  const [extra, setExtra] = useState<string[]>([]);
-  const [typed, setTyped] = useState('');
-  const act = useAction();
-  const key = (x: string) => x.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '');
-  const options = Array.from(new Map([...known, ...own, ...extra].map((x) => [key(x), x])).values()).filter((x) => key(x));
-  const start = () => { setPick(own); setExtra([]); setTyped(''); setEdit(true); };
-  const add = () => { const v = typed.trim(); if (!v) return; const hit = options.find((x) => key(x) === key(v)) || v; setExtra((e) => (e.some((x) => key(x) === key(hit)) ? e : [...e, hit])); setPick((p) => (p.some((x) => key(x) === key(hit)) ? p : [...p, hit])); setTyped(''); };
-  if (!edit) {
-    return (
-      <span className="inline-flex flex-wrap items-center gap-1.5">
-        {own.length ? own.map((x) => <span key={x} className="badge">{x}</span>) : 'Whole product'}
-        <button type="button" className="text-[13px] font-normal text-[var(--text-muted)] hover:text-[var(--text-heading)]" onClick={start}>Edit</button>
-      </span>
-    );
-  }
-  return (
-    <div className="flex min-w-[16rem] max-w-[24rem] flex-col gap-2 rounded-xl border border-[var(--divider)] p-3 font-normal">
-      <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={pick.length === 0} onChange={() => setPick([])} />Whole product</label>
-      {options.map((x) => (
-        <label key={x} className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={pick.some((y) => key(y) === key(x))} onChange={(e) => setPick((p) => (e.target.checked ? [...p, x] : p.filter((y) => key(y) !== key(x))))} />{x}</label>
-      ))}
-      <div className="flex gap-2">
-        <input type="text" value={typed} onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} placeholder="Add a part of our product" aria-label="Add a part of our product" className="min-w-0 flex-1" style={{ height: 32, minHeight: 0, fontSize: 13 }} />
-        <button type="button" className="btn sm" disabled={!typed.trim()} onClick={add}>Add</button>
-      </div>
-      {act.box}
-      <div className="flex gap-2">
-        <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => act.run(async () => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { scopes: pick.length ? pick : '' } } }); setEdit(false); onSaved(); })}>Save</button>
-        <button type="button" className="btn sm" onClick={() => setEdit(false)}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
 /** Change a competitor's name. */
 function RenameCompetitor({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () => void }) {
   const [name, setName] = useState(c.title || '');
@@ -174,7 +135,6 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   const [tab, setTab] = useState(['overview', 'prices', 'files', 'notes', 'sources'].includes(query.get('tab') || '') ? query.get('tab')! : 'overview');
   const [addPrice, setAddPrice] = useState(false);
   const [fromFile, setFromFile] = useState(false);
-  const modScopes = useApi<any>('/competitors/scopes', pid);
   const [addLine, setAddLine] = useState(false);
   const [verify, setVerify] = useState<any>(null);
   const [cand, setCand] = useState<any>(null);
@@ -285,7 +245,6 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
       <div>
         {tab === 'overview' && (
           <Overview c={c} onOpen={setTab} onAddProduct={() => setAddLine(true)} links={data.links} prices={myPrices} files={myFiles} notes={myNotes} lines={myLines} onSaved={refreshAll}
-            competes={<CompetesWith c={c} known={((modScopes.data?.scopes as any[]) || []).map((x) => x.name)} onSaved={refreshAll} />}
             kind={<select value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
             todo={(<>
             {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}

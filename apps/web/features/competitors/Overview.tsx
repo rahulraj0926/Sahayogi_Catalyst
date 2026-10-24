@@ -26,9 +26,9 @@ function show(key: string, v: any): ReactNode {
   return String(v);
 }
 
-type Props = { c: any; onOpen: (tab: string) => void; onAddProduct: () => void; links: any[]; prices: any[]; files: any[]; notes: any[]; lines: any[]; onSaved: () => void; todo: ReactNode; /** the two controls that live in Company details: what part of our product they compete with, and what kind of competitor they are */ competes: ReactNode; kind: ReactNode };
+type Props = { c: any; onOpen: (tab: string) => void; onAddProduct: () => void; links: any[]; prices: any[]; files: any[]; notes: any[]; lines: any[]; onSaved: () => void; todo: ReactNode; /** the control in Company details for what kind of competitor they are */ kind: ReactNode };
 
-export default function Overview({ c, onOpen, onAddProduct, links, prices, files, notes, lines, onSaved, todo, competes, kind }: Props) {
+export default function Overview({ c, onOpen, onAddProduct, links, prices, files, notes, lines, onSaved, todo, kind }: Props) {
   const derived: Record<string, ReactNode> = {
     // the products this company sells (each with its own plans); the Plans tab holds their prices
     products: (
@@ -37,7 +37,6 @@ export default function Overview({ c, onOpen, onAddProduct, links, prices, files
         <button type="button" className="text-[14px] font-semibold text-[var(--sd-accent)]" onClick={onAddProduct}>{lines.length ? '+ Add product' : 'Add a product'}</button>
       </span>
     ),
-    competes,
     kind,
     evidence: links.filter((l) => l.otherType === 'Evidence').length || <span className="font-medium" style={{ color: 'var(--status-warning-fg)' }}>None yet</span>,
     files: files.length || '',
@@ -87,7 +86,7 @@ function Block({ b, c, val, onSaved, onOpen }: { b: BlockDef; c: any; val: (r: R
   const act = useAction();
   const keys = b.rows.filter((r) => r.key && F[r.key]).map((r) => r.key!);
   // a long answer or a row of tags reads better under its label than squeezed beside it
-  const wide = (r: Row) => r.id === 'products' || r.id === 'competes' || (r.key && F[r.key]?.kind === 'longtext') || (r.key && Array.isArray(c[r.key]) && c[r.key].length > 2) || (r.key && typeof c[r.key] === 'string' && c[r.key].length > 70);
+  const wide = (r: Row) => r.id === 'products' || (r.key && F[r.key]?.kind === 'longtext') || (r.key && Array.isArray(c[r.key]) && c[r.key].length > 2) || (r.key && typeof c[r.key] === 'string' && c[r.key].length > 70);
   const rows = b.rows.map((r) => [r, val(r)] as const).filter(([, v]) => v !== '' && v !== undefined && v !== null);
   const start = () => { setVals(Object.fromEntries(keys.map((k) => [k, c[k]]))); setEdit(true); };
   if (!edit && rows.length === 0 && keys.length === 0) return null;

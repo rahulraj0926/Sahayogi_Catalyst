@@ -39,7 +39,6 @@ export const BLOCKS: BlockDef[] = [
     { id: 'website', label: 'Website', key: 'website' },
     { id: 'legal_name', label: 'Legal name', key: 'legal_name' },
     { id: 'products', label: 'Products' },
-    { id: 'competes', label: 'Competes with' },
     { id: 'kind', label: 'Type' },
     { id: 'founded_year', label: 'Founded', key: 'founded_year' },
     { id: 'hq_country', label: 'Head office', key: 'hq_country' },
