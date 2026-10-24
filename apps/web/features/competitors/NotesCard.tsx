@@ -1,6 +1,6 @@
 'use client';
 /**
- * Notes about one competitor, as sticky notes. Add one right here; remove one with the cross.
+ * The Notes tab of one competitor: coloured sticky notes like the Notes page. Add one at the top; remove one with the cross.
  * Each note is a CompetitorNote tied to this competitor, so it is kept apart from the notes about the product or the tool
  * and the Notes page can later tell the three kinds apart.
  */
@@ -28,15 +28,15 @@ export default function NotesCard({ c, notes, onSaved }: { c: any; notes: any[];
   };
   const newest = notes.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   return (
-    <section className={`flex h-full min-w-0 flex-col p-6 ${CARD}`}>
+    <section className={`@container flex min-w-0 flex-col p-6 ${CARD}`}>
       {dialog}
       <div className="mb-4 flex items-center gap-2">
-        <h3 className="m-0 flex-1 text-[18px] font-bold text-[var(--text-heading)]">Notes</h3>
+        <h3 className="m-0 flex-1 text-[18px] font-bold text-[var(--text-heading)]">Notes about {c.title}</h3>
         {text === null && <button type="button" className={CARD_ACTION} onClick={() => setText('')}>+ Add</button>}
       </div>
       {act.box}
       {text !== null && (
-        <div className={`mb-4 flex flex-col gap-2 rounded-md border p-3 shadow-sm ${STICKY_COLORS[0]}`}>
+        <div className={`mb-4 flex max-w-sm flex-col gap-2 rounded-md border p-3 shadow-sm ${STICKY_COLORS[0]}`}>
           <textarea autoFocus rows={3} className="w-full" style={{ background: 'transparent', color: 'inherit' }} value={text} aria-label="New note" placeholder="What did you notice?"
             onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setText(null); if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } }} />
           <div className="flex gap-2">
@@ -46,7 +46,7 @@ export default function NotesCard({ c, notes, onSaved }: { c: any; notes: any[];
         </div>
       )}
       {newest.length === 0 && text === null ? <p className="m-0 text-[14px] text-[var(--text-muted)]">No notes yet.</p> : (
-        <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 @sm:grid-cols-2">
+        <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 @md:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-4">
           {newest.map((n) => {
             const h = stickyHash(n.id);
             return (

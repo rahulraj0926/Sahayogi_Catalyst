@@ -9,8 +9,6 @@ import { api } from '@/lib/api';
 import { BLOCKS, SIDES, type BlockDef, type Row } from './overviewBlocks';
 import PointList, { fromPoints, toPoints } from './PointList';
 import { Control, F, filled, norm } from './profileFields';
-import FilesCard from './FilesCard';
-import NotesCard from './NotesCard';
 import { CARD as EVERY } from './overviewStyle';
 
 export const THREAT_COLOR: Record<string, string> = { High: 'var(--status-critical-fg)', Medium: 'var(--status-warning-fg)', Low: 'var(--status-healthy-fg)' };
@@ -25,9 +23,9 @@ function show(key: string, v: any): ReactNode {
   return String(v);
 }
 
-type Props = { c: any; pid: string; onAddProduct: () => void; lines: any[]; files: any[]; notes: any[]; onSaved: () => void; todo: ReactNode; /** the control in Company details for what kind of competitor they are */ kind: ReactNode };
+type Props = { c: any; onAddProduct: () => void; lines: any[]; onSaved: () => void; todo: ReactNode; /** the control in Company details for what kind of competitor they are */ kind: ReactNode };
 
-export default function Overview({ c, pid, onAddProduct, lines, files, notes, onSaved, todo, kind }: Props) {
+export default function Overview({ c, onAddProduct, lines, onSaved, todo, kind }: Props) {
   const derived: Record<string, ReactNode> = {
     // the products this company sells (each with its own plans); the Plans tab holds their prices
     products: (
@@ -50,7 +48,7 @@ export default function Overview({ c, pid, onAddProduct, lines, files, notes, on
   return (
     <div className="@container flex flex-col gap-4">
       <div className={across(top.length)}>{top.map(block)}</div>
-      <div className={across(3)}><FilesCard id={c.id} pid={pid} files={files} onSaved={onSaved} />{todo}<NotesCard c={c} notes={notes} onSaved={onSaved} /></div>
+      {todo}
       <HeadToHead c={c} onSaved={onSaved} />
     </div>
   );

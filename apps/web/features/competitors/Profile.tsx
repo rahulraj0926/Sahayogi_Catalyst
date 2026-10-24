@@ -239,18 +239,18 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
       </div>
       <div>
         {tab === 'overview' && (
-          <Overview c={c} pid={pid} onAddProduct={() => setAddLine(true)} lines={myLines} files={myFiles} notes={myNotes} onSaved={refreshAll}
+          <Overview c={c} onAddProduct={() => setAddLine(true)} lines={myLines} onSaved={refreshAll}
             kind={<select value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
             todo={(<>
             {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}
             <section className={`@container flex h-full min-w-0 flex-col p-6 ${CARD}`}><div className="flex min-h-0 flex-1 flex-col">
               <div className="mb-4 flex items-baseline gap-2"><h3 className="m-0 flex-1 text-[18px] font-bold text-[var(--text-heading)]">To do</h3><span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span></div>
               {todoOpen.length === 0 && <div className="small muted" style={{ marginBottom: 6 }}>Nothing left to do.</div>}
-              <ul className="m-0 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoOpen.map(todoRow)}</ul>
+              <ul className="m-0 grid list-none gap-x-8 gap-y-1 p-0 @xl:grid-cols-2">{todoOpen.map(todoRow)}</ul>
               {todoDone.length > 0 && (
                 <div style={{ marginTop: 8 }}>
                   <button type="button" className="btn xs ghost" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>{showDone ? 'Hide' : 'Show'} {todoDone.length} done</button>
-                  {showDone && <ul className="m-0 mt-1 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoDone.map(todoRow)}</ul>}
+                  {showDone && <ul className="m-0 mt-1 grid list-none gap-x-8 gap-y-1 p-0 @xl:grid-cols-2">{todoDone.map(todoRow)}</ul>}
                 </div>)}
               <form className="row mt-auto" style={{ gap: 6, paddingTop: 12 }} onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
                 <input value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Add a to-do" aria-label="Add a to-do" style={{ flex: 1, minWidth: 0 }} />

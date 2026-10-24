@@ -34,7 +34,7 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 - **Under the title:** the description, the website, and who added the record and when it last changed. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
 - **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
 - **First row:** Company details and Customers & market, two equal cards.
-- **Second row:** Files, To do and Notes, three equal cards (two columns on a narrower screen).
+- **Second row:** To do, full width, open items in two columns when there is room, the add box at the bottom. Files and Notes are not on the Overview: they have their own tabs.
 - **Bottom:** Strengths and Weaknesses & risks, side by side. Each is a numbered list of points with its own "+ Add" at the top right of the title. A point has a heading and details, edited in two separate boxes (the heading is optional). Edit changes one point, Remove deletes one, and every change saves straight away. Stored as text, one point per line, written "Heading: details".
 - Cards in a row always have the same height, so there is no hole beside a short card; on a phone they stack in one column.
 
@@ -42,9 +42,9 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 |---|---|---|
 | Company details | Website, legal name, products, founded, head office, team size, ownership, funding | Typed in. Products are the competitor's product lines (each with its own plans on the Plans & pricing tab); "+ Add product" adds one here |
 | Customers & market | Customer size (tick any of Individuals, Small business, Mid-size companies, Large companies), target market (regions or industries, typed as tags), target customers (a few words), shared with us, known customers, sales channels | Typed in |
-| Files | The competitor's files, with "+ Upload" (or drop files on the card) straight on the Overview | Files linked to this competitor |
-| To do | What is still missing on this competitor, with the add box pinned to the bottom of the card | The existing to-do list |
-| Notes | Coloured sticky notes, the same look as the Notes page; "+ Add" writes a note right there, the cross removes it | Competitor notes linked to this competitor (kept apart from product notes and personal notes, so the Notes page can filter the three kinds later) |
+| To do | What is still missing on this competitor | The existing to-do list |
+
+The Notes tab is a board of coloured sticky notes in the same style as the Notes page: "+ Add" writes a note at the top, the cross removes it. Each note is a competitor note linked to this competitor, so it stays apart from product notes and personal notes and the Notes page can filter the three kinds later. The Files tab holds uploads.
 
 There is no Evidence card on the Overview. Last checked, Next review and "Checked today" sit at the top of the Sources tab.
 
