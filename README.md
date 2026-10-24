@@ -3,15 +3,38 @@
 Product lifecycle platform for the 13-phase process (Phase 0 Intake ... Phase 12 Feedback). NestJS API + PostgreSQL (real relational tables, no JSON columns) + Next.js.
 Built from the `prototype/` (Phases 0-4, all features kept) plus new Phases 5-12. Read `docs/BUILD_PLAN.md` first, then `CLAUDE.md`.
 
-## Run it
+## Run it (first time on a new computer)
+
+You need **Node 22 or newer**, **Docker** (for the database; or your own PostgreSQL 16) and **git**.
+
 ```bash
+git clone https://github.com/rahulraj0926/Sahayogi_Catalyst.git
+cd Sahayogi_Catalyst
 npm install
-docker compose up -d db                       # PostgreSQL 16 (or point DATABASE_URL at your own)
-cp apps/api/.env.example apps/api/.env
-npm run db:migrate -w apps/api
+docker compose up -d db                       # PostgreSQL 16 on localhost:5432 (user, password and database: sahayogi)
+cp apps/api/.env.example apps/api/.env        # Windows PowerShell: Copy-Item apps/api/.env.example apps/api/.env
+npm run db:migrate -w apps/api                # creates the tables
 npm run seed                                  # 6 demo products + 4 ideas, each with records in all phases 0-12
-npm run dev:api                               # http://localhost:4000   (/health)
-npm run dev:web                               # http://localhost:3000
+npm run dev:api                               # http://localhost:4000   (/health)   <- keep this window open
+npm run dev:web                               # http://localhost:3000               <- in a second window
+```
+
+Open http://localhost:3000. If the page loads with demo products, everything works.
+
+- **The API settings** live in `apps/api/.env` (never committed). `apps/api/.env.example` lists every setting with a comment; only `DATABASE_URL` is required and its default already matches the Docker database.
+- **The web app** needs no settings if the API runs on port 4000. Otherwise copy `apps/web/.env.example` to `apps/web/.env.local` and change `API_URL`.
+- **Checks before you open a pull request:** `npm run check` (types and contract) and `npm test` (needs the database). The same checks run on GitHub for every pull request.
+
+| If you see | Do this |
+|---|---|
+| `DATABASE_URL is required` | You skipped the `cp ... .env` step, or you started the API from a different folder. Use `npm run dev:api` from the project root. |
+| `ECONNREFUSED ... 5432` or "database does not exist" | The database is not running: `docker compose up -d db`, then `npm run db:migrate -w apps/api`. |
+| `EADDRINUSE` (port already in use) | Something else uses port 4000 or 3000. Stop it, or change `PORT` in `apps/api/.env` and `API_URL` in `apps/web/.env.local`. |
+| The web page loads but shows no data or errors | The API is not running, or `API_URL` points to the wrong address. Open http://localhost:4000/health. |
+| A new database field is missing after pulling | Run `npm run db:migrate -w apps/api` again. |
+
+Other commands:
+```bash
 npm test                                      # 12 checks: Postgres parity with the prototype, HTTP, persistence
 npm run check -w apps/api                     # typecheck + 13 Home/ideas checks (no database needed)
 ```
@@ -20,6 +43,14 @@ Every route is under `/api/v1` (the older `/api/...` addresses still work until 
 **Keeping the API reference current:** after you add, change or remove any API route (backend) or any API call (web app), run `npm run openapi:export -w apps/api` and commit `docs/api`. Describing a route's input and answer: add it to `apps/api/src/legacy/openapi-docs/` (see `items.ts`); `npm run test:docs` checks the descriptions against real answers. `npm run test:contract -w apps/api` (part of `npm run check`, so CI runs it) fails when a server route is missing from the reference, a web call points at a route that does not exist, or `swagger.html` is out of date.
 
 Node 22+. The web app proxies `/api/*` to `API_URL` (default http://localhost:4000).
+
+## Working as a team
+
+- **One branch per task**, started from an up-to-date `main`: `git checkout main && git pull && git checkout -b feature/short-name`. Open a pull request into `main`; the other person reviews and merges it. Nobody pushes straight to `main`.
+- **One owner per page or feature**, covering both its web part and its API part. When one person does the screen and the other the API for the same page, first agree the route and what it returns (write it in `apps/api/src/legacy/openapi-docs/`). The API person merges a small pull request with the route first; the screen person then pulls `main` and builds on it.
+- **Database changes:** a new field goes in `apps/api/src/legacy/engine/schema.ts`, then `npm run db:generate -w apps/api`, plus a numbered folder in `apps/api/prisma/migrations` registered in `apps/api/src/db/apply.ts`. Tell the other person before you pick the next number, and merge it first.
+- **Generated files** (`apps/api/prisma/schema.prisma`, `docs/api/*`) are never merged by hand. If they conflict, take either version, run `npm run db:generate -w apps/api` or `npm run openapi:export -w apps/api`, and commit the result.
+- **Never commit** `.env` files, `uploads/`, `backups/` or `.claude/`. They are in `.gitignore`.
 
 ## Backup and restore
 ```bash
@@ -46,9 +77,7 @@ Old JSON tables from before the schema change: once your data is in the real tab
 | Engine (45+26 record types, 87 link types, 97 gate criteria, 36 coverage rules, 30 documents, approvals, competitors, hand-over) | Prototype engine kept in `apps/api/src/legacy`, extended to Phase 0-12 |
 | API | New typed API under `/api/v1` (Home, Ideas, Me; Swagger at `/api/docs`, contract in `docs/api/`). The 144 prototype routes still work under `/api` (deprecated). Writes go to PostgreSQL |
 | Web | Portfolio, Overview (13 phases), Phase workspace (records, add form, sign-off checks), Gates, Traceability, Item detail, Documents |
-| Not yet | Other prototype screens (Work, Files, Competitors, Review inbox, Flows, Handoff, Reports), sign-off buttons, login/roles, typed Nest controllers. See BUILD_PLAN.md |
+| Not yet | Other prototype screens (Work, Files, Review inbox, Flows, Handoff, Reports), sign-off buttons, login/roles, typed Nest controllers. See BUILD_PLAN.md |
 
 The Phase 0-4 gate results are identical to the prototype on all 6 seeded products (`apps/api/src/tests/parity_with_prototype.ts <path to prototype>`).
 Limit: the engine keeps each product in memory and writes the changes to Postgres, so run one API instance until BUILD_PLAN milestone M6.
-# sahayogi_catalyst
-# sahayogi_catalyst

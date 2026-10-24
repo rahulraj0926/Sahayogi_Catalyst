@@ -8,3 +8,7 @@ uploads
 
 backups
 phases5_12_review
+.env.local
+.env.*.local
+.claude/
+.fuse_hidden*
