@@ -10,7 +10,7 @@ export interface SwitchItem { slug: string; name: string; readiness?: number }
  * The product's name as the page title, as a drop-down that jumps to another product.
  * It keeps the same screen (or the same phase) when the other product has it.
  */
-export function ProductSwitcher({ name, pid, items, path, compact }: { name: string; pid: string; items: SwitchItem[]; path: string; compact?: boolean }) {
+export function ProductSwitcher({ name, pid, items, path, compact, current }: { name: string; pid: string; items: SwitchItem[]; path: string; compact?: boolean; /** this is the page being looked at, so the name is shown dark; otherwise it is a grey step on the way */ current?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -37,7 +37,7 @@ export function ProductSwitcher({ name, pid, items, path, compact }: { name: str
     <div ref={box} className="relative">
       <button type="button" onClick={() => { const r = box.current?.getBoundingClientRect(); if (r) setPos({ top: r.bottom + 6, left: Math.max(8, Math.min(r.left, window.innerWidth - 280)) }); setOpen((o) => !o); }}
         aria-haspopup="listbox" aria-expanded={open} title="Switch product"
-        className={compact ? 'flex max-w-[14rem] items-center gap-1 rounded-md border-0 bg-transparent px-1.5 py-0.5 text-xs font-medium text-[var(--text-heading)] transition-colors hover:bg-[var(--search-bg)]' : '-ml-2 flex max-w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-0.5 text-xl font-semibold text-[var(--text-heading)] transition-colors hover:bg-[var(--search-bg)]'} style={{ minHeight: 0 }}>
+        className={compact ? 'flex max-w-[14rem] items-center gap-1 rounded-md border-0 bg-transparent px-1.5 py-0.5 text-sm transition-colors hover:bg-[var(--search-bg)] ' + (current ? 'font-semibold text-[var(--text-heading)]' : 'font-normal text-[var(--text-muted)] hover:text-[var(--text-heading)]') : '-ml-2 flex max-w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-0.5 text-xl font-semibold text-[var(--text-heading)] transition-colors hover:bg-[var(--search-bg)]'} style={{ minHeight: 0 }}>
         {compact ? <span className="truncate">{name}</span> : <h1 className="m-0 truncate text-xl font-semibold">{name}</h1>}
         <ChevronsUpDown size={compact ? 12 : 16} className="shrink-0 text-[var(--text-muted)]" />
       </button>
