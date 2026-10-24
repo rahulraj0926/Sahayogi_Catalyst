@@ -1061,6 +1061,8 @@ CREATE TABLE "item_competitor_note" (
     "id" TEXT NOT NULL,
     "date" DATE,
     "text" TEXT,
+    "html" TEXT,
+    "pinned" BOOLEAN,
     "source" TEXT,
     "author" TEXT,
     "importance" TEXT,
@@ -1113,7 +1115,6 @@ CREATE TABLE "item_price_point" (
     "valid_to" DATE,
     "seat_model" TEXT,
     "max_users" INTEGER,
-    "tier_tag" TEXT,
     CONSTRAINT "item_price_point_pkey" PRIMARY KEY ("product_id","id")
 );
 
@@ -1235,7 +1236,6 @@ CREATE TABLE "item_pricing_plan" (
     "limits" TEXT,
     "audience" TEXT,
     "is_free" BOOLEAN,
-    "tier_tag" TEXT,
     "price_monthly" DOUBLE PRECISION,
     "price_yearly" DOUBLE PRECISION,
     "seat_model" TEXT,

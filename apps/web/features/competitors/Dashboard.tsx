@@ -53,7 +53,6 @@ export default function Dashboard({ pid, scope, onScope, onAdd }: { pid: string;
   const hasParts = modules.length > 0;
   const scoped = hasParts && scope ? all.filter((c) => scopesOf(c).length === 0 || scopesOf(c).some((x) => key(x) === key(scope))) : all;
   const order = (a: any, b: any) => (sort === 'recent' ? String(b.last_update || '').localeCompare(String(a.last_update || '')) : 0) || String(a.title).localeCompare(String(b.title));
-  const mix = (['direct', 'indirect', 'alternative', 'in_house'] as const).map((k) => [k, scoped.filter((c) => (c.kind || 'direct') === k).length] as const).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${KIND[k].replace(' competitor', '').toLowerCase()}`).join(' · ');
   const shown = scoped
     .filter((c) => !q || `${c.title} ${c.positioning || ''}`.toLowerCase().includes(q.toLowerCase()))
     .map((c) => ({ ...c, _whole: !!scope && hasParts && scopesOf(c).length === 0 }))
@@ -121,21 +120,17 @@ export default function Dashboard({ pid, scope, onScope, onAdd }: { pid: string;
   const list = (
     <section className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[11rem] flex-1">
-          {/* the page title above already says "Competitors", so the line below gives only the numbers */}
-          <div className="text-[14px] text-[var(--text-muted)]"><b className="font-semibold text-[var(--text-heading)]">{scoped.length}</b> in total{hasParts && scope ? ` for ${scope}` : ''}{mix ? ` · ${mix}` : ''}</div>
-        </div>
-        <label className="relative block w-full screen-lg:w-52">
+        <label className="relative block w-full screen-lg:w-64">
           <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input type="search" value={q} onChange={(e) => { setQ(e.target.value); pg.setPage(1); }} placeholder="Search competitors" aria-label="Search competitors" className="h-9 w-full rounded-lg border border-[var(--divider)] bg-[var(--search-bg)] pr-2 text-sm" style={{ paddingLeft: 32 }} />
         </label>
-        <div className="seg" role="group" aria-label="How to show">
-          <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => pickView('list')} aria-label="List" title="List" style={{ padding: '5px 9px' }}><List size={15} /></button>
-          <button type="button" className={view === 'cards' ? 'on' : ''} onClick={() => pickView('cards')} aria-label="Cards" title="Cards" style={{ padding: '5px 9px' }}><LayoutGrid size={15} /></button>
-        </div>
         <div className="seg" role="group" aria-label="Order">
           <button type="button" className={sort === 'name' ? 'on' : ''} onClick={() => setSort('name')}>A to Z</button>
           <button type="button" className={sort === 'recent' ? 'on' : ''} onClick={() => setSort('recent')}>Recently updated</button>
+        </div>
+        <div className="seg ml-auto" role="group" aria-label="How to show">
+          <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => pickView('list')} aria-label="List" title="List" style={{ padding: '5px 9px' }}><List size={15} /></button>
+          <button type="button" className={view === 'cards' ? 'on' : ''} onClick={() => pickView('cards')} aria-label="Cards" title="Cards" style={{ padding: '5px 9px' }}><LayoutGrid size={15} /></button>
         </div>
       </div>
 

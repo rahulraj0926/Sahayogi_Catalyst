@@ -289,7 +289,7 @@ const TYPES = {
   },
   CompetitorNote: {
     prefix: 'CNT', phase: 1, v2Ref: ['PORTFOLIO/CompetitorNote', 'COMP-6/CompetitorEvent'], statuses: ['Active', 'Retired'],
-    fields: [req(D('date')), req(LT('text')), T('source'), T('author'), E('importance', ['low', 'medium', 'high'])],
+    fields: [req(D('date')), req(LT('text')), LT('html', { help: 'The note with bold, italic and tick boxes, as the sticky note was written. text is the same note as plain words.' }), B('pinned', { help: 'Pinned notes are shown first.' }), T('source'), T('author'), E('importance', ['low', 'medium', 'high'])],
     suspectFields: [],
   },
   CompetitorProductLine: {

@@ -61,7 +61,7 @@ export default function PointList({ title, tone, one, points, onChange }: Props)
       </div>
       <ol className="m-0 flex list-none flex-col gap-4 p-0">
         {points.map((p, i) => (
-          <li key={`${i}-${p.head}-${p.text}`} className={row}>
+          <li key={`${i}-${p.head}-${p.text}`} className={`group ${row}`}>
             <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full text-[12px] font-bold" style={{ background: `color-mix(in srgb, ${tone} 16%, transparent)`, color: tone }}>{i + 1}</span>
             {at === i ? form : (
               <div className="flex min-w-0 items-start gap-3">
@@ -69,7 +69,7 @@ export default function PointList({ title, tone, one, points, onChange }: Props)
                   {p.head && <div className="text-[15px] font-bold leading-6 text-[var(--text-heading)]">{p.head}</div>}
                   <div className={p.head ? 'text-[14px] leading-snug text-[var(--text-secondary)]' : 'text-[14px] leading-6 text-[var(--text-heading)]'}>{p.text.charAt(0).toUpperCase() + p.text.slice(1)}</div>
                 </div>
-                <span className="flex shrink-0 gap-2 leading-6">
+                <span className="flex shrink-0 gap-2 leading-6 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                   <button type="button" className="grid h-6 w-6 place-items-center text-[var(--text-muted)] hover:text-[var(--text-heading)]" aria-label={`Edit ${one} ${i + 1}`} title="Edit" onClick={() => open(i)}><Pencil size={14} /></button>
                   <button type="button" className="grid h-6 w-6 place-items-center text-[var(--text-muted)] hover:text-[var(--status-critical-fg)]" aria-label={`Remove ${one} ${i + 1}`} title="Remove" disabled={act.busy} onClick={() => run(points.filter((_, j) => j !== i), close)}><Trash2 size={14} /></button>
                 </span>

@@ -1449,6 +1449,8 @@ model ItemCompetitorNote {
   id String
   date DateTime? @db.Date
   text String?
+  html String?
+  pinned Boolean?
   source String?
   author String?
   importance String?
