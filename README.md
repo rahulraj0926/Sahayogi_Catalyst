@@ -5,12 +5,12 @@ Built from the `prototype/` (Phases 0-4, all features kept) plus new Phases 5-12
 
 ## Run it (first time on a new computer)
 
-You need **Node 22 or newer**, **Docker** (for the database; or your own PostgreSQL 16) and **git**.
+You need **Node 24.20.0** (the exact version is in `.nvmrc`; how to install it and every other version we use is in [docs/VERSIONS.md](docs/VERSIONS.md)), **Docker** (for the database; or your own PostgreSQL 16) and **git**.
 
 ```bash
 git clone https://github.com/rahulraj0926/Sahayogi_Catalyst.git
 cd Sahayogi_Catalyst
-npm install
+npm ci                                        # installs exactly the versions in package-lock.json
 docker compose up -d db                       # PostgreSQL 16 on localhost:5432 (user, password and database: sahayogi)
 cp apps/api/.env.example apps/api/.env        # Windows PowerShell: Copy-Item apps/api/.env.example apps/api/.env
 npm run db:migrate -w apps/api                # creates the tables
@@ -64,7 +64,7 @@ Every route is under `/api/v1` (the older `/api/...` addresses still work until 
 
 **Keeping the API reference current:** after you add, change or remove any API route (backend) or any API call (web app), run `npm run openapi:export -w apps/api` and commit `docs/api`. Describing a route's input and answer: add it to `apps/api/src/legacy/openapi-docs/` (see `items.ts`); `npm run test:docs` checks the descriptions against real answers. `npm run test:contract -w apps/api` (part of `npm run check`, so CI runs it) fails when a server route is missing from the reference, a web call points at a route that does not exist, or `swagger.html` is out of date.
 
-Node 22+. The web app proxies `/api/*` to `API_URL` (default http://localhost:4000).
+Node 24.20.0 (see `.nvmrc`). The web app proxies `/api/*` to `API_URL` (default http://localhost:4000).
 
 ## Working as a team
 
