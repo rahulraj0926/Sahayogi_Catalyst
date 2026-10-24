@@ -6,6 +6,7 @@ import * as coverage from '../../legacy/engine/coverage';
 import * as requests from '../../legacy/engine/requests';
 import * as agent from '../../legacy/engine/agent';
 import * as competitors from '../../legacy/engine/competitors';
+import * as competitorProfile from '../../legacy/engine/competitor_profile';
 import * as competitorPlans from '../../legacy/engine/competitor_plans';
 import * as competitorOverview from '../../legacy/engine/competitor_overview';
 import * as competitorSample from '../../legacy/engine/competitor_sample';
@@ -200,6 +201,9 @@ export class CompetitorViewsController {
 
   /** The whole competitor dashboard in one answer: analysed counts, tiers, common features with their share, the recommendation and its average price. */
   @Get('scopes') @EngineRoute() scopes(@Ctx() c: EngineCtx) { return { has_modules: hasModules(c.store), scopes: scopeNames(c.store) }; }
+
+  /** Everything one competitor's page shows, worked out for that competitor only. */
+  @Get(':id/profile') @EngineRoute() profile(@Ctx() c: EngineCtx, @Param('id') id: string) { return competitorProfile.profile(c.store, id); }
 
   @Get('overview') @EngineRoute() overview(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) { return competitorOverview.overview(c.store, query); }
 

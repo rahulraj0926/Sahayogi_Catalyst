@@ -78,6 +78,11 @@ export const analysisDocs: DocSet = {
     'GET /api/competitors/catalog': { summary: 'Our common feature list and the competitor ratings that still use only their own name', description: 'Per common feature: which competitors offer it and what each calls it. Also the names not yet mapped, with a suggested match.', response: open },
     'GET /api/competitors/plan-capabilities': { summary: 'Which capabilities each plan includes', description: 'Per competitor: each plan with the capabilities linked to it, and how many plans have no capabilities mapped yet.', response: open },
     'GET /api/competitors/must-have': { summary: 'Capabilities most competitors offer', description: 'Our features ordered by how many active competitors offer them (rated strong, parity or partial), with the competitors that do not. Only features offered by at least the given share are listed.', query: { threshold: { description: 'Share of competitors, 1 to 100. Default 80. 1 lists every feature at least one competitor offers.', schema: { type: 'integer', minimum: 1, maximum: 100 } }, scope: { description: 'Only competitors that matter for this part of our product (a module or area name). Competitors with no scope count everywhere.' } }, response: open },
+    'GET /api/competitors/{id}/profile': {
+      summary: 'Everything one competitor\'s page shows',
+      description: 'The competitor with its links, history and checks (the same as GET /items/{id}), plus only its own plans (prices), capability ratings, notes and files, its product lines with their plans, how complete the record is with the to-do items that follow from it, and the capability names in use across the product. One call replaces reading every price, rating, note and file of the product and sorting them in the browser.',
+      response: open, errors: { '404': 'No competitor has this id (it may be another kind of item).' },
+    },
     'GET /api/competitors/scopes': { summary: 'Parts of our product competitors are set against', description: 'Every scope name in use: modules of the product and any area name typed on a competitor, with how many competitors carry it.', response: open },
     'GET /api/competitors/overview': {
       summary: 'The competitor dashboard in one answer',

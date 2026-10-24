@@ -124,13 +124,7 @@ function Candidates({ att, c, onClose, onDone }: { att: any; c: any; onClose: ()
 const GOALS: [string, string][] = [['competitor_profile', 'Find company facts'], ['competitor_prices', 'Find prices'], ['capabilities', 'Find capabilities']];
 
 export default function Profile({ pid, id, query }: { pid: string; id: string; query: URLSearchParams }) {
-  const { data, error, loading, reload } = useApi<any>(`/items/${id}`, pid);
-  const prices = useApi<any>('/items?type=PricePoint&limit=2000', pid);
-  const caps = useApi<any>('/items?type=CompetitorCapability&limit=3000', pid);
-  const notes = useApi<any>('/items?type=CompetitorNote&limit=2000', pid);
-  const atts = useApi<any>('/attachments', pid);
-  const pls = useApi<any>('/competitors/product-lines', pid);
-  const comp = useApi<any>('/competitors/completeness', pid);
+  const { data, error, loading, reload } = useApi<any>(`/competitors/${id}/profile`, pid);
   const cat = useApi<any>('/competitors/catalog', pid);
   const [tab, setTab] = useState(['overview', 'prices', 'files', 'notes', 'sources'].includes(query.get('tab') || '') ? query.get('tab')! : 'overview');
   const [addPrice, setAddPrice] = useState(false);
@@ -149,22 +143,20 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [showDone, setShowDone] = useState(false); const [newTodo, setNewTodo] = useState(''); const [editTodo, setEditTodo] = useState<{ i: number; text: string } | null>(null);
-  if (loading || prices.loading || caps.loading) return <Loading />;
+  if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error || 'Not found'} />;
   const c = data.item;
-  const out = (type: string) => new Set((data.links as any[]).filter((l) => l.direction === 'out' && l.otherType === type).map((l) => l.other));
-  const myLines: any[] = ((pls.data as any[]) || []).find((x) => x.id === id)?.product_lines || [];
-  const lineOf = new Map<string, string>(); myLines.forEach((l) => (l.plans || []).forEach((p: any) => lineOf.set(p.id, l.product_name)));
-  const myPrices = ((prices.data?.items as any[]) || []).filter((p) => (out('PricePoint').has(p.id) || lineOf.has(p.id)) && p.status !== 'Retired');
-  const myCaps = ((caps.data?.items as any[]) || []).filter((p) => out('CompetitorCapability').has(p.id) && p.status !== 'Retired');
-  const noteIds = new Set((data.links as any[]).filter((l) => l.direction === 'in' && l.type === 'note_on').map((l) => l.other));
-  const myNotes = ((notes.data?.items as any[]) || []).filter((n) => noteIds.has(n.id) && n.status !== 'Retired');
-  const myFiles = ((atts.data?.attachments as any[]) || []).filter((a) => (a.targets || []).includes(id));
-  const allTags = Array.from(new Set(((caps.data?.items as any[]) || []).map((x) => x.capability_tag).filter(Boolean))) as string[];
+  // everything below belongs to this competitor: the server has already picked it out
+  const myLines: any[] = data.product_lines || [];
+  const myPrices: any[] = data.prices || [];
+  const myCaps: any[] = data.capabilities || [];
+  const myNotes: any[] = data.notes || [];
+  const myFiles: any[] = data.files || [];
+  const allTags: string[] = data.capability_tags || [];
   const mapOf: Record<string, { capability_id: string; link_id: string }> = cat.data?.mapping || {};
   const features: { id: string; name: string; aliases: string[] }[] = cat.data?.capabilities || [];
   const guess = (name: string) => { const n = name.trim().toLowerCase(); return n ? features.find((f) => f.name.toLowerCase() === n || (f.aliases || []).some((a) => a.toLowerCase() === n)) : undefined; };
-  const refreshAll = () => { reload(); prices.reload(); caps.reload(); notes.reload(); atts.reload(); pls.reload(); comp.reload(); cat.reload(); };
+  const refreshAll = () => { reload(); cat.reload(); };
   const unchecked = (p: any) => p.verification === 'unverified' || (p.origin === 'human' && !p.verified_by && p.verification !== 'verified' && p.verification !== 'rejected');
   const checks = [
     { done: filled(c.website), label: 'Add their website' }, { done: filled(c.positioning), label: 'Say in a line how they compete' },
@@ -175,7 +167,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
     { done: myFiles.length > 0, label: 'Upload a source file (deck, price list, PDF)' },
     { done: !!c.last_reviewed_on && !(c.review_by && c.review_by < today()), label: c.last_reviewed_on ? 'Review is overdue. Mark it reviewed' : 'Mark as reviewed once it looks right' },
   ];
-  const server = ((comp.data as any[]) || []).find((x) => x.id === id);
+  const server = data.completeness;
   const pct = server ? server.score : Math.round((checks.filter((x) => x.done).length / checks.length) * 100);
   const toggleTodo = (key: string, on: boolean) => { const cur = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []); if (on) cur.add(key); else cur.delete(key); patch(id, { todo_done: cur.size ? [...cur] : '' }); };
   const myTodos: string[] = Array.isArray(c.todo_items) ? c.todo_items : [];

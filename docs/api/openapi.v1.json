@@ -12661,6 +12661,97 @@
         "x-documented": true
       }
     },
+    "/api/v1/competitors/{id}/profile": {
+      "get": {
+        "operationId": "CompetitorViewsController_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {}
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No competitor has this id (it may be another kind of item).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The input is not valid; the message says what to change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Everything one competitor's page shows",
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "description": "The competitor with its links, history and checks (the same as GET /items/{id}), plus only its own plans (prices), capability ratings, notes and files, its product lines with their plans, how complete the record is with the to-do items that follow from it, and the capability names in use across the product. One call replaces reading every price, rating, note and file of the product and sorting them in the browser. Also answers at its old address /api/competitors/{id}/profile, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
     "/api/v1/competitors/overview": {
       "get": {
         "operationId": "CompetitorViewsController_overview",
