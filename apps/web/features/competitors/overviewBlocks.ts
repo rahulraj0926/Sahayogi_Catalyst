@@ -11,7 +11,7 @@ export type Row = {
   /** the competitor field this row reads from and saves to, so it can be edited here */
   key?: string;
 };
-export type BlockDef = { id: string; title: string; /** one line under the title saying what the card holds */ sub?: string; rows: Row[]; /** a link under the block that opens a tab of this page */ open?: { label: string; tab: string } };
+export type BlockDef = { id: string; title: string; /** one line under the title saying what the card holds */ sub?: string; rows: Row[] };
 
 /** The two sides of the head-to-head card at the top: what they do well, and where we can beat them. */
 export const SIDES = [
@@ -27,13 +27,6 @@ export const BLOCKS: BlockDef[] = [
     { id: 'segment_overlap', label: 'Shared with us', key: 'segment_overlap' },
     { id: 'key_customers', label: 'Known customers', key: 'key_customers' },
     { id: 'gtm_channels', label: 'Sales channels', key: 'gtm_channels' },
-  ] },
-  { id: 'evidence', title: 'Evidence & review', open: { label: 'Open sources →', tab: 'sources' }, rows: [
-    { id: 'evidence', label: 'Sources' },
-    { id: 'files', label: 'Files' },
-    { id: 'notes', label: 'Notes' },
-    { id: 'verified', label: 'Last checked' },
-    { id: 'review_by', label: 'Next review', key: 'review_by' },
   ] },
   { id: 'company', title: 'Company details', sub: 'Identity and verification', rows: [
     { id: 'website', label: 'Website', key: 'website' },

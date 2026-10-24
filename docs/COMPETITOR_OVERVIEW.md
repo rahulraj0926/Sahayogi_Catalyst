@@ -25,16 +25,16 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 | Started | Founded |
 | Number of people / People | Team size |
 | About their size | Size note |
-| How we know | Evidence & review |
+| How we know | Sources tab |
 | Charged | Licence |
 | Prices checked | Prices updated |
-| Check again by | Next review |
+| Check again by | Next review (Sources tab) |
 
 ## Layout (follows the design mock-up)
 - **Under the title:** the description, the website, and who added the record and when it last changed. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
 - **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
 - **First row:** Company details and Customers & market, two equal cards.
-- **Second row:** Evidence & review on the left, To do on the right.
+- **Second row:** Files, To do and Notes, three equal cards (two columns on a narrower screen).
 - **Bottom:** Strengths and Weaknesses & risks, side by side. Each is a numbered list of points with its own "+ Add" at the top right of the title. A point has a heading and details, edited in two separate boxes (the heading is optional). Edit changes one point, Remove deletes one, and every change saves straight away. Stored as text, one point per line, written "Heading: details".
 - Cards in a row always have the same height, so there is no hole beside a short card; on a phone they stack in one column.
 
@@ -42,8 +42,11 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 |---|---|---|
 | Company details | Website, legal name, products, founded, head office, team size, ownership, funding | Typed in. Products are the competitor's product lines (each with its own plans on the Plans & pricing tab); "+ Add product" adds one here |
 | Customers & market | Customer size (tick any of Individuals, Small business, Mid-size companies, Large companies), target market (regions or industries, typed as tags), target customers (a few words), shared with us, known customers, sales channels | Typed in |
-| Evidence & review | Sources (amber "None yet" when there are none), files, notes, last checked, next review (amber "overdue" after the date). Link: Open sources | Counted from the competitor's own sources, files and notes |
-| To do | What is still missing on this competitor | The existing to-do list |
+| Files | The competitor's files, with "+ Upload" (or drop files on the card) straight on the Overview | Files linked to this competitor |
+| To do | What is still missing on this competitor, with the add box pinned to the bottom of the card | The existing to-do list |
+| Notes | Coloured sticky notes, the same look as the Notes page; "+ Add" writes a note right there, the cross removes it | Competitor notes linked to this competitor (kept apart from product notes and personal notes, so the Notes page can filter the three kinds later) |
+
+There is no Evidence card on the Overview. Last checked, Next review and "Checked today" sit at the top of the Sources tab.
 
 Left out of the mock-up on purpose: the left menu (the page already has tabs), the "keep claims linked to a source" note, the data-confidence line (the amber "None yet" next to Sources says the same) and the Products & pricing card (it repeated the Plans & pricing tab).
 

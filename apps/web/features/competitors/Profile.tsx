@@ -14,6 +14,9 @@ import { ImportDialog } from './Import';
 import { ago, hueOf } from './Dashboard';
 import { filled, F } from './profileFields';
 import Overview from './Overview';
+import NotesCard from './NotesCard';
+import { CARD } from './overviewStyle';
+import { uploadFiles } from './FilesCard';
 
 const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const sp = (s?: string) => String(s ?? '').replace(/_/g, ' ');
@@ -236,12 +239,12 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
       </div>
       <div>
         {tab === 'overview' && (
-          <Overview c={c} onOpen={setTab} onAddProduct={() => setAddLine(true)} links={data.links} prices={myPrices} files={myFiles} notes={myNotes} lines={myLines} onSaved={refreshAll}
+          <Overview c={c} pid={pid} onAddProduct={() => setAddLine(true)} lines={myLines} files={myFiles} notes={myNotes} onSaved={refreshAll}
             kind={<select value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
             todo={(<>
             {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}
-            <section className="@container h-full rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-6 [box-shadow:var(--card-shadow)]"><div>
-              <div className="mb-4 flex items-baseline gap-2"><h3 className="m-0 flex-1 text-[18px] font-bold">To do</h3><span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span></div>
+            <section className={`@container flex h-full min-w-0 flex-col p-6 ${CARD}`}><div className="flex min-h-0 flex-1 flex-col">
+              <div className="mb-4 flex items-baseline gap-2"><h3 className="m-0 flex-1 text-[18px] font-bold text-[var(--text-heading)]">To do</h3><span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span></div>
               {todoOpen.length === 0 && <div className="small muted" style={{ marginBottom: 6 }}>Nothing left to do.</div>}
               <ul className="m-0 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoOpen.map(todoRow)}</ul>
               {todoDone.length > 0 && (
@@ -249,7 +252,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
                   <button type="button" className="btn xs ghost" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>{showDone ? 'Hide' : 'Show'} {todoDone.length} done</button>
                   {showDone && <ul className="m-0 mt-1 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoDone.map(todoRow)}</ul>}
                 </div>)}
-              <form className="row" style={{ gap: 6, marginTop: 12 }} onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
+              <form className="row mt-auto" style={{ gap: 6, paddingTop: 12 }} onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
                 <input value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Add a to-do" aria-label="Add a to-do" style={{ flex: 1, minWidth: 0 }} />
                 <button type="submit" className="btn sm primary" disabled={act.busy || !newTodo.trim()}>Add</button>
               </form>
@@ -273,7 +276,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
         )}
         {tab === 'files' && (
           <Card title="Source files" right={<>
-            <input ref={fileInput} type="file" multiple hidden onChange={(e) => { const fl = e.target.files; if (fl && fl.length) act.run(async () => { for (const file of Array.from(fl)) { const res = await fetch(`/api/v1/attachments?target=${encodeURIComponent(id)}&name=${encodeURIComponent(file.name)}&product=${encodeURIComponent(pid)}`, { method: 'POST', headers: { 'x-actor': actor(), 'content-type': file.type || 'application/octet-stream' }, body: file }); const j = await res.json().catch(() => ({})); if (!res.ok) throw new Error(j.error || `Could not upload ${file.name} (${res.status})`); } refreshAll(); }); e.target.value = ''; }} />
+            <input ref={fileInput} type="file" multiple hidden onChange={(e) => { const fl = e.target.files; if (fl && fl.length) act.run(async () => { await uploadFiles(Array.from(fl), id, pid); refreshAll(); }); e.target.value = ''; }} />
             <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => fileInput.current?.click()}>{act.busy ? 'Uploading…' : 'Upload a file'}</button>
           </>}>
             {assistMsg && <div className="callout ok" style={{ marginBottom: 8 }}>{assistMsg} <Link href={`/products/${pid}/inbox`}>Open the review inbox</Link></div>}
@@ -289,16 +292,8 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
             ))}
           </Card>
         )}
-        {tab === 'notes' && (
-          <Card title="Notes">
-            <textarea rows={3} style={{ width: '100%' }} value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="What did you notice?" />
-            <button className="btn primary" style={{ margin: '6px 0 10px' }} disabled={!newNote.trim()} onClick={() => act.run(async () => { const r = await api<any>('/items', { method: 'POST', body: { type: 'CompetitorNote', fields: { title: `${c.title}: ${newNote.trim().slice(0, 60)}`, text: newNote.trim(), importance: 'medium' } } }); await api('/links', { method: 'POST', body: { type: 'note_on', source: r.item.id, target: id } }); setNewNote(''); refreshAll(); })}>Add note</button>
-            {myNotes.length === 0 ? <Empty>No notes yet.</Empty> : myNotes.map((n) => (
-              <div key={n.id} className="row" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}><div style={{ flex: 1 }}>{n.text}<div className="xs muted">{n.created_by} · {fmtDate(n.created_at)}</div></div><button className="btn xs danger" onClick={async () => { if (await ask('Remove this note? It stays in history but is no longer shown.', 'Remove')) act.run(async () => { await api(`/items/${n.id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); }); }}>Remove</button></div>
-            ))}
-          </Card>
-        )}
-        {tab === 'sources' && <SourcesTab links={data.links} pid={pid} />}
+        {tab === 'notes' && <NotesCard c={c} notes={myNotes} onSaved={refreshAll} />}
+        {tab === 'sources' && <SourcesTab c={c} links={data.links} pid={pid} onSaved={refreshAll} />}
       </div>
       {addLine && <AddProductLine c={c} onClose={() => setAddLine(false)} onDone={() => { setAddLine(false); refreshAll(); }} />}
       {fromFile && <ImportDialog pid={pid} fixedCompetitor={c.title} onClose={() => setFromFile(false)} onDone={() => { setFromFile(false); refreshAll(); }} />}
@@ -310,11 +305,24 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   );
 }
 
-function SourcesTab({ links, pid }: { links: any[]; pid: string }) {
+/** When the competitor was last checked and when to check it next, then the evidence behind what we know. */
+function SourcesTab({ c, links, pid, onSaved }: { c: any; links: any[]; pid: string; onSaved: () => void }) {
   const ev = useApi<any>('/items?type=Evidence&limit=5000', pid);
+  const act = useAction();
   const ids = new Set(links.map((l) => l.other));
   const list = ((ev.data?.items as any[]) || []).filter((e) => ids.has(e.id));
+  const save = (fields: Record<string, unknown>) => act.run(async () => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields } }); onSaved(); });
+  const overdue = !!c.review_by && c.review_by < today();
   return (
+    <>
+    <Card title="Review">
+      {act.box}
+      <div className="row wrap" style={{ gap: 24 }}>
+        <span><span className="muted">Last checked </span><b>{c.last_reviewed_on ? fmtDate(c.last_reviewed_on) : 'not yet'}</b></span>
+        <label className="row" style={{ gap: 8 }}><span className="muted">Next review</span><input type="date" value={c.review_by || ''} disabled={act.busy} onChange={(e) => { if (e.target.value) save({ review_by: e.target.value }); }} style={{ height: 30, minHeight: 0 }} />{overdue && <span style={{ color: 'var(--status-warning-fg)' }}>overdue</span>}</label>
+        <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => save({ last_reviewed_on: today(), review_by: addDays(today(), 90) })}>Checked today</button>
+      </div>
+    </Card>
     <Card title="Sources" flush>
       {list.length === 0 ? <Empty>No evidence is linked to this competitor yet. Evidence is added when a file or web page is used for a price or capability.</Empty> : (
         <table className="tbl compact"><thead><tr><th>ID</th><th>Evidence</th><th>Grade</th><th>Retrieved</th></tr></thead><tbody>
@@ -322,5 +330,6 @@ function SourcesTab({ links, pid }: { links: any[]; pid: string }) {
         </tbody></table>
       )}
     </Card>
+    </>
   );
 }
