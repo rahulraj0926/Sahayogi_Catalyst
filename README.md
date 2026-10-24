@@ -34,6 +34,7 @@ Each developer has their own database; data is not shared through GitHub. What i
 
 - **The API settings** live in `apps/api/.env` (never committed). `apps/api/.env.example` lists every setting with a comment; only `DATABASE_URL` is required and its default already matches the Docker database.
 - **The web app** needs no settings if the API runs on port 4000. Otherwise copy `apps/web/.env.example` to `apps/web/.env.local` and change `API_URL`.
+- **Versions:** `versions.json` is the one list of Node, npm, PostgreSQL and package versions. Change a version only with `npm run versions:set -- <package> <version>`; `npm run versions:check` fails if anything disagrees. See [docs/VERSIONS.md](docs/VERSIONS.md).
 - **Checks before you open a pull request:** `npm run check` (types and contract) and `npm test` (needs the database). The same checks run on GitHub for every pull request.
 
 **Which address goes where.** On your own computer you change nothing: the defaults already point at each other. Change one only if you move a part to another port or computer.

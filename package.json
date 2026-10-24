@@ -19,9 +19,13 @@
     "build": "npm run build -w apps/api && npm run build -w apps/web",
     "seed": "npm run seed -w apps/api",
     "test": "npm test -w apps/api",
-    "check": "npm run check -w apps/api && npx tsc --noEmit -p apps/web/tsconfig.json",
+    "check": "npm run versions:check && npm run check -w apps/api && npx tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "eslint .",
-    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" --log-level warn"
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" --log-level warn",
+    "versions:check": "node scripts/versions.mjs check",
+    "versions:set": "node scripts/versions.mjs set",
+    "versions:sync": "node scripts/versions.mjs sync",
+    "versions:list": "node scripts/versions.mjs list"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
