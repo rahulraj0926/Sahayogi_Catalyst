@@ -41,7 +41,9 @@ function RenameCompetitor({ c, onClose, onDone }: { c: any; onClose: () => void;
 
 function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lines: any[]; onClose: () => void; onDone: () => void }) {
   const units = useApi<any>('/price-units', pid);
-  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst', line: '', seat_model: '', max_users: '' });
+  const mine = useApi<any>(`/competitors/plans?competitor=${encodeURIComponent(c.id)}`, pid);
+  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst', line: '', seat_model: '', max_users: '', copy: '', features: '' });
+  const others: any[] = (mine.data?.plans || []).filter((p: any) => (mine.data?.features || []).some((f: any) => f.in_plans.includes(p.key)));
   const act = useAction();
   const choices: any[] = (units.data?.choices || []).filter((x: any) => !x.usage || units.data?.sells_usage !== false);
   const set = (k: string, x: any) => setV({ ...v, [k]: x });
@@ -55,6 +57,8 @@ function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lin
       {v.seat_model === 'multi_user' && <Field label="Most users it covers (if stated)"><input type="number" min={1} value={v.max_users} onChange={(e) => set('max_users', e.target.value)} /></Field>}
       <Field label="What kind of price is it?"><select value={v.price_type} onChange={(e) => set('price_type', e.target.value)}>{['list', 'mrp', 'street', 'dealer', 'distributor', 'oem', 'quote', 'tender_award', 'promo'].map((x) => <option key={x} value={x}>{sp(x)}</option>)}</select></Field>
       <Field label="Does that price include GST?"><select value={v.tax_basis} onChange={(e) => set('tax_basis', e.target.value)}><option value="incl_gst">Includes GST</option><option value="excl_gst">Excludes GST</option><option value="not_applicable">No GST applies</option></select></Field>
+      {others.length > 0 && <Field label="Start with the features of" help="Copies every feature of that plan into this one."><select value={v.copy} onChange={(e) => set('copy', e.target.value)}><option value="">None</option>{others.map((p: any) => <option key={p.key} value={p.key}>{p.plan}</option>)}</select></Field>}
+      <Field label="Features in this plan (optional)" help="One on each line. Add more later from the plan card."><textarea rows={3} value={v.features} onChange={(e) => set('features', e.target.value)} placeholder={'Audit log\nExport to Excel'} /></Field>
       {act.box}
       <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
         const f = choices.find((x) => x.v === v.for);
@@ -63,6 +67,10 @@ function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lin
         const fields = { title: `${c.title} ${v.plan || f.label}`, plan: v.plan, amount: Number(v.amount), currency: v.currency, price_type: v.price_type, tax_basis: v.tax_basis, captured_on: today(), ...(v.seat_model ? { seat_model: v.seat_model } : {}), ...(v.seat_model === 'multi_user' && v.max_users !== '' ? { max_users: Number(v.max_users) } : {}), ...f.f };
         const r = await api<any>('/items', { method: 'POST', body: { type: 'PricePoint', fields } });
         await api('/links', { method: 'POST', body: { type: 'contains', source: v.line || c.id, target: r.item.id } });
+        const copied = v.copy ? (mine.data?.features || []).filter((x: any) => x.in_plans.includes(v.copy)).map((x: any) => (x.capability_id ? { capability_id: x.capability_id } : { rating_id: x.rating_id })) : [];
+        if (copied.length) await api('/competitors/plans/features', { method: 'POST', body: { competitor: c.id, price_ids: [r.item.id], features: copied, included: true } });
+        const typed = v.features.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+        if (typed.length) await api('/competitors/catalog/common', { method: 'POST', body: { features: typed.map((name: string) => ({ name })), competitor: c.id, price_ids: [r.item.id] } });
         onDone();
       })}>Add price</button>
       <div className="small muted" style={{ marginTop: 6 }}>Today&apos;s date is saved as the date you captured it. Add source and date details in its row later.</div>

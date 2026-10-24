@@ -415,7 +415,7 @@ function addCommonFeatures(store, features: { name: string; category?: string; d
   const comps = store.list('Competitor', (c) => c.status !== 'Retired');
   if (!comps.length) throw Object.assign(new Error('There are no competitors yet. Add one first.'), { status: 422 });
   const today = store.today();
-  const out = { features_added: 0, features_existing: 0, rows_added: 0, rows_existing: 0, competitors: comps.length };
+  const out = { features_added: 0, features_existing: 0, rows_added: 0, rows_existing: 0, competitors: comps.length, capability_ids: [] as string[] };
   for (const f of clean) {
     let cap = store.list('Capability', (c) => c.status !== 'Retired').find((c) => String(c.title).trim().toLowerCase() === f.name.toLowerCase());
     if (cap) out.features_existing++;
@@ -423,6 +423,7 @@ function addCommonFeatures(store, features: { name: string; category?: string; d
       cap = store.create('Capability', { title: f.name, ...(f.category ? { category: f.category } : {}), ...(f.description ? { description: f.description } : {}), status: 'Active' }, { actor });
       out.features_added++;
     }
+    out.capability_ids.push(cap.id);
     for (const c of comps) {
       const have = cellsOf(store, c).some((r) => r.type === 'CompetitorCapability' && r.status !== 'Retired' && capabilityTag(store, r).toLowerCase() === f.name.toLowerCase());
       if (have) { out.rows_existing++; continue; }

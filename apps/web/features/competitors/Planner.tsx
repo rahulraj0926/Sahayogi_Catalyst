@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Empty, ErrorBox, Loading } from '@/components/ui';
 import { Field, Modal, useAction } from '@/components/kit';
 import { api, useApi } from '@/lib/api';
-import { PlanCard, PlanRow } from './PlanKit';
+import { AddFeatureModal, PlanCard, PlanRow } from './PlanKit';
 
 const PERIODS: [string, string][] = [['monthly', 'per month'], ['quarterly', 'per quarter'], ['yearly', 'per year'], ['one_time', 'paid once'], ['per_unit', 'per unit'], ['custom', 'custom']];
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? 'On request' : `${c === 'INR' ? '₹' : c + ' '}${Number(a).toLocaleString('en-IN')}`);
@@ -72,57 +72,6 @@ function PlanForm({ pid, plan, plans = [], all = [], onClose, onDone }: { pid: s
   );
 }
 
-/** Add features to ONE plan. Search what our other plans and the competitors already have and click one, or type new ones (one per line). */
-function AddFeature({ pid, plan, plans, all, onClose, onDone }: { pid: string; plan: any; plans: any[]; all: any[]; onClose: () => void; onDone: () => void }) {
-  const [lines, setLines] = useState('');
-  const [from, setFrom] = useState('');
-  const others = plans.filter((p) => p.id !== plan.id && p.feature_count > 0);
-  const [find, setFind] = useState('');
-  const [q, setQ] = useState('');
-  const act = useAction();
-  useEffect(() => { const t = setTimeout(() => setQ(find.trim()), 250); return () => clearTimeout(t); }, [find]);
-  const names = lines.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  // the competitors' features are searched on the server (there can be thousands); only the first few matches are drawn
-  const theirs = useApi<any>(q ? `/competitors/our-plans/pick-features?q=${encodeURIComponent(q)}&limit=6` : null, pid, { keep: true });
-  const mine = q ? all.filter((f) => !f.in_plans.includes(plan.id) && f.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
-  const rivals: any[] = q ? theirs.data?.features || [] : [];
-  const total: number = q ? theirs.data?.total || 0 : 0;
-  const addMine = (f: any) => act.run(async () => { await api('/competitors/our-plans/features', { product: pid, method: 'POST', body: { plan_id: plan.id, capability_id: f.capability_id, included: true } }); onDone(); });
-  const addTheirs = (name: string) => act.run(async () => { await api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: [{ name }], plan_ids: [plan.id] } }); onDone(); });
-  return (
-    <Modal title={`Add features to ${plan.title}`} onClose={onClose}>
-      {others.length > 0 && (
-        <Field label="Copy from another plan" help="Adds every feature of that plan to this one.">
-          <div className="row" style={{ gap: 8 }}>
-            <select value={from} onChange={(e) => setFrom(e.target.value)}><option value="">Choose a plan</option>{others.map((p) => <option key={p.id} value={p.id}>{p.title} ({p.feature_count} feature{p.feature_count === 1 ? '' : 's'})</option>)}</select>
-            <button type="button" className="btn" disabled={act.busy || !from} onClick={() => act.run(async () => { await copyFeatures(pid, from, plan.id, all); onDone(); })}>Copy</button>
-          </div>
-        </Field>
-      )}
-      <Field label="Search features" help="Search the features our plans and all the competitors have. Click one to add it to this plan.">
-        <input type="search" autoFocus value={find} onChange={(e) => setFind(e.target.value)} placeholder="For example: audit, GST, export" />
-      </Field>
-      {q && (
-        <div className="grid gap-1" style={{ margin: '-4px 0 12px' }}>
-          {mine.map((f) => <button key={f.capability_id} type="button" className="btn sm" style={{ justifyContent: 'space-between', textAlign: 'left' }} disabled={act.busy} onClick={() => addMine(f)}><span>+ {f.name}</span></button>)}
-          {rivals.map((f) => <button key={f.name} type="button" className="btn sm" style={{ justifyContent: 'space-between', textAlign: 'left' }} disabled={act.busy} title={(f.competitors || []).join(', ')} onClick={() => addTheirs(f.name)}><span>+ {f.name}</span><span className="xs muted">{f.count} competitor{f.count === 1 ? '' : 's'}</span></button>)}
-          {theirs.loading && !theirs.data && <p className="small muted" style={{ margin: 0 }}>Searching…</p>}
-          {!theirs.loading && mine.length + rivals.length === 0 && <p className="small muted" style={{ margin: 0 }}>No match. Type it below to add it as a new feature.</p>}
-          {total > rivals.length && <p className="xs muted" style={{ margin: 0 }}>{total - rivals.length} more. Type more letters to narrow it down.</p>}
-        </div>
-      )}
-      <Field label="Or type new features, one on each line">
-        <textarea rows={4} value={lines} onChange={(e) => setLines(e.target.value)} placeholder={'Two-step sign-in\nAudit log\nExport to Excel'} />
-      </Field>
-      {act.box}
-      <button className="btn primary" disabled={act.busy || names.length === 0} onClick={() => act.run(async () => {
-        await api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: names.map((name) => ({ name })), plan_ids: [plan.id] } });
-        onDone();
-      })}>{names.length > 1 ? `Add ${names.length} features` : 'Add feature'}</button>
-    </Modal>
-  );
-}
-
 /** Our own plans: what each plan costs and which of our features it includes. Same plan card and feature list as a competitor's plans. */
 export default function Planner({ pid, adding, setAdding }: { pid: string; scope?: string; adding: boolean; setAdding: (v: boolean) => void }) {
   const { data, error, loading, reload } = useApi<any>('/competitors/our-plans', pid, { keep: true });
@@ -162,7 +111,19 @@ export default function Planner({ pid, adding, setAdding }: { pid: string; scope
 
       {adding && <PlanForm pid={pid} plans={plans} all={all} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload(); }} />}
       {editing && <PlanForm pid={pid} plan={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); reload(); }} />}
-      {addingTo && <AddFeature pid={pid} plan={addingTo} plans={plans} all={all} onClose={() => setAddingTo(null)} onDone={() => { setAddingTo(null); reload(); }} />}
+      {addingTo && (
+        <AddFeatureModal
+          title={`Add features to ${addingTo.title}`}
+          copy={plans.filter((p) => p.id !== addingTo.id && p.feature_count > 0).map((p) => ({ key: p.id, label: p.title, count: p.feature_count }))}
+          onCopy={(from) => copyFeatures(pid, from, addingTo.id, all)}
+          known={all.filter((f) => !f.in_plans.includes(addingTo.id)).map((f) => ({ key: f.capability_id, name: f.name }))}
+          onAddKnown={(key) => api('/competitors/our-plans/features', { product: pid, method: 'POST', body: { plan_id: addingTo.id, capability_id: key, included: true } })}
+          rivals={{ pid, onAdd: (name) => api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: [{ name }], plan_ids: [addingTo.id] } }) }}
+          onAddNew={(names) => api('/competitors/our-plans/features/new', { product: pid, method: 'POST', body: { features: names.map((name) => ({ name })), plan_ids: [addingTo.id] } })}
+          onClose={() => setAddingTo(null)}
+          onDone={() => { setAddingTo(null); reload(); }}
+        />
+      )}
     </div>
   );
 }

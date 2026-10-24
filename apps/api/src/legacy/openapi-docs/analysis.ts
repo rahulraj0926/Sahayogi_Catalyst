@@ -34,7 +34,7 @@ export const analysisDocs: DocSet = {
     'POST /api/competitors/catalog/common': {
       summary: 'Add common features for every competitor',
       description: 'Puts each feature on our list (if it is not there) and gives every active competitor an unrated row for it (rating unknown). Nothing is rated. Features and rows that already exist are skipped. At most 60 features per call.',
-      body: obj({ features: { type: 'array', description: 'The features to add.', items: obj({ name: str('Our name for the feature.'), category: str('Group, e.g. Compliance.'), description: str('What counts as having it.') }, ['name']) } }, ['features']),
+      body: obj({ features: { type: 'array', description: 'The features to add.', items: obj({ name: str('Our name for the feature.'), category: str('Group, e.g. Compliance.'), description: str('What counts as having it.') }, ['name']) }, competitor: str('Optional. A competitor id; with price_ids the features are also put in those plans.'), price_ids: { type: 'array', items: str('Price id.'), description: 'Optional. The plans (prices of that competitor) that include the features.' } }, ['features']),
       response: open, errors: { '422': 'No feature names, too many, or no competitors yet.' },
     },
     'GET /api/competitors/plans': {

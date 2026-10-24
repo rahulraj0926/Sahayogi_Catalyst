@@ -61,6 +61,18 @@ async function main() {
       assert.equal(b.body.features_added, 0); assert.equal(b.body.features_existing, 1);
     });
 
+    await ok('adding a feature while naming a competitor plan also puts it in that plan', async () => {
+      const d = (await call(`/plans?competitor=${comp.id}`)).body;
+      const plan = (d.plans || [])[0];
+      if (!plan) return;
+      const r = await post('/catalog/common', { features: [{ name: 'Plan card feature' }], competitor: comp.id, price_ids: plan.price_ids });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      const after = (await call(`/plans?competitor=${comp.id}`)).body;
+      const f = after.features.find((x: any) => x.name === 'Plan card feature');
+      assert.ok(f && f.in_plans.includes(plan.key), 'the new feature is in the plan');
+      assert.equal((await post('/catalog/common', { features: [{ name: 'x' }], price_ids: 'a' })).status, 400);
+    });
+
     await ok('adding competitors by rows: rows must be a list; a check-only request saves nothing', async () => {
       assert.equal((await post('/bulk', { rows: 'x' })).status, 400);
       assert.equal((await post('/bulk', { commit: true })).status, 400);

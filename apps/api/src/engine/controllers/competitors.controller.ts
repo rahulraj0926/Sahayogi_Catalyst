@@ -46,7 +46,11 @@ export class CompetitorsController {
   // ---- our feature list
   @Get('catalog') @EngineRoute() catalog(@Ctx() c: EngineCtx, @Query() _q: CompetitorQueryDto) { return competitors.catalog(c.store); }
   @Post('catalog/common') @EngineRoute()
-  addCommon(@Ctx() c: EngineCtx, @Body() dto: AddCommonFeaturesDto) { return competitors.addCommonFeatures(c.store, dto.features, c.actor); }
+  addCommon(@Ctx() c: EngineCtx, @Body() dto: AddCommonFeaturesDto) {
+    const r = competitors.addCommonFeatures(c.store, dto.features, c.actor);
+    if (dto.competitor && dto.price_ids?.length) competitorPlans.setPlanFeature(c.store, { competitor: dto.competitor, price_ids: dto.price_ids, included: true, features: r.capability_ids.map((capability_id: string) => ({ capability_id })) }, c.actor);
+    return r;
+  }
 
   // ---- plans
   @Get('plans') @EngineRoute() plans(@Ctx() c: EngineCtx, @Query() q: PlansQueryDto) { return competitorPlans.plans(c.store, q); }

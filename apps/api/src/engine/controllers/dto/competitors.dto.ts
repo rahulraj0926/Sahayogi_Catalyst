@@ -108,6 +108,10 @@ export class CommonFeatureDto {
 export class AddCommonFeaturesDto {
   /** Features to add to every competitor's list (1 to 60). */
   @IsArray() @ArrayNotEmpty() @ArrayMaxSize(60) @ValidateNested({ each: true }) @Type(() => CommonFeatureDto) features!: CommonFeatureDto[];
+  /** With price_ids: also put the features in those plans of this competitor. */
+  @IsOptional() @IsString() competitor?: string;
+  /** The plans (prices of that competitor) that should include the features. */
+  @IsOptional() @IsArray() @IsString({ each: true }) price_ids?: string[];
 }
 
 export class PlanFeatureRefDto {

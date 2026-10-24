@@ -21165,6 +21165,17 @@
             "items": {
               "$ref": "#/components/schemas/CommonFeatureDto"
             }
+          },
+          "competitor": {
+            "type": "string",
+            "description": "With price_ids: also put the features in those plans of this competitor."
+          },
+          "price_ids": {
+            "description": "The plans (prices of that competitor) that should include the features.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [

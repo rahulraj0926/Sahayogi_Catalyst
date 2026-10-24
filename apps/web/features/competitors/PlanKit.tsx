@@ -6,6 +6,8 @@
  */
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowRight, Check, ChevronDown, ChevronUp, ListFilter, Search, X } from 'lucide-react';
+import { Field, Modal, useAction } from '@/components/kit';
+import { useApi } from '@/lib/api';
 
 export const CHUNK = 200;
 /** The top row of a long list: solid, so the rows scrolling under it never show through (set inline so no table style can override it). */
@@ -290,4 +292,78 @@ export function useBulkTicks({ initial, sig, fkey, colName, send, onStart }: {
   };
   const undo = () => { const u = msg?.undo; setMsg(null); u?.(); };
   return { ticks, has, apply, msg, undo, count: (col: string, all: any[]) => all.filter((f) => has(f, col)).length };
+}
+
+
+/**
+ * Add features to a plan, the same window for our plans, a competitor's plan card and the feature table.
+ * Click a feature that is already on the list, or type new ones (one per line). `pick` lets the person choose which plans get them (the table).
+ * `rivals` also searches the features the competitors have (our plans only).
+ */
+export function AddFeatureModal({ title, copy, onCopy, known = [], onAddKnown, onAddNew, pick, rivals, onClose, onDone }: {
+  title: string;
+  copy?: { key: string; label: string; count: number }[];
+  onCopy?: (from: string) => Promise<unknown>;
+  known?: { key: string; name: string }[];
+  onAddKnown?: (key: string, plans: string[]) => Promise<unknown> | void;
+  onAddNew: (names: string[], plans: string[]) => Promise<unknown>;
+  pick?: { key: string; label: string }[];
+  rivals?: { pid: string; onAdd: (name: string) => Promise<unknown> };
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [lines, setLines] = useState('');
+  const [from, setFrom] = useState('');
+  const [find, setFind] = useState('');
+  const [q, setQ] = useState('');
+  const [on, setOn] = useState<string[]>([]);
+  const act = useAction();
+  useEffect(() => { const t = setTimeout(() => setQ(find.trim()), 250); return () => clearTimeout(t); }, [find]);
+  const names = lines.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const theirs = useApi<any>(rivals && q ? `/competitors/our-plans/pick-features?q=${encodeURIComponent(q)}&limit=6` : null, rivals?.pid || '', { keep: true });
+  const matches = known.filter((f) => !q || f.name.toLowerCase().includes(q.toLowerCase()));
+  const mine = matches.slice(0, 6);
+  const other: any[] = rivals && q ? theirs.data?.features || [] : [];
+  const total: number = rivals && q ? theirs.data?.total || 0 : 0;
+  const run = (fn: () => Promise<unknown> | void) => act.run(async () => { await fn(); onDone(); });
+  const btn = { justifyContent: 'space-between', textAlign: 'left' } as const;
+  return (
+    <Modal title={title} onClose={onClose}>
+      {pick && pick.length > 0 && (
+        <Field label="Put them in" help="Tick the plans that include them. You can change this later in the table.">
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {pick.map((p) => <label key={p.key} className="row small" style={{ gap: 6 }}><input type="checkbox" checked={on.includes(p.key)} onChange={(e) => setOn(e.target.checked ? [...on, p.key] : on.filter((x) => x !== p.key))} />{p.label}</label>)}
+          </div>
+        </Field>
+      )}
+      {copy && copy.length > 0 && onCopy && (
+        <Field label="Copy from another plan" help="Adds every feature of that plan to this one.">
+          <div className="row" style={{ gap: 8 }}>
+            <select value={from} onChange={(e) => setFrom(e.target.value)}><option value="">Choose a plan</option>{copy.map((p) => <option key={p.key} value={p.key}>{p.label} ({p.count} feature{p.count === 1 ? '' : 's'})</option>)}</select>
+            <button type="button" className="btn" disabled={act.busy || !from} onClick={() => run(() => onCopy(from))}>Copy</button>
+          </div>
+        </Field>
+      )}
+      {(known.length > 0 || rivals) && (
+        <>
+          <Field label="Search features" help={rivals ? 'Search the features our plans and all the competitors have. Click one to add it to this plan.' : 'Click a feature on our list to add it to this plan.'}>
+            <input type="search" autoFocus value={find} onChange={(e) => setFind(e.target.value)} placeholder="For example: audit, GST, export" />
+          </Field>
+          <div className="grid gap-1" style={{ margin: '-4px 0 12px' }}>
+            {mine.map((f) => <button key={f.key} type="button" className="btn sm" style={btn} disabled={act.busy} onClick={() => run(() => onAddKnown?.(f.key, on))}><span>+ {f.name}</span></button>)}
+            {other.map((f) => <button key={f.name} type="button" className="btn sm" style={btn} disabled={act.busy} title={(f.competitors || []).join(', ')} onClick={() => run(() => rivals!.onAdd(f.name))}><span>+ {f.name}</span><span className="xs muted">{f.count} competitor{f.count === 1 ? '' : 's'}</span></button>)}
+            {theirs.loading && !theirs.data && q !== '' && rivals && <p className="small muted" style={{ margin: 0 }}>Searching…</p>}
+            {q !== '' && !theirs.loading && mine.length + other.length === 0 && <p className="small muted" style={{ margin: 0 }}>No match. Type it below to add it as a new feature.</p>}
+            {matches.length > mine.length && <p className="xs muted" style={{ margin: 0 }}>{matches.length - mine.length} more. Type more letters to narrow it down.</p>}
+            {total > other.length && <p className="xs muted" style={{ margin: 0 }}>{total - other.length} more from competitors. Type more letters to narrow it down.</p>}
+          </div>
+        </>
+      )}
+      <Field label="Or type new features, one on each line">
+        <textarea rows={4} autoFocus={known.length === 0 && !rivals} value={lines} onChange={(e) => setLines(e.target.value)} placeholder={'Two-step sign-in\nAudit log\nExport to Excel'} />
+      </Field>
+      {act.box}
+      <button className="btn primary" disabled={act.busy || names.length === 0} onClick={() => run(() => onAddNew(names, on))}>{names.length > 1 ? `Add ${names.length} features` : 'Add feature'}</button>
+    </Modal>
+  );
 }
