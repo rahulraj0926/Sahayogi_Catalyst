@@ -122,8 +122,8 @@ export default function Dashboard({ pid, scope, onScope, onAdd }: { pid: string;
     <section className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[11rem] flex-1">
-          <div className="whitespace-nowrap text-xl font-semibold tracking-tight text-[var(--text-heading)]">{scoped.length} competitor{scoped.length === 1 ? '' : 's'}{hasParts && scope ? ` for ${scope}` : ''}</div>
-          {mix && <div className="mt-0.5 text-[13px] text-[var(--text-muted)]">{mix}</div>}
+          {/* the page title above already says "Competitors", so the line below gives only the numbers */}
+          <div className="text-[14px] text-[var(--text-muted)]"><b className="font-semibold text-[var(--text-heading)]">{scoped.length}</b> in total{hasParts && scope ? ` for ${scope}` : ''}{mix ? ` · ${mix}` : ''}</div>
         </div>
         <label className="relative block w-full screen-lg:w-52">
           <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
