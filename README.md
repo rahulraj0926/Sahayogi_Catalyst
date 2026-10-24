@@ -51,3 +51,4 @@ Old JSON tables from before the schema change: once your data is in the real tab
 The Phase 0-4 gate results are identical to the prototype on all 6 seeded products (`apps/api/src/tests/parity_with_prototype.ts <path to prototype>`).
 Limit: the engine keeps each product in memory and writes the changes to Postgres, so run one API instance until BUILD_PLAN milestone M6.
 # sahayogi_catalyst
+# sahayogi_catalyst
