@@ -21,6 +21,17 @@ npm run dev:web                               # http://localhost:3000           
 
 Open http://localhost:3000. If the page loads with demo products, everything works.
 
+**Database without Docker (pgAdmin / your own PostgreSQL).** Skip the `docker compose` line and do this instead:
+1. Install PostgreSQL 16 and, if you want a window onto the data, pgAdmin.
+2. In pgAdmin (or `psql`), create an empty database, for example `sahayogi`.
+3. In your own `apps/api/.env`, set `DATABASE_URL="postgresql://<user>:<password>@localhost:5432/sahayogi?schema=public"` with your own user and password. Never put your real password in `.env.example` or commit `.env`.
+4. Run `npm run db:migrate -w apps/api`, then `npm run seed`, then start the API and web app as above.
+
+To look at the data in pgAdmin with the Docker database, add a server with host `localhost`, port `5432`, database, user and password all `sahayogi`.
+
+Each developer has their own database; data is not shared through GitHub. What is shared is the table structure, through the migration files. After every `git pull`, run `npm run db:migrate -w apps/api` to bring your own database up to date.
+
+
 - **The API settings** live in `apps/api/.env` (never committed). `apps/api/.env.example` lists every setting with a comment; only `DATABASE_URL` is required and its default already matches the Docker database.
 - **The web app** needs no settings if the API runs on port 4000. Otherwise copy `apps/web/.env.example` to `apps/web/.env.local` and change `API_URL`.
 - **Checks before you open a pull request:** `npm run check` (types and contract) and `npm test` (needs the database). The same checks run on GitHub for every pull request.
