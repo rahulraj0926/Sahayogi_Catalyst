@@ -16,7 +16,7 @@ export type BlockDef = { id: string; title: string; /** one line under the title
 /** The two sides of the head-to-head card at the top: what they do well, and where we can beat them. */
 export const SIDES = [
   { key: 'strengths', title: 'Strengths', one: 'strength', tone: 'var(--status-healthy-fg)' },
-  { key: 'weaknesses', title: 'Weaknesses & risks', one: 'weakness', tone: 'var(--status-warning-fg)' },
+  { key: 'weaknesses', title: 'Weaknesses', one: 'weakness', tone: 'var(--status-warning-fg)' },
 ] as const;
 
 export const BLOCKS: BlockDef[] = [

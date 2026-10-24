@@ -4,12 +4,13 @@
  * Everything shown is either saved here or worked out from the plans, files and notes already recorded. Empty rows are left out.
  */
 import { useState, type ReactNode } from 'react';
-import { Field, useAction } from '@/components/kit';
+import { Field, ago, useAction } from '@/components/kit';
 import { api } from '@/lib/api';
 import { BLOCKS, SIDES, type BlockDef, type Row } from './overviewBlocks';
 import PointList, { fromPoints, toPoints } from './PointList';
 import { Control, F, filled, norm } from './profileFields';
-import { CARD as EVERY } from './overviewStyle';
+import { Card } from '@/components/dashboard/Card';
+import { ActivityList } from '@/features/home/ActivityFeed';
 
 export const THREAT_COLOR: Record<string, string> = { High: 'var(--status-critical-fg)', Medium: 'var(--status-warning-fg)', Low: 'var(--status-healthy-fg)' };
 export const tint = (c: string) => `color-mix(in srgb, ${c} 14%, transparent)`;
@@ -23,9 +24,9 @@ function show(key: string, v: any): ReactNode {
   return String(v);
 }
 
-type Props = { c: any; onAddProduct: () => void; lines: any[]; onSaved: () => void; todo: ReactNode; /** the control in Company details for what kind of competitor they are */ kind: ReactNode };
+type Props = { c: any; onAddProduct: () => void; lines: any[]; /** the last few changes, newest first */ recent: any[]; onSaved: () => void; todo: ReactNode; /** the control in Company details for what kind of competitor they are */ kind: ReactNode };
 
-export default function Overview({ c, onAddProduct, lines, onSaved, todo, kind }: Props) {
+export default function Overview({ c, onAddProduct, lines, recent, onSaved, todo, kind }: Props) {
   const derived: Record<string, ReactNode> = {
     // the products this company sells (each with its own plans); the Plans tab holds their prices
     products: (
@@ -48,8 +49,8 @@ export default function Overview({ c, onAddProduct, lines, onSaved, todo, kind }
   return (
     <div className="@container flex flex-col gap-4">
       <div className={across(top.length)}>{top.map(block)}</div>
-      {todo}
       <HeadToHead c={c} onSaved={onSaved} />
+      <div className={across(2)}>{todo}<Card title="Recent activity">{recent.length === 0 ? <p className="m-0 text-[14px] text-[var(--text-muted)]">Nothing has changed yet.</p> : <ActivityList rows={recent} />}</Card></div>
     </div>
   );
 }
@@ -59,10 +60,10 @@ function HeadToHead({ c, onSaved }: { c: any; onSaved: () => void }) {
   return (
     <div aria-label="Strengths and weaknesses" className="grid gap-4 @3xl:grid-cols-2">
       {SIDES.map((s) => (
-        <section key={s.key} className={`min-w-0 p-6 ${EVERY}`}>
+        <Card key={s.key}>
           <PointList title={s.title} tone={s.tone} one={s.one} points={toPoints(c[s.key])}
             onChange={async (next) => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { [s.key]: next.length ? fromPoints(next) : null } } }); onSaved(); }} />
-        </section>
+        </Card>
       ))}
     </div>
   );
@@ -80,14 +81,7 @@ function Block({ b, c, val, onSaved }: { b: BlockDef; c: any; val: (r: Row) => R
   const start = () => { setVals(Object.fromEntries(keys.map((k) => [k, c[k]]))); setEdit(true); };
   if (!edit && rows.length === 0 && keys.length === 0) return null;
   return (
-    <section className={`@container flex h-full flex-col p-6 ${EVERY}`}>
-      <div className="mb-4 flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="m-0 text-[18px] font-bold text-[var(--text-heading)]">{b.title}</h3>
-          {b.sub && <p className="m-0 mt-1 text-[14px] text-[var(--text-muted)]">{b.sub}</p>}
-        </div>
-        {keys.length > 0 && !edit && <button type="button" className="text-[14px] font-semibold text-[var(--sd-accent)]" onClick={start}>{rows.length ? 'Edit' : 'Add'}</button>}
-      </div>
+    <Card title={b.title} description={b.sub} action={keys.length > 0 && !edit ? <button type="button" className="text-[14px] font-semibold text-[var(--sd-accent)]" onClick={start}>{rows.length ? 'Edit' : 'Add'}</button> : undefined}>
       {!edit ? (
         rows.length === 0 ? <p className="m-0 text-[14px] text-[var(--text-muted)]">Nothing here yet.</p> : (
           <dl className="m-0">
@@ -114,6 +108,6 @@ function Block({ b, c, val, onSaved }: { b: BlockDef; c: any; val: (r: Row) => R
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }

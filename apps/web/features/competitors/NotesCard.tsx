@@ -9,7 +9,7 @@ import { X } from 'lucide-react';
 import { fmtDate, useAction, useConfirm } from '@/components/kit';
 import { actor, api } from '@/lib/api';
 import { STICKY_COLORS, STICKY_TILT, stickyHash } from '@/components/notes/StickyBoard';
-import { CARD, CARD_ACTION } from './overviewStyle';
+import { Card } from '@/components/dashboard/Card';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -28,12 +28,8 @@ export default function NotesCard({ c, notes, onSaved }: { c: any; notes: any[];
   };
   const newest = notes.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   return (
-    <section className={`@container flex min-w-0 flex-col p-6 ${CARD}`}>
+    <Card title={`Notes about ${c.title}`} className="@container" action={text === null ? <button type="button" className="text-[14px] font-semibold text-[var(--sd-accent)]" onClick={() => setText('')}>+ Add</button> : undefined}>
       {dialog}
-      <div className="mb-4 flex items-center gap-2">
-        <h3 className="m-0 flex-1 text-[18px] font-bold text-[var(--text-heading)]">Notes about {c.title}</h3>
-        {text === null && <button type="button" className={CARD_ACTION} onClick={() => setText('')}>+ Add</button>}
-      </div>
       {act.box}
       {text !== null && (
         <div className={`mb-4 flex max-w-sm flex-col gap-2 rounded-md border p-3 shadow-sm ${STICKY_COLORS[0]}`}>
@@ -61,6 +57,6 @@ export default function NotesCard({ c, notes, onSaved }: { c: any; notes: any[];
           })}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

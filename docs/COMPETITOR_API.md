@@ -13,7 +13,7 @@ Rules this page follows (and new competitor work should keep following):
 
 | Call | What it gives |
 |---|---|
-| `GET /competitors/{id}/profile` | The competitor, its links and history, only its own plans, ratings, notes and files, its product lines, how complete the record is, and the capability names in use. 404 if the id is not a competitor. |
+| `GET /competitors/{id}/profile` | The competitor, its links and history, only its own plans, ratings, notes and files, its product lines, how complete the record is, the last few changes in plain words (`recent`), and the capability names in use. 404 if the id is not a competitor. |
 | `GET /competitors/catalog` | Our common feature list (shared by every competitor, so it is a separate call) |
 | `PATCH /items/{id}` | Saves fields. Refuses an edit made on an old revision (`If-Match` or `expected_rev`) |
 | `POST /items`, `POST /links`, `POST /items/{id}/status` | Add a plan, product, note; link them; retire |

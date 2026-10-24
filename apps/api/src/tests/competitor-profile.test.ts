@@ -66,6 +66,17 @@ async function main() {
     assert.throws(() => profile(store, 'CMP-NOPE'), (e: any) => e.status === 404);
   });
 
+  await ok('recent changes are plain words, newest first, at most six', () => {
+    const c = comps[0];
+    store.update(c.id, { hq_country: 'Testland' }, { actor: 'Tester' });
+    store.update(c.id, { todo_done: ['x'] }, { actor: 'Tester' });
+    const r: any[] = (profile(store, c.id) as any).recent;
+    assert.ok(r.length >= 1 && r.length <= 6);
+    assert.ok(r.some((x) => /^updated .*hq country/.test(x.text) && x.actor === 'Tester'), 'a details edit shows with the field named in words');
+    assert.ok(!r.some((x) => /todo/.test(x.text)), 'bookkeeping fields are not shown');
+    for (let i = 1; i < r.length; i++) assert.ok(String(r[i - 1].at) >= String(r[i].at), 'newest first');
+  });
+
   done();
 }
 main().catch((e) => { console.error(e); process.exit(1); });

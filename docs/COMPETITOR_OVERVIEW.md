@@ -15,7 +15,7 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 | Was | Now |
 |---|---|
 | What they are good at / Where they are strong | Strengths |
-| Where they are weak | Weaknesses & risks |
+| Where they are weak | Weaknesses |
 | What they sell | (removed: see the Plans & pricing tab) |
 | The company | Company details |
 | Who they sell to | Customers & market (row: Target customers) |
@@ -34,8 +34,8 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 - **Under the title:** the description, the website, and who added the record and when it last changed. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
 - **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
 - **First row:** Company details and Customers & market, two equal cards.
-- **Second row:** To do, full width, open items in two columns when there is room, the add box at the bottom. Files and Notes are not on the Overview: they have their own tabs.
-- **Bottom:** Strengths and Weaknesses & risks, side by side. Each is a numbered list of points with its own "+ Add" at the top right of the title. A point has a heading and details, edited in two separate boxes (the heading is optional). Edit changes one point, Remove deletes one, and every change saves straight away. Stored as text, one point per line, written "Heading: details".
+- **Second row:** Strengths and Weaknesses, side by side. Each is a numbered list of points with its own "+ Add" at the top right of the title. A point has a heading and details, edited in two separate boxes (the heading is optional). Edit changes one point, Remove deletes one, and every change saves straight away. Stored as text, one point per line, written "Heading: details".
+- **Last row:** To do and Recent activity, side by side. Recent activity is the same timeline as on Home (one shared list), showing the last few changes on this competitor in plain words. Files and Notes are not on the Overview: they have their own tabs.
 - Cards in a row always have the same height, so there is no hole beside a short card; on a phone they stack in one column.
 
 | Card | Rows | Comes from |
