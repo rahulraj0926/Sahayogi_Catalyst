@@ -21,8 +21,8 @@ let cache: TypedRoute[] | undefined;
 export function typedRoutes(): TypedRoute[] {
   if (cache) return cache;
   cache = ENGINE_ROUTES.map(({ target, key, opts }) => {
-    const ctor = (target as { constructor: Function }).constructor;
-    const fn = (target as Record<string, Function>)[key];
+    const ctor = (target as { constructor: object }).constructor;
+    const fn = (target as Record<string, object>)[key];
     const base = Reflect.getMetadata(PATH_METADATA, ctor) || '';
     const own = Reflect.getMetadata(PATH_METADATA, fn) || '';
     const method = RequestMethod[Reflect.getMetadata(METHOD_METADATA, fn)];

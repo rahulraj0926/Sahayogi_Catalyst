@@ -28,6 +28,11 @@ export default tseslint.config(
     },
   },
   {
+    // plain Node scripts (build and release helpers) run in Node, so its globals are known
+    files: ['scripts/**/*.{js,cjs,mjs}', 'apps/*/scripts/**/*.{js,cjs,mjs}'],
+    languageOptions: { globals: { require: 'readonly', module: 'writable', __dirname: 'readonly', process: 'readonly', console: 'readonly' } },
+  },
+  {
     files: ['apps/web/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: { 'react-hooks/rules-of-hooks': 'error', 'react-hooks/exhaustive-deps': 'warn' },
