@@ -15,7 +15,7 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 | Was | Now |
 |---|---|
 | What they are good at / Where they are strong | Strengths |
-| Where they are weak | Weaknesses & risks |
+| Where they are weak | Weaknesses |
 | What they sell | (removed: see the Plans & pricing tab) |
 | The company | Company details |
 | Who they sell to | Customers & market (row: Target customers) |
@@ -25,25 +25,28 @@ A heading names what the block holds (a noun). A row label is one or two plain n
 | Started | Founded |
 | Number of people / People | Team size |
 | About their size | Size note |
-| How we know | Evidence & review |
+| How we know | Sources tab |
 | Charged | Licence |
 | Prices checked | Prices updated |
-| Check again by | Next review |
+| Check again by | Next review (Sources tab) |
 
 ## Layout (follows the design mock-up)
-- **Under the title:** tiles for Competes with, Competitor type (both editable here), Founded, Headquarters and Employees. A tile with nothing in it is left out. Who added the record and when it last changed sit under the website.
+- **Under the title:** the description, the website, and when it last changed ("Updated today"). Who added it is not shown. Nothing else is repeated up here: Competes with, Type, Founded, Head office and Team size each appear once, in Company details.
 - **Tabs:** one bar, the open tab filled. The Plans tab is called Plans & pricing; prices live there only, not on the Overview.
 - **First row:** Company details and Customers & market, two equal cards.
-- **Second row:** To do and Evidence & review.
-- **Bottom:** Strengths and Weaknesses & risks, side by side, one point per line. A line written as "Price: about $37 a user" shows "Price" as the title and the rest underneath it. If only one side has text it takes the full width and the other becomes an "Add" link. Each side has its own Edit.
+- **Second row:** Strengths and Weaknesses, side by side. Each is a numbered list of points with its own "+ Add" at the top right of the title. A point has a heading and details, edited in two separate boxes (the heading is optional). Edit changes one point, Remove deletes one, and every change saves straight away. Stored as text, one point per line, written "Heading: details".
+- **Last row:** To do and Recent activity, side by side. Recent activity is the same timeline as on Home (one shared list), showing the last few changes on this competitor in plain words. Files and Notes are not on the Overview: they have their own tabs.
 - Cards in a row always have the same height, so there is no hole beside a short card; on a phone they stack in one column.
 
 | Card | Rows | Comes from |
 |---|---|---|
 | Company details | Website, legal name, products, founded, head office, team size, ownership, funding | Typed in. Products are the competitor's product lines (each with its own plans on the Plans & pricing tab); "+ Add product" adds one here |
 | Customers & market | Customer size (tick any of Individuals, Small business, Mid-size companies, Large companies), target market (regions or industries, typed as tags), target customers (a few words), shared with us, known customers, sales channels | Typed in |
-| Evidence & review | Sources (amber "None yet" when there are none), files, notes, last checked, next review (amber "overdue" after the date). Link: Open sources | Counted from the competitor's own sources, files and notes |
 | To do | What is still missing on this competitor | The existing to-do list |
+
+The Notes tab is a board of coloured sticky notes in the same style as the Notes page: "+ Add" writes a note at the top, the cross removes it. Each note is a competitor note linked to this competitor, so it stays apart from product notes and personal notes and the Notes page can filter the three kinds later. The Files tab holds uploads.
+
+There is no Evidence card on the Overview. Last checked, Next review and "Checked today" sit at the top of the Sources tab.
 
 Left out of the mock-up on purpose: the left menu (the page already has tabs), the "keep claims linked to a source" note, the data-confidence line (the amber "None yet" next to Sources says the same) and the Products & pricing card (it repeated the Plans & pricing tab).
 
@@ -69,3 +72,11 @@ Changed, and why
 - **Thirteen fields on the list card.** Too wide to read. The card shows who they are, a few facts and the threat.
 
 Still to come (these need new fields in the data): recommended action and priority, an owner and next step, a threat override with a reason, revenue as a number, industries, and customer complaints with their source.
+
+## Tabs other than Overview
+- **Plans & pricing:** the feature list has one filter, in its first column: All, In a plan, In no plan. The "Copy features from [plan] to [plan]" bar says how many features the copy would add ("Copy 12 features") and stays off when there is nothing new. The "Why are there no prices?" box shows only when the competitor has no plans; the answer counts as "prices or a reason" in the completeness check and the Stage 1 sign-off.
+- **Notes:** coloured sticky notes (see above).
+- **Sources:** a Review card (last checked, next review) and the list of sources. "+ Add a source" takes a link (web page, video, article, interview, other), an optional name and what it tells us, and saves it as evidence linked to the competitor. Documents we hold as files go on the Files tab.
+
+## Our plans
+Only the page title and the plan cards: no extra "Plans" heading. When a new plan is added, it starts with every feature of the dearest plan so far (a higher plan includes the lower ones); the "Start with the features of" box can be changed to another plan or to empty. "+ Add feature" on a card can also copy all features of another plan.

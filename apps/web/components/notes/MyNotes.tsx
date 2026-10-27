@@ -1,8 +1,14 @@
 'use client';
-import { Bold, GripVertical, Italic, ListChecks, Pin, PinOff, Plus, Search, Trash2 } from 'lucide-react';
+import { SearchField } from '@/components/ui/search-field';
+import { STICKY_COLORS, STICKY_TILT, stickyHash } from '@/components/notes/StickyBoard';
+import { Bold, GripVertical, Italic, ListChecks, Pin, PinOff, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Note = { id: string; html: string; tone: number; pinned: boolean; at: string };
+/** What the board needs to show a note. */
+export type BoardNote = { id: string; html: string; tone: number; pinned: boolean; /** a small line under the text, for example who wrote it and when */ meta?: string };
+/** A colour for a note that has none of its own, the same every time for the same id. */
+export const toneFor = (id: string) => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 7;
 
 const KEY = 'sahayogi.mynotes.v2';
 // Colours are handed out automatically; a person never has to choose one.
@@ -15,8 +21,8 @@ const TONES = [
   'bg-orange-100 text-orange-950 dark:bg-orange-900/40 dark:text-orange-50',
   'bg-teal-100 text-teal-950 dark:bg-teal-900/40 dark:text-teal-50',
 ];
-const pickTone = (not?: number) => { let t = Math.floor(Math.random() * TONES.length); if (t === not) t = (t + 1) % TONES.length; return t; };
-const uid = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
+export const pickTone = (not?: number) => { let t = Math.floor(Math.random() * TONES.length); if (t === not) t = (t + 1) % TONES.length; return t; };
+export const uid = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
 const BTN = { minHeight: 0, minWidth: 0, padding: 0 } as const;
 const TOOL = 'inline-flex h-7 w-7 items-center justify-center rounded-md opacity-70 transition hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/15';
 
@@ -35,7 +41,7 @@ function clean(html: string): string {
   };
   return [...doc.body.firstElementChild!.childNodes].map(walk).join('').replace(/(<br>)+$/, '');
 }
-const plain = (html: string) => { const d = document.createElement('div'); d.innerHTML = html; return (d.textContent || '').trim(); };
+export const plain = (html: string) => { const d = document.createElement('div'); d.innerHTML = html; return (d.textContent || '').trim(); };
 function read(): Note[] { try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v.map((n) => ({ ...n, html: clean(String(n.html || '')) })) : []; } catch { return []; } }
 
 /** Tapping a ☐ / ☑ ticks or unticks it. */
@@ -50,8 +56,8 @@ function toggleBox() {
   return true;
 }
 
-function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, grip, className = '' }: {
-  html: string; placeholder?: string; tone: number; pinned?: boolean; onPin?: () => void; className?: string;
+function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, grip, className = '', sticky, tilt = '', meta }: {
+  html: string; placeholder?: string; tone: number; pinned?: boolean; onPin?: () => void; className?: string; sticky?: boolean; tilt?: string; meta?: string;
   onCommit: (html: string) => void; onClear: () => void; grip?: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -60,13 +66,14 @@ function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, gri
   const cmd = (c: string) => { ref.current?.focus(); document.execCommand(c); };
   const save = () => { if (ref.current) onCommit(clean(ref.current.innerHTML)); };
   return (
-    <div className={`group relative flex h-[17rem] min-w-0 flex-col rounded-xl p-4 shadow-sm transition-shadow focus-within:shadow-md ${TONES[tone % TONES.length]} ${className}`}>
+    <div className={`group relative flex min-w-0 flex-col shadow-sm transition-shadow focus-within:shadow-md ${sticky ? `min-h-[11rem] rounded-md border p-3 transition-transform hover:z-10 hover:rotate-0 focus-within:rotate-0 ${STICKY_COLORS[tone % STICKY_COLORS.length]} ${tilt}` : `h-[17rem] rounded-xl p-4 ${TONES[tone % TONES.length]}`} ${className}`}>
       {grip}
       <div ref={ref} contentEditable suppressContentEditableWarning role="textbox" aria-multiline aria-label={placeholder ? 'New note' : 'Note'} data-placeholder={placeholder}
         onBlur={save} onClick={() => { if (toggleBox()) save(); }}
         onPaste={(e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }}
         onKeyDown={(e) => { if (e.key === 'Escape') (e.target as HTMLElement).blur(); }}
         className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-[0.95rem] leading-snug outline-none empty:before:opacity-60 empty:before:content-[attr(data-placeholder)]" />
+      {meta && <div className="mt-1 text-[11px] opacity-80">{meta}</div>}
       <div className="mt-2 flex items-center gap-0.5" onMouseDown={(e) => e.preventDefault()}>
         <button type="button" style={BTN} className={TOOL} aria-label="Bold" title="Bold" onClick={() => cmd('bold')}><Bold size={15} /></button>
         <button type="button" style={BTN} className={TOOL} aria-label="Italic" title="Italic" onClick={() => cmd('italic')}><Italic size={15} /></button>
@@ -79,15 +86,55 @@ function Editor({ html, placeholder, onCommit, onClear, tone, pinned, onPin, gri
   );
 }
 
-/** Personal sticky notes. They are saved in this browser only: nothing goes to the server, and nobody else sees them. */
-export function MyNotes() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [ready, setReady] = useState(false);
+/**
+ * The sticky-note board: a card to write a new note, then the notes (pinned ones first), with bold, italic, tick boxes, pin and delete on every card.
+ * It keeps nothing itself. Personal notes (below) and a competitor's notes both use it and decide where the notes are saved.
+ * Dragging a card to rearrange works only when `onMove` is given.
+ */
+export function NoteBoard({ notes, onAdd, onEdit, onRemove, onPin, onMove, busy, search = true, sticky }: {
+  notes: BoardNote[]; busy?: boolean; search?: boolean; /** the tilted paper look with a border (the competitor notes) */ sticky?: boolean;
+  onAdd: (html: string, tone: number) => void; onEdit: (id: string, html: string) => void; onRemove: (id: string) => void; onPin: (id: string) => void; onMove?: (from: string, before: string) => void;
+}) {
   const [next, setNext] = useState(0);
   const [q, setQ] = useState('');
   const [drag, setDrag] = useState<string | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
   const [fresh, setFresh] = useState(0); // bumps to give the empty card a clean editor after adding
+  useEffect(() => { setNext(pickTone()); }, []);
+  const add = (html: string) => { if (!plain(html)) return; onAdd(html, next); setNext(pickTone(next)); setFresh((f) => f + 1); };
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = s ? notes.filter((n) => plain(n.html).toLowerCase().includes(s)) : notes;
+    return [...list.filter((n) => n.pinned), ...list.filter((n) => !n.pinned)];
+  }, [notes, q]);
+  return (
+    <div className="flex flex-col gap-[var(--space-md)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="btn primary inline-flex items-center gap-1.5" disabled={busy} onClick={() => (document.querySelector('[aria-label="New note"]') as HTMLElement | null)?.focus()}><Plus size={16} />Add note</button>
+        {search && notes.length > 3 && (
+          <SearchField value={q} onChange={setQ} placeholder="Search notes" className="w-full max-w-xs" />
+        )}
+      </div>
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(15.5rem,1fr))] gap-4">
+        <li><Editor key={`new-${fresh}`} html="" placeholder="Write your note here, then press Add note" tone={next} sticky={sticky} onCommit={add} onClear={() => undefined} /></li>
+        {shown.map((n) => (
+          <li key={n.id} draggable={!!onMove && armed === n.id} onDragStart={(e) => { setDrag(n.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', n.id); }} onDragEnd={() => { setDrag(null); setArmed(null); }}
+            onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (drag && onMove) onMove(drag, n.id); setDrag(null); setArmed(null); }} className={drag === n.id ? 'opacity-40' : ''}>
+            <Editor html={n.html} tone={n.tone} pinned={n.pinned} onPin={() => onPin(n.id)} sticky={sticky} meta={n.meta} tilt={sticky ? STICKY_TILT[stickyHash(n.id) % STICKY_TILT.length] : ''}
+              onCommit={(h) => { if (!plain(h)) onRemove(n.id); else if (h !== n.html) onEdit(n.id, h); }} onClear={() => onRemove(n.id)}
+              grip={onMove ? <span aria-label="Drag to rearrange" title="Drag to rearrange" onMouseDown={() => setArmed(n.id)} onMouseUp={() => setArmed(null)} className="absolute right-2 top-2 cursor-grab opacity-0 transition-opacity group-hover:opacity-60 active:cursor-grabbing"><GripVertical size={16} /></span> : undefined} />
+          </li>
+        ))}
+      </ul>
+      {notes.length > 0 && shown.length === 0 && <p className="text-sm text-[var(--text-muted)]">No note matches your search.</p>}
+    </div>
+  );
+}
+
+/** Personal sticky notes. They are saved in this browser only: nothing goes to the server, and nobody else sees them. */
+export function MyNotes() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let n = read();
@@ -98,47 +145,22 @@ export function MyNotes() {
         localStorage.setItem(KEY, JSON.stringify(n)); localStorage.setItem(KEY + '.seeded', '1');
       }
     } catch { /* storage blocked */ }
-    setNotes(n); setNext(pickTone()); setReady(true);
+    setNotes(n); setReady(true);
   }, []);
   const commit = (n: Note[]) => { setNotes(n); try { localStorage.setItem(KEY, JSON.stringify(n)); } catch { /* storage blocked: notes last until the page is closed */ } };
-  const add = (html: string) => { if (!plain(html)) return; commit([{ id: uid(), html, tone: next, pinned: false, at: new Date().toISOString() }, ...notes]); setNext(pickTone(next)); setFresh((f) => f + 1); };
-  const edit = (id: string, html: string) => { if (!plain(html)) { commit(notes.filter((n) => n.id !== id)); return; } commit(notes.map((n) => (n.id === id && n.html !== html ? { ...n, html } : n))); };
   const move = (from: string, before: string) => {
     if (from === before) return;
     const m = notes.find((n) => n.id === from); if (!m) return;
     const rest = notes.filter((n) => n.id !== from); const at = rest.findIndex((n) => n.id === before);
     rest.splice(at < 0 ? rest.length : at, 0, m); commit(rest);
   };
-  const shown = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    const list = s ? notes.filter((n) => plain(n.html).toLowerCase().includes(s)) : notes;
-    return [...list.filter((n) => n.pinned), ...list.filter((n) => !n.pinned)];
-  }, [notes, q]);
-
   if (!ready) return null;
   return (
-    <div className="flex flex-col gap-[var(--space-md)]">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn primary inline-flex items-center gap-1.5" onClick={() => (document.querySelector('[aria-label="New note"]') as HTMLElement | null)?.focus()}><Plus size={16} />Add note</button>
-        {notes.length > 3 && (
-          <label className="relative w-full max-w-xs">
-            <Search size={14} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes" aria-label="Search notes" className="h-8 w-full rounded-lg border border-[var(--divider)] bg-[var(--surface)] pl-8 pr-2.5 text-sm text-[var(--text-heading)] outline-none placeholder:text-[var(--text-muted)]" />
-          </label>
-        )}
-      </div>
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(15.5rem,1fr))] gap-4">
-        <li><Editor key={`new-${fresh}`} html="" placeholder="Write your note here, then press Add note" tone={next} onCommit={add} onClear={() => undefined} /></li>
-        {shown.map((n) => (
-          <li key={n.id} draggable={armed === n.id} onDragStart={(e) => { setDrag(n.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', n.id); }} onDragEnd={() => { setDrag(null); setArmed(null); }}
-            onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (drag) move(drag, n.id); setDrag(null); setArmed(null); }} className={drag === n.id ? 'opacity-40' : ''}>
-            <Editor html={n.html} tone={n.tone} pinned={n.pinned} onPin={() => commit(notes.map((x) => (x.id === n.id ? { ...x, pinned: !x.pinned } : x)))}
-              onCommit={(h) => edit(n.id, h)} onClear={() => commit(notes.filter((x) => x.id !== n.id))}
-              grip={<span aria-label="Drag to rearrange" title="Drag to rearrange" onMouseDown={() => setArmed(n.id)} onMouseUp={() => setArmed(null)} className="absolute right-2 top-2 cursor-grab opacity-0 transition-opacity group-hover:opacity-60 active:cursor-grabbing"><GripVertical size={16} /></span>} />
-          </li>
-        ))}
-      </ul>
-      {notes.length > 0 && shown.length === 0 && <p className="text-sm text-[var(--text-muted)]">No note matches your search.</p>}
-    </div>
+    <NoteBoard notes={notes}
+      onAdd={(html, tone) => commit([{ id: uid(), html, tone, pinned: false, at: new Date().toISOString() }, ...notes])}
+      onEdit={(id, html) => commit(notes.map((n) => (n.id === id ? { ...n, html } : n)))}
+      onRemove={(id) => commit(notes.filter((n) => n.id !== id))}
+      onPin={(id) => commit(notes.map((x) => (x.id === id ? { ...x, pinned: !x.pinned } : x)))}
+      onMove={move} />
   );
 }

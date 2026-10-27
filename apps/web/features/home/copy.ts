@@ -10,7 +10,7 @@ export const HOME_COPY = {
   activityEmpty: 'Nothing has happened yet.',
   noProducts: 'No products match these filters.',
   healthLabel: { on_track: 'On track', attention: 'Needs attention', blocked: 'Held up', idle: 'No activity' } as Record<string, string>,
-  healthStatus: { on_track: 'healthy', attention: 'info', blocked: 'warning', idle: 'neutral' } as Record<string, 'healthy' | 'warning' | 'critical' | 'neutral'>,
+  healthStatus: { on_track: 'healthy', attention: 'info', blocked: 'warning', idle: 'neutral' } as Record<string, 'healthy' | 'info' | 'warning' | 'critical' | 'neutral'>,
   stages: [['', 'All stages'], ...Array.from({ length: 13 }, (_, i) => [`P${i}`, `Phase ${i}`] as const), ['handoff', 'Hand-over'], ['done', 'Done'], ['parked', 'Parked']] as const,
   kinds: [['', 'All kinds'], ['software', 'Software'], ['hardware', 'Hardware'], ['service', 'Service']] as const,
   healths: [['', 'Any health'], ['blocked', 'Held up'], ['attention', 'Needs attention'], ['idle', 'No activity'], ['on_track', 'On track']] as const,

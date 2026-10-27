@@ -159,80 +159,103 @@ function effort(store) {
 
 
 // ---- Product lines per competitor (Competitor → contains → CompetitorProductLine → contains → PricePoint)
-function productLines(store) {
-  const today = store.today();
-  const comps = store.list('Competitor', (c) => c.status !== 'Retired');
-  return comps.map((c) => {
-    const pls = competitorCells(store, c).filter((x) => x.type === 'CompetitorProductLine' && x.status !== 'Retired');
-    const directPrices = competitorCells(store, c).filter((x) => x.type === 'PricePoint' && x.status !== 'Retired');
-    // product line detail: each PL has its own prices linked via contains
-    const lines = pls.map((pl) => {
-      const plPrices = store.out(pl.id, 'contains').map((l) => store.get(l.target)).filter((x) => x && x.type === 'PricePoint' && x.status !== 'Retired');
-      const plCaps = store.out(pl.id, 'includes_capability').map((l) => store.get(l.target)).filter((x) => x && x.type === 'CompetitorCapability' && x.status !== 'Retired');
-      return {
-        id: pl.id, product_name: pl.product_name, description: pl.description || null, url: pl.url || null,
-        product_type: pl.product_type || null, target_segments: pl.target_segments || [], is_primary: !!pl.is_primary,
-        status: pl.status, prices: plPrices.length, capabilities: plCaps.length,
-        plans: plPrices.map((p) => ({
-          id: p.id, plan: p.plan, amount: p.amount, currency: p.currency, unit: p.unit,
-          value_metric: p.value_metric, billing_model: p.billing_model, billing_period: p.billing_period || null,
-          tier_tag: p.tier_tag || null, tax_basis: p.tax_basis,
-        })),
-      };
-    });
-    // prices attached directly to competitor (no product line)
-    const unlinkedPriceIds = new Set(directPrices.map((p) => p.id));
-    for (const pl of lines) for (const p of pl.plans) unlinkedPriceIds.delete(p.id);
-    const orphanPrices = directPrices.filter((p) => unlinkedPriceIds.has(p.id));
+/** One competitor with its product lines and the plans in each. productLines() below is this for every live competitor. */
+function productLinesOf(store, c) {
+  const pls = competitorCells(store, c).filter((x) => x.type === 'CompetitorProductLine' && x.status !== 'Retired');
+  const directPrices = competitorCells(store, c).filter((x) => x.type === 'PricePoint' && x.status !== 'Retired');
+  // product line detail: each PL has its own prices linked via contains
+  const lines = pls.map((pl) => {
+    const plPrices = store.out(pl.id, 'contains').map((l) => store.get(l.target)).filter((x) => x && x.type === 'PricePoint' && x.status !== 'Retired');
+    const plCaps = store.out(pl.id, 'includes_capability').map((l) => store.get(l.target)).filter((x) => x && x.type === 'CompetitorCapability' && x.status !== 'Retired');
     return {
-      id: c.id, title: c.title, tier: c.tier || null,
-      product_lines: lines, orphan_prices: orphanPrices.length,
-      has_product_lines: lines.length > 0,
+      id: pl.id, product_name: pl.product_name, description: pl.description || null, url: pl.url || null,
+      product_type: pl.product_type || null, target_segments: pl.target_segments || [], is_primary: !!pl.is_primary,
+      status: pl.status, prices: plPrices.length, capabilities: plCaps.length,
+      plans: plPrices.map((p) => ({
+        id: p.id, plan: p.plan, amount: p.amount, currency: p.currency, unit: p.unit,
+        value_metric: p.value_metric, billing_model: p.billing_model, billing_period: p.billing_period || null,
+        tax_basis: p.tax_basis,
+      })),
     };
   });
+  // prices attached directly to competitor (no product line)
+  const unlinkedPriceIds = new Set(directPrices.map((p) => p.id));
+  for (const pl of lines) for (const p of pl.plans) unlinkedPriceIds.delete(p.id);
+  const orphanPrices = directPrices.filter((p) => unlinkedPriceIds.has(p.id));
+  return {
+    id: c.id, title: c.title, tier: c.tier || null,
+    product_lines: lines, orphan_prices: orphanPrices.length,
+    has_product_lines: lines.length > 0,
+  };
+}
+function productLines(store) {
+  return store.list('Competitor', (c) => c.status !== 'Retired').map((c) => productLinesOf(store, c));
 }
 
 // ---- Completeness scoring: how much data we have per competitor
-function completeness(store) {
-  const comps = store.list('Competitor', (c) => c.status !== 'Retired');
-  /** Each check is done by itself when the data exists, or when a person ticked it off by hand (todo_done on the competitor). */
-  const checks = (c, myPrices, planFeatureCount, myFiles) => {
-    const manual = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []);
-    const items = [
-      { key: 'website', auto: !!c.website, label: 'Add their website', weight: 1 },
-      { key: 'positioning', auto: !!c.positioning, label: 'Say in a line how they compete', weight: 2 },
-      { key: 'target_customers', auto: !!c.target_customers, label: 'Say who they sell to', weight: 2 },
-      { key: 'strengths', auto: !!c.strengths, label: 'Note their strengths', weight: 1 },
-      { key: 'weaknesses', auto: !!c.weaknesses, label: 'Note their weaknesses', weight: 1 },
-      { key: 'company_facts', auto: !!(c.founded_year || c.hq_country || c.size_band), label: 'Add company facts (founded, head office or size)', weight: 1 },
-      { key: 'pricing', auto: myPrices.length > 0 || !!c.pricing_na_reason, label: 'Add their prices, or say why there are none', weight: 3 },
-      { key: 'pricing_levels', auto: myPrices.length > 0 && myPrices.every((p) => p.tier_tag), label: 'Give every plan a level (Free, Entry, Mid, Top, Enterprise)', weight: 2 },
-      { key: 'plan_features', auto: planFeatureCount > 0, label: 'Tick the features each plan includes', weight: 3 },
-      { key: 'files', auto: myFiles > 0, label: 'Upload a source file (price list, deck, PDF)', weight: 1 },
-      { key: 'looks_right', auto: false, label: 'Check that everything here looks right', weight: 2 },
-    ].map((i) => ({ ...i, manual: manual.has(i.key), done: i.auto || manual.has(i.key) }));
-    const total = items.reduce((s, i) => s + i.weight, 0);
-    const done = items.filter((i) => i.done).reduce((s, i) => s + i.weight, 0);
-    return { items, score: total > 0 ? Math.round((done / total) * 100) : 0, done_count: items.filter((i) => i.done).length, total_count: items.length };
-  };
-  return comps.map((c) => {
-    const cells = competitorCells(store, c);
-    const myPrices = cells.filter((x) => x.type === 'PricePoint' && x.status !== 'Retired');
-    const planFeatureCount = myPrices.reduce((n, p) => n + store.out(p.id, 'includes_capability').length, 0);
-    const myFiles = (store.out(c.id, 'attached_to') || []).length + (store.inn(c.id, 'attached_to') || []).length;
-    return { id: c.id, title: c.title, tier: c.tier || null, status: c.status, ...checks(c, myPrices, planFeatureCount, myFiles) };
-  });
+/** Each check is done by itself when the data exists, or when a person ticked it off by hand (todo_done on the competitor). */
+function completenessChecks(c, myPrices, planFeatureCount, myFiles) {
+  const manual = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []);
+  const items = [
+    { key: 'website', auto: !!c.website, label: 'Add their website', weight: 1 },
+    { key: 'positioning', auto: !!c.positioning, label: 'Say in a line how they compete', weight: 2 },
+    { key: 'target_customers', auto: !!c.target_customers, label: 'Say who they sell to', weight: 2 },
+    { key: 'strengths', auto: !!c.strengths, label: 'Note their strengths', weight: 1 },
+    { key: 'weaknesses', auto: !!c.weaknesses, label: 'Note their weaknesses', weight: 1 },
+    { key: 'company_facts', auto: !!(c.founded_year || c.hq_country || c.size_band), label: 'Add company facts (founded, head office or size)', weight: 1 },
+    { key: 'pricing', auto: myPrices.length > 0 || !!c.pricing_na_reason, label: 'Add their prices, or say why there are none', weight: 3 },
+    { key: 'plan_features', auto: planFeatureCount > 0, label: 'Tick the features each plan includes', weight: 3 },
+    { key: 'files', auto: myFiles > 0, label: 'Upload a source file (price list, deck, PDF)', weight: 1 },
+    { key: 'looks_right', auto: false, label: 'Check that everything here looks right', weight: 2 },
+  ].map((i) => ({ ...i, manual: manual.has(i.key), done: i.auto || manual.has(i.key) }));
+  const total = items.reduce((s, i) => s + i.weight, 0);
+  const done = items.filter((i) => i.done).reduce((s, i) => s + i.weight, 0);
+  return { items, score: total > 0 ? Math.round((done / total) * 100) : 0, done_count: items.filter((i) => i.done).length, total_count: items.length };
 }
 
-// ---- Normalized pricing: plans of every competitor on one scale, grouped by plan level
+/** How complete one competitor's record is. completeness() below is this for every live competitor. */
+function completenessOf(store, c) {
+  const cells = competitorCells(store, c);
+  const myPrices = cells.filter((x) => x.type === 'PricePoint' && x.status !== 'Retired');
+  const planFeatureCount = myPrices.reduce((n, p) => n + store.out(p.id, 'includes_capability').length, 0);
+  const myFiles = (store.out(c.id, 'attached_to') || []).length + (store.inn(c.id, 'attached_to') || []).length;
+  return { id: c.id, title: c.title, tier: c.tier || null, status: c.status, ...completenessChecks(c, myPrices, planFeatureCount, myFiles) };
+}
+function completeness(store) {
+  return store.list('Competitor', (c) => c.status !== 'Retired').map((c) => completenessOf(store, c));
+}
+
+// ---- Normalized pricing: plans of every competitor on one scale
 const median = (v: number[]) => { if (!v.length) return null; const s = [...v].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
 const spread = (v: number[]) => (v.length ? { min: Math.min(...v), median: median(v), max: Math.max(...v), count: v.length } : null);
 
 /**
- * Every tagged plan, costed with the same rules as the side-by-side compare (compare.costFor): INR excluding GST, over 12 months,
+ * Where a plan sits among ITS OWN company's plans, worked out from the prices (nothing is typed in or stored):
+ *   free      costs nothing,
+ *   cheapest  the lowest-priced paid plan of the company,
+ *   top       the highest-priced paid plan of the company (only when the company has at least two paid plans),
+ * and any plan in between has no position. Plans with no public price have none either.
+ */
+export const POSITIONS = ['free', 'cheapest', 'top'] as const;
+export const POSITION_NAME: Record<string, string> = { free: 'Free plans', cheapest: 'Cheapest paid plan', top: 'Most expensive plan' };
+function assignPositions(rows: any[]) {
+  const byCompany = new Map<string, any[]>();
+  for (const r of rows) { r.position = null; (byCompany.get(r.competitor.id) || byCompany.set(r.competitor.id, []).get(r.competitor.id)!).push(r); }
+  for (const list of byCompany.values()) {
+    const cost = (r: any) => (r.yearly_inr !== null ? r.yearly_inr : r.once_inr);
+    for (const r of list) if (cost(r) === 0) r.position = 'free';
+    const paid = list.filter((r) => cost(r) !== null && cost(r) > 0).sort((a, b) => cost(a) - cost(b));
+    if (paid.length) paid[0].position = 'cheapest';
+    if (paid.length > 1) paid[paid.length - 1].position = 'top';
+  }
+}
+
+/**
+ * Every plan, costed with the same rules as the side-by-side compare (compare.costFor): INR excluding GST, over 12 months,
  * for ONE usage scenario (?users=, ?units=, ?gb=). A plan sold for several terms (1, 3, 12 months, lifetime) is ONE row:
  * yearly_inr is its cheapest recurring term over 12 months, once_inr is the lifetime / one-time price. Single-user licences are
- * bought once per user; multi-user licences are one price that covers up to max_users.
+ * bought once per user; multi-user licences are one price that covers up to max_users. Rows carry their `position` (see above)
+ * and `key`, which is `<competitor>|<product line>|<plan name>|<licence>`; `positions` groups the rows by position.
  */
 function normalizedPricing(store, query: any = {}) {
   // compare.ts imports this file, so it is loaded when first needed rather than at start-up
@@ -241,14 +264,11 @@ function normalizedPricing(store, query: any = {}) {
   const fx = store.data.settings.fx;
   const { usage, defaults_used } = parseUsage(query);
   const allPrices = store.list('PricePoint', (p) => p.status !== 'Retired');
-  const TIER_TAGS = ['free', 'entry', 'mid', 'top', 'enterprise'];
   const plans = new Map<string, any>();
   const skipped: any[] = [];
-  let untagged = 0;
   for (const p of allPrices) {
     const comp = ownerOf(store, p);
     if (!comp || !inScope(comp, query.scope)) continue;
-    if (!p.tier_tag) { untagged++; continue; }
     const line = lineOf(store, p);
     const key = [comp.id, line ? line.id : '', String(p.plan || p.title).toLowerCase(), p.seat_model || ''].join('|');
     const r = costFor(p, usage, 12, fx);
@@ -256,7 +276,7 @@ function normalizedPricing(store, query: any = {}) {
     if (r.cost === null || r.cost === undefined) { skipped.push({ id: p.id, plan: p.plan || p.title, competitor: comp.title, reason: r.reason }); }
     let row = plans.get(key);
     if (!row) {
-      row = { id: p.id, plan: p.plan || p.title, competitor: { id: comp.id, title: comp.title, tier: comp.tier }, product: line ? line.product_name : null, tier_tag: p.tier_tag, seat_model: p.seat_model || null, max_users: p.max_users || null, yearly_inr: null, once_inr: null, terms: [] };
+      row = { key, id: p.id, plan: p.plan || p.title, competitor: { id: comp.id, title: comp.title, tier: comp.tier }, product: line ? line.product_name : null, position: null, seat_model: p.seat_model || null, max_users: p.max_users || null, yearly_inr: null, once_inr: null, terms: [] };
       plans.set(key, row);
     }
     const period = oneTime ? 'one_time' : (p.billing_period || 'month');
@@ -266,13 +286,14 @@ function normalizedPricing(store, query: any = {}) {
       else row.yearly_inr = row.yearly_inr === null ? r.cost : Math.min(row.yearly_inr, r.cost);
     }
   }
-  const byTier = Object.fromEntries(TIER_TAGS.map((t) => [t, [] as any[]]));
-  for (const row of plans.values()) byTier[row.tier_tag].push(row);
-  const tiers = TIER_TAGS.map((tag) => {
-    const rows = byTier[tag].sort((a, b) => (a.yearly_inr ?? a.once_inr ?? Infinity) - (b.yearly_inr ?? b.once_inr ?? Infinity));
-    return { tier_tag: tag, count: rows.length, rows, yearly: spread(rows.filter((r) => r.yearly_inr !== null).map((r) => r.yearly_inr)), once: spread(rows.filter((r) => r.once_inr !== null).map((r) => r.once_inr)) };
+  const rows = [...plans.values()];
+  assignPositions(rows);
+  const cheapFirst = (a: any, b: any) => (a.yearly_inr ?? a.once_inr ?? Infinity) - (b.yearly_inr ?? b.once_inr ?? Infinity);
+  const positions = POSITIONS.map((position) => {
+    const list = rows.filter((r) => r.position === position).sort(cheapFirst);
+    return { position, label: POSITION_NAME[position], count: list.length, rows: list, yearly: spread(list.filter((r) => r.yearly_inr !== null).map((r) => r.yearly_inr)), once: spread(list.filter((r) => r.once_inr !== null).map((r) => r.once_inr)) };
   }).filter((t) => t.count > 0);
-  return { tiers, usage: { ...usage, defaults_used }, summary: { total: allPrices.length, tagged: allPrices.length - untagged, untagged, plans: plans.size }, skipped, fx };
+  return { positions, rows: rows.sort(cheapFirst), usage: { ...usage, defaults_used }, summary: { total: allPrices.length, plans: rows.length, with_position: rows.filter((r) => r.position).length }, skipped, fx };
 }
 
 // ---- Plan-capability mapping: which capabilities are included in which plan
@@ -286,7 +307,7 @@ function planCapabilities(store) {
       // capabilities linked to this plan via includes_capability
       const planCaps = store.out(p.id, 'includes_capability').map((l) => store.get(l.target)).filter((x) => x && x.type === 'CompetitorCapability' && x.status !== 'Retired');
       return {
-        id: p.id, plan: p.plan, tier_tag: p.tier_tag || null, amount: p.amount, currency: p.currency,
+        id: p.id, plan: p.plan, amount: p.amount, currency: p.currency,
         billing_model: p.billing_model, billing_period: p.billing_period || null,
         capabilities: planCaps.map((cap) => ({ id: cap.id, tag: capabilityTag(store, cap), their_name: cap.capability_tag, level: cap.level })),
       };
@@ -394,7 +415,7 @@ function addCommonFeatures(store, features: { name: string; category?: string; d
   const comps = store.list('Competitor', (c) => c.status !== 'Retired');
   if (!comps.length) throw Object.assign(new Error('There are no competitors yet. Add one first.'), { status: 422 });
   const today = store.today();
-  const out = { features_added: 0, features_existing: 0, rows_added: 0, rows_existing: 0, competitors: comps.length };
+  const out = { features_added: 0, features_existing: 0, rows_added: 0, rows_existing: 0, competitors: comps.length, capability_ids: [] as string[] };
   for (const f of clean) {
     let cap = store.list('Capability', (c) => c.status !== 'Retired').find((c) => String(c.title).trim().toLowerCase() === f.name.toLowerCase());
     if (cap) out.features_existing++;
@@ -402,6 +423,7 @@ function addCommonFeatures(store, features: { name: string; category?: string; d
       cap = store.create('Capability', { title: f.name, ...(f.category ? { category: f.category } : {}), ...(f.description ? { description: f.description } : {}), status: 'Active' }, { actor });
       out.features_added++;
     }
+    out.capability_ids.push(cap.id);
     for (const c of comps) {
       const have = cellsOf(store, c).some((r) => r.type === 'CompetitorCapability' && r.status !== 'Retired' && capabilityTag(store, r).toLowerCase() === f.name.toLowerCase());
       if (have) { out.rows_existing++; continue; }
@@ -414,5 +436,5 @@ function addCommonFeatures(store, features: { name: string; category?: string; d
   return out;
 }
 
-export { tierView, grid, prices, sources, effort, productLines, completeness, normalizedPricing, planCapabilities, mustHaveCapabilities, catalog, addCommonFeatures, CAPS };
+export { tierView, grid, prices, sources, effort, productLines, productLinesOf, completeness, completenessOf, normalizedPricing, planCapabilities, mustHaveCapabilities, catalog, addCommonFeatures, CAPS };
 

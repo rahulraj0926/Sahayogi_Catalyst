@@ -2548,7 +2548,15 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           },
           "404": {
             "description": "Unknown record, product or route.",
@@ -2595,7 +2603,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Members of the platform, a project or a phase",
+        "description": "Everyone who has been added, with their role and where they were added. Works without a product. Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       },
       "post": {
         "operationId": "MembersController_add",
@@ -2621,6 +2631,17 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
           "401": {
             "description": "No name was sent in X-Actor (code actor_required).",
             "content": {
@@ -2632,7 +2653,7 @@
             }
           },
           "403": {
-            "description": "Only an administrator may do this (code role_required).",
+            "description": "Only an administrator can add members.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2652,7 +2673,7 @@
             }
           },
           "409": {
-            "description": "The change conflicts with the current state (for example stale_edit or stale_gate).",
+            "description": "This person is already a member at that level.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2662,7 +2683,7 @@
             }
           },
           "422": {
-            "description": "The input is not valid; the message says what to change.",
+            "description": "A name is needed, or project / phase is missing.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2701,7 +2722,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Add a member",
+        "description": "Administrators only. Adds a person at one level: the whole platform, one project (give product_id) or one phase of a project (give product_id and phase). Also answers at its old address /api/members, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       }
     },
     "/api/v1/members/{id}/role": {
@@ -2737,6 +2760,17 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
           "401": {
             "description": "No name was sent in X-Actor (code actor_required).",
             "content": {
@@ -2748,7 +2782,7 @@
             }
           },
           "403": {
-            "description": "Only an administrator may do this (code role_required).",
+            "description": "Only an administrator can change roles.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2758,7 +2792,7 @@
             }
           },
           "404": {
-            "description": "Unknown record, product or route.",
+            "description": "No such member.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2778,7 +2812,7 @@
             }
           },
           "422": {
-            "description": "The input is not valid; the message says what to change.",
+            "description": "That is not a role.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2817,7 +2851,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members/{id}/role, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Change a member's role",
+        "description": "Administrators only. Also answers at its old address /api/members/{id}/role, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       }
     },
     "/api/v1/members/{id}": {
@@ -2844,7 +2880,15 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           },
           "401": {
             "description": "No name was sent in X-Actor (code actor_required).",
@@ -2857,7 +2901,7 @@
             }
           },
           "403": {
-            "description": "Only an administrator may do this (code role_required).",
+            "description": "Only an administrator can remove members.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2867,7 +2911,7 @@
             }
           },
           "404": {
-            "description": "Unknown record, product or route.",
+            "description": "No such member.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2926,7 +2970,9 @@
           "Members"
         ],
         "x-engine": true,
-        "description": "Also answers at its old address /api/members/{id}, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1."
+        "summary": "Remove a member",
+        "description": "Administrators only. The person keeps their history; they just no longer have the role. Also answers at its old address /api/members/{id}, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
       }
     },
     "/api/v1/documents": {
@@ -10573,16 +10619,26 @@
         "x-documented": true
       }
     },
-    "/api/v1/competitors/tiers": {
+    "/api/v1/competitors/{id}/profile": {
       "get": {
-        "operationId": "CompetitorViewsController_tiers",
+        "operationId": "CompetitorsController_profile",
         "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -10592,12 +10648,97 @@
             "schema": {
               "type": "string"
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No competitor has this id (it may be another kind of item).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The input is not valid; the message says what to change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "summary": "Everything one competitor's page shows",
+        "description": "The competitor with its links, history and checks (the same as GET /items/{id}), plus only its own plans (prices), capability ratings, notes and files, its product lines with their plans, how complete the record is with the to-do items that follow from it, the last few changes in plain words (recent: when, who, what), and the capability names in use across the product. One call replaces reading every price, rating, note and file of the product and sorting them in the browser. Also answers at its old address /api/competitors/{id}/profile, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
+    "/api/v1/competitors/tiers": {
+      "get": {
+        "operationId": "CompetitorsController_tiers",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "scope",
-            "in": "query",
             "required": false,
-            "description": "Only competitors that matter for this part of our product (a module or area name). Competitors with no scope count everywhere.",
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -10667,14 +10808,16 @@
     },
     "/api/v1/competitors/grid": {
       "get": {
-        "operationId": "CompetitorViewsController_grid",
+        "operationId": "CompetitorsController_grid",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -10750,14 +10893,16 @@
     },
     "/api/v1/competitors/prices": {
       "get": {
-        "operationId": "CompetitorViewsController_prices",
+        "operationId": "CompetitorsController_prices",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -10833,14 +10978,16 @@
     },
     "/api/v1/competitors/sources": {
       "get": {
-        "operationId": "CompetitorViewsController_sources",
+        "operationId": "CompetitorsController_sources",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -10916,14 +11063,16 @@
     },
     "/api/v1/competitors/effort": {
       "get": {
-        "operationId": "CompetitorViewsController_effort",
+        "operationId": "CompetitorsController_effort",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -10999,14 +11148,16 @@
     },
     "/api/v1/competitors/product-lines": {
       "get": {
-        "operationId": "CompetitorViewsController_productLines",
+        "operationId": "CompetitorsController_productLines",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -11082,14 +11233,16 @@
     },
     "/api/v1/competitors/completeness": {
       "get": {
-        "operationId": "CompetitorViewsController_completeness",
+        "operationId": "CompetitorsController_completeness",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -11165,47 +11318,55 @@
     },
     "/api/v1/competitors/normalized-prices": {
       "get": {
-        "operationId": "CompetitorViewsController_normalizedPrices",
+        "operationId": "CompetitorsController_normalizedPrices",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
+            "name": "scope",
             "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "users",
-            "in": "query",
             "required": false,
-            "description": "Users in the scenario. Default 10.",
+            "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "units",
-            "in": "query",
             "required": false,
-            "description": "Units in the scenario.",
+            "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "gb",
-            "in": "query",
             "required": false,
-            "description": "GB per month in the scenario.",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -11268,21 +11429,23 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Competitor plans compared by plan level",
-        "description": "Plans tagged free, entry, mid, top or enterprise, costed over 12 months in INR excluding GST for one usage scenario. A plan sold for several terms is one row: its cheapest recurring term per year, and its one-time (lifetime) price. Single-user licences are bought once per user; multi-user licences cover up to max_users. Also answers at its old address /api/competitors/normalized-prices, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Competitor plans compared by price position",
+        "description": "Plans grouped by where they sit in their own company's price list (free, cheapest paid, most expensive; worked out from the prices, not stored), costed over 12 months in INR excluding GST for one usage scenario. A plan sold for several terms is one row: its cheapest recurring term per year, and its one-time (lifetime) price. Single-user licences are bought once per user; multi-user licences cover up to max_users. Also answers at its old address /api/competitors/normalized-prices, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/plan-capabilities": {
       "get": {
-        "operationId": "CompetitorViewsController_planCapabilities",
+        "operationId": "CompetitorsController_planCapabilities",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -11356,16 +11519,348 @@
         "x-documented": true
       }
     },
-    "/api/v1/competitors/catalog": {
+    "/api/v1/competitors/must-have": {
       "get": {
-        "operationId": "CompetitorViewsController_catalog",
+        "operationId": "CompetitorsController_mustHave",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threshold",
+            "required": false,
+            "in": "query",
+            "description": "Share of competitors that offer a feature for it to count, 1 to 100 (default 80).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown record, product or route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The input is not valid; the message says what to change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "summary": "Capabilities most competitors offer",
+        "description": "Our features ordered by how many active competitors offer them (rated strong, parity or partial), with the competitors that do not. Only features offered by at least the given share are listed. Also answers at its old address /api/competitors/must-have, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
+    "/api/v1/competitors/scopes": {
+      "get": {
+        "operationId": "CompetitorsController_scopes",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown record, product or route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The input is not valid; the message says what to change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "summary": "Parts of our product competitors are set against",
+        "description": "Every scope name in use: modules of the product and any area name typed on a competitor, with how many competitors carry it. Also answers at its old address /api/competitors/scopes, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
+    "/api/v1/competitors/overview": {
+      "get": {
+        "operationId": "CompetitorsController_overview",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threshold",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "users",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "coverage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "must",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "common",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "compare_users",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown record, product or route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The input is not valid; the message says what to change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (see the Retry-After header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; quote the requestId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The competitor dashboard in one answer",
+        "tags": [
+          "Competitors"
+        ],
+        "x-engine": true,
+        "description": "How many competitors are analysed and how complete they are; the competitors by tier; plans by price position (free, cheapest, most expensive); every feature at least one competitor offers with the share of competitors that offer it (and who does not); the recommended features (offered by at least threshold percent); the average price per plan position; and the typical yearly price of a plan that holds most of the recommended features (coverage percent). Nothing is stored. Also answers at its old address /api/competitors/overview, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "x-documented": true
+      }
+    },
+    "/api/v1/competitors/catalog": {
+      "get": {
+        "operationId": "CompetitorsController_catalog",
+        "parameters": [
+          {
+            "name": "product",
+            "required": false,
+            "in": "query",
+            "description": "Product id such as PRD-001 (or send X-Product).",
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -11441,7 +11936,7 @@
     },
     "/api/v1/competitors/catalog/common": {
       "post": {
-        "operationId": "CompetitorViewsController_addCommon",
+        "operationId": "CompetitorsController_addCommon",
         "parameters": [
           {
             "name": "product",
@@ -11460,6 +11955,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCommonFeaturesDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success.",
@@ -11538,35 +12043,46 @@
         ],
         "x-engine": true,
         "summary": "Add common features for every competitor",
-        "description": "Puts each feature on our list (if it is not there) and gives every active competitor an unrated row for it (level unknown). Nothing is rated. Features and rows that already exist are skipped. At most 60 features per call. Also answers at its old address /api/competitors/catalog/common, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Puts each feature on our list (if it is not there) and gives every active competitor an unrated row for it (rating unknown). Nothing is rated. Features and rows that already exist are skipped. At most 60 features per call. Also answers at its old address /api/competitors/catalog/common, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/plans": {
       "get": {
-        "operationId": "CompetitorViewsController_plans",
+        "operationId": "CompetitorsController_plans",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
+            "name": "scope",
             "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "competitor",
-            "in": "query",
             "required": false,
-            "description": "Competitor id.",
+            "in": "query",
+            "description": "One competitor's plans (a competitor id).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -11636,7 +12152,7 @@
     },
     "/api/v1/competitors/plans/features": {
       "post": {
-        "operationId": "CompetitorViewsController_setPlanFeature",
+        "operationId": "CompetitorsController_setPlanFeature",
         "parameters": [
           {
             "name": "product",
@@ -11655,6 +12171,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlanFeatureDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success.",
@@ -11737,16 +12263,27 @@
         "x-documented": true
       }
     },
-    "/api/v1/competitors/plan-level-features": {
+    "/api/v1/competitors/plan-position-features": {
       "get": {
-        "operationId": "CompetitorViewsController_planLevelFeatures",
+        "operationId": "CompetitorsController_planPositionFeatures",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -11815,54 +12352,56 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Which features competitors include at each plan level",
-        "description": "For each level (free, entry, mid, top, enterprise): how many plans list their features and, per feature, how many of them include it. Also answers at its old address /api/competitors/plan-level-features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Which features competitors include at each plan position",
+        "description": "For each position (free, cheapest paid plan, most expensive plan): how many plans list their features and, per feature, how many of them include it. Also answers at its old address /api/competitors/plan-position-features, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/recommended": {
       "get": {
-        "operationId": "CompetitorViewsController_recommended",
+        "operationId": "CompetitorsController_recommended",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "threshold",
-            "in": "query",
-            "required": false,
-            "description": "Share of plans that must include a feature, 1 to 100. Default 60.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "users",
-            "in": "query",
-            "required": false,
-            "description": "Users in the price scenario. Default 1.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "scope",
-            "in": "query",
             "required": false,
-            "description": "Only competitors that matter for this part of our product (a module or area name). Competitors with no scope count everywhere.",
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "threshold",
+            "required": false,
+            "in": "query",
+            "description": "Share of competitors that must offer a feature, 1 to 100.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "users",
+            "required": false,
+            "in": "query",
+            "description": "Users in the price scenario.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -11925,54 +12464,76 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Recommended plan for each level, from the competitors' plans",
-        "description": "For each plan level (free, entry, mid, top, enterprise) with competitor plans: the average yearly price in INR excluding GST for the given number of users, and the features that at least the given share of those plans include. new_features is what the level adds over the one below it. Also answers at its old address /api/competitors/recommended, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Recommended plan for each position, from the competitors' plans",
+        "description": "For each plan position (free, cheapest, top) with competitor plans: the average yearly price in INR excluding GST for the given number of users, and the features that at least the given share of those plans include. new_features is what the position adds over the one before it. Also answers at its old address /api/competitors/recommended, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/compare-plans": {
       "get": {
-        "operationId": "CompetitorViewsController_comparePlans",
+        "operationId": "CompetitorsController_comparePlans",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "position",
+            "required": false,
+            "in": "query",
+            "description": "free, cheapest or top. Required.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "free",
+                "cheapest",
+                "top",
+                ""
+              ]
+            }
+          },
+          {
+            "name": "fallback",
+            "required": false,
+            "in": "query",
+            "description": "A position to show for a competitor that has no plan in `position`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "free",
+                "cheapest",
+                "top",
+                ""
+              ]
+            }
+          },
+          {
+            "name": "users",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
             "in": "header",
             "description": "Who is acting. Required for every change.",
             "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "level",
-            "in": "query",
-            "required": false,
-            "description": "free, entry, mid, top or enterprise.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "users",
-            "in": "query",
-            "required": false,
-            "description": "Users in the price scenario. Default 1.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "fallback",
-            "in": "query",
-            "required": false,
-            "description": "A level to show instead for a competitor that has no plan at the asked level, for example entry when asking for free. Left out when it has neither.",
             "schema": {
               "type": "string"
             }
@@ -12001,7 +12562,7 @@
             }
           },
           "422": {
-            "description": "Unknown level, or users is not a number of 1 or more.",
+            "description": "Unknown position, or users is not a number of 1 or more.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12035,21 +12596,23 @@
           "Competitors"
         ],
         "x-engine": true,
-        "summary": "Compare competitors' plans at one level",
-        "description": "One column per competitor plan at the level (for example everyone's Entry plan), with its yearly price and the features it includes, plus the competitors that have no plan at that level. Also answers at its old address /api/competitors/compare-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Compare competitors' plans in one position",
+        "description": "One column per competitor plan in the position (for example everyone's free plan), with its yearly price and the features it includes, plus the competitors that have no plan in that position. Also answers at its old address /api/competitors/compare-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/our-plans": {
       "get": {
-        "operationId": "CompetitorViewsController_ourPlans",
+        "operationId": "CompetitorsController_ourPlans",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -12119,89 +12682,96 @@
         ],
         "x-engine": true,
         "summary": "Our plans and the features each includes",
-        "description": "Our plans, and our features as rows with the plans that include them. Each plan has price_monthly and price_yearly (empty when not sold that way), seat_model and max_users (how many users it covers), and its level. Also answers at its old address /api/competitors/our-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Our plans, and our features as rows with the plans that include them. Each plan has price_monthly and price_yearly (empty when not sold that way), seat_model and and max_users (how many users it covers). Also answers at its old address /api/competitors/our-plans, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/our-plans/pick-features": {
       "get": {
-        "operationId": "CompetitorViewsController_pickFeatures",
+        "operationId": "CompetitorsController_pickFeatures",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tier",
-            "in": "query",
-            "required": false,
-            "description": "Only competitor plans at this level: free, entry, mid, top or enterprise.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "competitor",
-            "in": "query",
-            "required": false,
-            "description": "Only this competitor.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "description": "Words the feature name contains.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "description": "Rows to skip. Default 0.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "description": "Rows to return, 1 to 500. Default 30.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "names_only",
-            "in": "query",
-            "required": false,
-            "description": "Set to 1 to get every matching name (up to 5000) and nothing else.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "scope",
-            "in": "query",
             "required": false,
-            "description": "Only competitors that matter for this part of our product.",
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "competitor",
+            "required": false,
+            "in": "query",
+            "description": "One competitor's plans (a competitor id).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "position",
+            "required": false,
+            "in": "query",
+            "description": "Only features offered in plans in this position: free, cheapest (cheapest paid plan) or top (most expensive plan).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "free",
+                "cheapest",
+                "top",
+                ""
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Words the feature name must contain.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "names_only",
+            "required": false,
+            "in": "query",
+            "description": "Any value: return just the names (at most 5000), for \"pick all\".",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "How many features to return (1 to 500, default 30).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -12230,7 +12800,7 @@
             }
           },
           "422": {
-            "description": "Unknown level.",
+            "description": "Unknown position.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12271,7 +12841,7 @@
     },
     "/api/v1/competitors/our-plans/features/new": {
       "post": {
-        "operationId": "CompetitorViewsController_addOurFeatures",
+        "operationId": "CompetitorsController_addOurFeatures",
         "parameters": [
           {
             "name": "product",
@@ -12290,6 +12860,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddOurFeaturesDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success.",
@@ -12374,7 +12954,7 @@
     },
     "/api/v1/competitors/our-plans/features": {
       "post": {
-        "operationId": "CompetitorViewsController_setOurPlanFeature",
+        "operationId": "CompetitorsController_setOurPlanFeature",
         "parameters": [
           {
             "name": "product",
@@ -12393,6 +12973,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOurPlanFeatureDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success.",
@@ -12475,417 +13065,88 @@
         "x-documented": true
       }
     },
-    "/api/v1/competitors/must-have": {
-      "get": {
-        "operationId": "CompetitorViewsController_mustHave",
-        "parameters": [
-          {
-            "name": "product",
-            "required": false,
-            "in": "query",
-            "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "threshold",
-            "in": "query",
-            "required": false,
-            "description": "Share of competitors, 1 to 100. Default 80. 1 lists every feature at least one competitor offers.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "required": false,
-            "description": "Only competitors that matter for this part of our product (a module or area name). Competitors with no scope count everywhere.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown record, product or route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The input is not valid; the message says what to change.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many requests (see the Retry-After header).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error; quote the requestId.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Competitors"
-        ],
-        "x-engine": true,
-        "summary": "Capabilities most competitors offer",
-        "description": "Our features ordered by how many active competitors offer them (rated strong, parity or partial), with the competitors that do not. Only features offered by at least the given share are listed. Also answers at its old address /api/competitors/must-have, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
-        "x-documented": true
-      }
-    },
-    "/api/v1/competitors/scopes": {
-      "get": {
-        "operationId": "CompetitorViewsController_scopes",
-        "parameters": [
-          {
-            "name": "product",
-            "required": false,
-            "in": "query",
-            "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown record, product or route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The input is not valid; the message says what to change.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many requests (see the Retry-After header).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error; quote the requestId.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Parts of our product competitors are set against",
-        "tags": [
-          "Competitors"
-        ],
-        "x-engine": true,
-        "description": "Every scope name in use: modules of the product and any area name typed on a competitor, with how many competitors carry it. Also answers at its old address /api/competitors/scopes, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
-        "x-documented": true
-      }
-    },
-    "/api/v1/competitors/overview": {
-      "get": {
-        "operationId": "CompetitorViewsController_overview",
-        "parameters": [
-          {
-            "name": "product",
-            "required": false,
-            "in": "query",
-            "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "threshold",
-            "in": "query",
-            "required": false,
-            "description": "Share of competitors that must offer a feature for it to be recommended, 1 to 100. Default 60.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "users",
-            "in": "query",
-            "required": false,
-            "description": "Users in the price scenario. Default 1.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "must",
-            "in": "query",
-            "required": false,
-            "description": "Share of competitors that offer a feature for it to count as a must-have, 2 to 100. Default 80.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "common",
-            "in": "query",
-            "required": false,
-            "description": "Share for a feature to count as common, below the must-have share. Default 50.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "compare_users",
-            "in": "query",
-            "required": false,
-            "description": "Comma-separated team sizes to show the recommended price for side by side. Default 1,5,10,25.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "coverage",
-            "in": "query",
-            "required": false,
-            "description": "Share of the recommended features a plan must include to count in the typical price, 10 to 100. Default 70.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "required": false,
-            "description": "Only competitors that matter for this part of our product (a module or area name). Competitors with no scope count everywhere.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown record, product or route.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The input is not valid; the message says what to change.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many requests (see the Retry-After header).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error; quote the requestId.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Competitors"
-        ],
-        "x-engine": true,
-        "summary": "The competitor dashboard in one answer",
-        "description": "How many competitors are analysed and how complete they are; the competitors by tier; plans by level; every feature at least one competitor offers with the share of competitors that offer it (and who does not); the recommended features (offered by at least threshold percent); the average price per plan level; and the typical yearly price of a plan that holds most of the recommended features (coverage percent). Nothing is stored. Also answers at its old address /api/competitors/overview, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
-        "x-documented": true
-      }
-    },
     "/api/v1/competitors/import": {
       "post": {
-        "operationId": "CompetitorViewsController_importFile",
+        "operationId": "CompetitorsController_importFile",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
+            "name": "scope",
             "required": false,
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "name",
+            "required": false,
             "in": "query",
-            "required": true,
-            "description": "File name with its extension, e.g. competitors.xlsx.",
+            "description": "The file name, such as plans.csv. Its ending says whether it is CSV or Excel.",
             "schema": {
+              "maxLength": 255,
               "type": "string"
             }
           },
           {
             "name": "commit",
-            "in": "query",
             "required": false,
-            "description": "1 to save, 0 (default) to only check.",
+            "in": "query",
+            "description": "1 saves; 0 (the default) only checks and reports.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "overwrite",
-            "in": "query",
             "required": false,
-            "description": "1 to replace values that are already filled in.",
+            "in": "query",
+            "description": "1 replaces what is saved with what is in the file.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "create_features",
-            "in": "query",
             "required": false,
-            "description": "0 to leave out features that are not on our feature list yet. Default: they are added to it.",
+            "in": "query",
+            "description": "0 does not add features that are not on our list yet.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "competitor",
-            "in": "query",
             "required": false,
-            "description": "The competitor's name, for a file about one competitor that has no Competitor column. Without it the name is taken from the title line above the table.",
+            "in": "query",
+            "description": "Put every row under this competitor.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "tier",
-            "in": "query",
             "required": false,
-            "description": "Tier 1, Tier 2, Tier 3 or Substitute, given to competitors in a plans file that have none of their own.",
+            "in": "query",
+            "description": "Tier to give new competitors.",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "scope",
-            "in": "query",
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
             "required": false,
-            "description": "The module (or area) of our product that the competitors in a plans file compete in, e.g. Finance & Accounting.",
             "schema": {
               "type": "string"
             }
@@ -12967,18 +13228,18 @@
             }
           }
         },
-        "summary": "Check or save competitors, plans and plan features from a CSV or Excel file",
         "tags": [
           "Competitors"
         ],
         "x-engine": true,
-        "description": "The body is the file itself (.csv or .xlsx, up to 25 MB), not JSON. Columns are matched by meaning (Competitor, Tier, Module, Product, Plan, Level, Licence, Max users, Monthly / Yearly / Lifetime price, Currency, GST included, Features, Feature, Included), so most exported sheets work as they are. With commit=0 nothing is saved and the answer lists what would be created, what already exists, what was assumed and which rows were skipped. With commit=1 it is saved. Names are matched to existing ones ignoring case and punctuation, so importing twice adds nothing twice. Existing values are only filled in when blank, unless overwrite=1. Title lines above the column names are skipped; a plan name ending in a term (\"Silver - 3 Month\", \"Gold - Lifetime\") becomes one plan with several prices; a CSV saved by Excel on Windows (Windows-1252) is read correctly; a table with Tier 1/2/3 headings and a Modules column records which module each competitor competes in. Also answers at its old address /api/competitors/import, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "summary": "Check or save competitors, plans and plan features from a CSV or Excel file",
+        "description": "The body is the file itself (.csv or .xlsx, up to 25 MB), not JSON. Columns are matched by meaning (Competitor, Tier, Module, Product, Plan, Licence, Max users, Monthly / Yearly / Lifetime price, Currency, GST included, Features, Feature, Included), so most exported sheets work as they are. With commit=0 nothing is saved and the answer lists what would be created, what already exists, what was assumed and which rows were skipped. With commit=1 it is saved. Names are matched to existing ones ignoring case and punctuation, so importing twice adds nothing twice. Existing values are only filled in when blank, unless overwrite=1. Title lines above the column names are skipped; a plan name ending in a term (\"Silver - 3 Month\", \"Gold - Lifetime\") becomes one plan with several prices; a CSV saved by Excel on Windows (Windows-1252) is read correctly; a table with Tier 1/2/3 headings and a Modules column records which module each competitor competes in. Also answers at its old address /api/competitors/import, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/sample": {
       "post": {
-        "operationId": "CompetitorViewsController_sample",
+        "operationId": "CompetitorsController_sample",
         "parameters": [
           {
             "name": "product",
@@ -13081,7 +13342,7 @@
     },
     "/api/v1/competitors/bulk": {
       "post": {
-        "operationId": "CompetitorViewsController_bulk",
+        "operationId": "CompetitorsController_bulk",
         "parameters": [
           {
             "name": "product",
@@ -13100,6 +13361,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCompetitorsDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success.",
@@ -13178,44 +13449,46 @@
           "Competitors"
         ],
         "x-engine": true,
-        "description": "Same rules as the file import. Each row is an object whose keys are column names such as Competitor, Tier, Plan, Level, Monthly price, Yearly price, Features. Also answers at its old address /api/competitors/bulk, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "Same rules as the file import. Each row is an object whose keys are column names such as Competitor, Tier, Plan, Monthly price, Yearly price, Features. Also answers at its old address /api/competitors/bulk, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/export": {
       "get": {
-        "operationId": "CompetitorViewsController_exportPlans",
+        "operationId": "CompetitorsController_exportPlans",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
-          },
-          {
-            "name": "X-Actor",
-            "in": "header",
-            "description": "Who is acting. Required for every change.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "in": "query",
-            "required": false,
-            "description": "Competitor id. Leave out for all competitors.",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "scope",
-            "in": "query",
             "required": false,
-            "description": "Only competitors for this module.",
+            "in": "query",
+            "description": "Only competitors set against this part of our product (a module name). Empty means all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": false,
+            "in": "query",
+            "description": "One competitor id. Empty exports all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change.",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -13279,20 +13552,31 @@
           "Competitors"
         ],
         "x-engine": true,
-        "description": "One row per plan: competitor, tier, module, product, plan, level, licence, most users, a price column for each billing period, currency, GST, and the features of the plan. The file can be imported again unchanged. Without id, every competitor (or only those for one module) is included. Also answers at its old address /api/competitors/export, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
+        "description": "One row per plan: competitor, tier, module, product, plan, licence, most users, a price column for each billing period, currency, GST, and the features of the plan. The file can be imported again unchanged. Without id, every competitor (or only those for one module) is included. Also answers at its old address /api/competitors/export, which is deprecated and ends on the Sunset date. Errors use the same envelope as the rest of /api/v1.",
         "x-documented": true
       }
     },
     "/api/v1/competitors/import/template": {
       "get": {
-        "operationId": "CompetitorViewsController_importTemplate",
+        "operationId": "CompetitorsController_importTemplate",
         "parameters": [
           {
             "name": "product",
             "required": false,
             "in": "query",
             "description": "Product id such as PRD-001 (or send X-Product).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "plans (the default) or another template name.",
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "X-Actor",
@@ -13301,20 +13585,6 @@
             "required": false,
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "kind",
-            "in": "query",
-            "required": false,
-            "description": "plans, tiers or features.",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "plans",
-                "tiers",
-                "features"
-              ]
             }
           }
         ],
@@ -20863,6 +21133,203 @@
             "maxLength": 2000
           }
         }
+      },
+      "CommonFeatureDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "AddCommonFeaturesDto": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "description": "Features to add to every competitor's list (1 to 60).",
+            "minItems": 1,
+            "maxItems": 60,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommonFeatureDto"
+            }
+          },
+          "competitor": {
+            "type": "string",
+            "description": "With price_ids: also put the features in those plans of this competitor."
+          },
+          "price_ids": {
+            "description": "The plans (prices of that competitor) that should include the features.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "features"
+        ]
+      },
+      "PlanFeatureRefDto": {
+        "type": "object",
+        "properties": {
+          "capability_id": {
+            "type": "string",
+            "description": "A feature on our list. Send this or rating_id."
+          },
+          "rating_id": {
+            "type": "string",
+            "description": "The competitor's own rating of the feature."
+          }
+        }
+      },
+      "SetPlanFeatureDto": {
+        "type": "object",
+        "properties": {
+          "competitor": {
+            "type": "string",
+            "description": "The competitor id."
+          },
+          "price_ids": {
+            "description": "The plans (prices of that competitor) to change.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "included": {
+            "type": "boolean",
+            "description": "True to include the feature(s) in those plans, false to take them out."
+          },
+          "capability_id": {
+            "type": "string",
+            "description": "One feature on our list ..."
+          },
+          "rating_id": {
+            "type": "string",
+            "description": "... or one of the competitor's own ratings ..."
+          },
+          "features": {
+            "description": "... or many at once (at most 500).",
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanFeatureRefDto"
+            }
+          }
+        },
+        "required": [
+          "competitor",
+          "price_ids",
+          "included"
+        ]
+      },
+      "NewFeatureDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "AddOurFeaturesDto": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "description": "New features for our own list (1 to 300). A name already on the list is not added twice.",
+            "minItems": 1,
+            "maxItems": 300,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewFeatureDto"
+            }
+          },
+          "plan_ids": {
+            "description": "Our plans that should include them.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "features"
+        ]
+      },
+      "SetOurPlanFeatureDto": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "description": "One of our plans."
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "capability_id": {
+            "type": "string",
+            "description": "One feature on our list ..."
+          },
+          "capability_ids": {
+            "description": "... or many (at most 500).",
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "plan_id",
+          "included"
+        ]
+      },
+      "BulkCompetitorsDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "description": "Rows as in the import file: Competitor, Plan, Level, prices ...",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "commit": {
+            "type": "boolean",
+            "description": "True saves; false (the default) only checks."
+          },
+          "overwrite": {
+            "type": "boolean"
+          },
+          "create_features": {
+            "type": "boolean",
+            "description": "False does not add features that are not on our list yet."
+          }
+        },
+        "required": [
+          "rows"
+        ]
       },
       "HandoffValidateDto": {
         "type": "object",

@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui';
 import { Field, Modal, Pager, useAction, usePaged } from '@/components/kit';
 import { actor, api, clearApiCache } from '@/lib/api';
 
-const LEVEL_LABEL: Record<string, string> = { free: 'Free', entry: 'Entry', mid: 'Mid', top: 'Top', enterprise: 'Enterprise' };
 const PERIOD: Record<string, string> = { month: 'a month', quarter: 'a quarter', year: 'a year', one_time: 'once' };
 const SEAT: Record<string, string> = { single_user: 'one user', multi_user: 'shared', per_user: 'per user', unlimited_users: 'no limit' };
 const money = (a: number | null, c: string, quote: boolean) => (quote ? 'on request' : a === null ? '-' : `${c === 'INR' ? '₹' : c + ' '}${Number(a).toLocaleString('en-IN')}`);
@@ -35,11 +34,10 @@ export function ImportSummary({ r, saved }: { r: any; saved: boolean }) {
       {r.assumptions.length > 0 && <div className="callout small" style={{ marginBottom: 8 }}><b>Assumed where the file was silent:</b><ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{r.assumptions.map((w: string, i: number) => <li key={i}>{w}</li>)}</ul></div>}
       {(r.plan_rows || []).length > 0 && (
         <div style={{ overflow: 'auto' }}>
-          <table className="tbl compact"><thead><tr><th>Competitor</th><th>Plan</th><th>Level</th><th>Users</th><th>Prices</th><th>Features</th><th /></tr></thead><tbody>
+          <table className="tbl compact"><thead><tr><th>Competitor</th><th>Plan</th><th>Users</th><th>Prices</th><th>Features</th><th /></tr></thead><tbody>
             {pg.rows.map((p, i) => (
               <tr key={i}>
                 <td>{p.competitor}</td><td>{p.plan}{p.product && <div className="xs muted">{p.product}</div>}</td>
-                <td>{p.level ? <>{LEVEL_LABEL[p.level]}{p.level_guessed && <> <Badge kind="warn">guessed</Badge></>}</> : <span className="muted">none</span>}</td>
                 <td className="small">{p.seat_model ? SEAT[p.seat_model] : <span className="muted">not stated</span>}{p.max_users ? `, up to ${p.max_users}` : ''}</td>
                 <td className="small">{p.terms.length ? p.terms.map((t: any) => `${money(t.amount, t.currency, t.quote)} ${PERIOD[t.period] || t.period}`).join(' · ') : <span className="muted">none</span>}</td>
                 <td className="small">{p.features}</td>
@@ -120,7 +118,7 @@ export function ImportDialog({ pid, hasModules, fixedCompetitor, onClose, onDone
   );
 }
 
-const EMPTY_PLAN = { plan: '', level: '', licence: '', max: '', month: '', year: '', once: '', features: '', quote: false };
+const EMPTY_PLAN = { plan: '', licence: '', max: '', month: '', year: '', once: '', features: '', quote: false };
 
 const SIZE_BANDS = ['1-10', '11-50', '51-200', '201-1000', '1001-5000', '5000+'];
 const OWNERSHIP: [string, string][] = [['private', 'Private'], ['public', 'Listed company'], ['subsidiary', 'Part of a bigger group'], ['state', 'State owned'], ['unknown', 'Not known']];
@@ -159,7 +157,7 @@ export function AddCompetitor({ pid, scopes, hasModules, defaultScope, onClose, 
   const rows = () => {
     const base = { Competitor: f.title.trim(), Kind: f.kind, Website: f.website.trim(), Positioning: f.positioning.trim(), Module: mods.join(', ') };
     const list = used.length ? used : [{ ...EMPTY_PLAN }];
-    return list.map((p) => ({ ...base, Plan: p.plan.trim(), Level: p.level, Licence: p.licence, 'Max users': p.max, 'Monthly price': p.quote ? 'Contact sales' : p.month, 'Yearly price': p.quote ? '' : p.year, 'Lifetime price': p.quote ? '' : p.once, Currency: f.currency, 'GST included': f.gst, Features: p.features }));
+    return list.map((p) => ({ ...base, Plan: p.plan.trim(), Licence: p.licence, 'Max users': p.max, 'Monthly price': p.quote ? 'Contact sales' : p.month, 'Yearly price': p.quote ? '' : p.year, 'Lifetime price': p.quote ? '' : p.once, Currency: f.currency, 'GST included': f.gst, Features: p.features }));
   };
   const filled = (...k: string[]) => k.some((x) => String(f[x] || '').trim());
   const save = () => act.run(async () => {
@@ -238,7 +236,6 @@ export function AddCompetitor({ pid, scopes, hasModules, defaultScope, onClose, 
                   <div key={i} className="card"><div className="card-b" style={{ padding: 10, display: 'grid', gap: 8 }}>
                     <div className="row wrap" style={{ gap: 8 }}>
                       <input style={{ flex: '1 1 130px', minWidth: 0 }} placeholder="Plan name, e.g. Standard" aria-label="Plan name" value={p.plan} onChange={(e) => setPlan(i, 'plan', e.target.value)} />
-                      <select aria-label="Plan level" value={p.level} onChange={(e) => setPlan(i, 'level', e.target.value)}><option value="">Level: work out from name</option>{Object.entries(LEVEL_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
                       {plans.length > 1 && <button className="btn xs danger" type="button" onClick={() => setPlans(plans.filter((_, j) => j !== i))}>Remove</button>}
                     </div>
                     <div className="row wrap" style={{ gap: 8 }}>

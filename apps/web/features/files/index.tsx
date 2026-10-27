@@ -77,7 +77,7 @@ export function FileList({ pid, addOnly, onAdded }: { pid: string; addOnly?: boo
       </Card>
       {!addOnly && <><div style={{ height: 14 }} />
       <Card title={`Files (${data.total})`} flush
-        right={true ? <div className="seg" role="group" aria-label="Phase"><button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>All</button>{PHASE_SHORT.map((_, n) => n).map((n) => <button key={n} className={filter === n ? 'on' : ''} onClick={() => setFilter(n)}>Phase {n}</button>)}</div> : null}>
+        right={<div className="seg" role="group" aria-label="Phase"><button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>All</button>{PHASE_SHORT.map((_, n) => n).map((n) => <button key={n} className={filter === n ? 'on' : ''} onClick={() => setFilter(n)}>Phase {n}</button>)}</div>}>
         {shownFiles.length === 0 ? <Empty>{files.length ? 'No files for this phase.' : 'No files yet.'}</Empty> : (
           <table className="tbl"><thead><tr><th>File</th><th>Phase</th><th>Attached to</th><th>Text</th><th>Added</th><th /></tr></thead><tbody>
             {pg.rows.map((a: any) => {

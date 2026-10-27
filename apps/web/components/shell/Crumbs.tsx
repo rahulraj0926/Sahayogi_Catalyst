@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/breadcrumbs';
 import { useApi } from '@/lib/api';
 import { PHASE_SHORT, screenLabel, sectionFor } from './groups';
@@ -46,6 +47,7 @@ export function crumbsFor(path: string, productName: string | undefined, competi
 }
 
 export function Crumbs({ path, productName }: { path: string; productName?: string }) {
+  const router = useRouter();
   const seg = path.split('/').filter(Boolean);
   const pid = seg[0] === 'products' ? seg[1] : undefined;
   const compId = pid && seg[2] === 'competitors' && seg[3] && !NAMED.has(seg[3]) ? seg[3] : null;
@@ -56,8 +58,11 @@ export function Crumbs({ path, productName }: { path: string; productName?: stri
   const pf = useApi<any>(pid ? '/portfolio' : null);
   const prods: any[] = pf.data?.products || [];
   if (pid && prods.length > 1 && items[2]) {
-    items[2] = { ...items[2], render: <ProductSwitcher compact name={items[2].label} pid={pid} path={path} items={prods.map((p: any) => ({ slug: p.slug || p.id, name: p.name, readiness: p.readiness_percent }))} /> };
+    items[2] = { ...items[2], render: <ProductSwitcher compact current={items.length === 3} name={items[2].label} pid={pid} path={path} items={prods.map((p: any) => ({ slug: p.slug || p.id, name: p.name, readiness: p.readiness_percent }))} /> };
   }
   if (items.length < 2) return null;
-  return <Breadcrumbs items={items} className="mb-2 shrink-0 text-xs" />;
+  // Back goes to the page the person came from; opened straight from a link, it goes one step up the trail instead
+  const parent = [...items].slice(0, -1).reverse().find((i) => i.href)?.href;
+  const back = () => { if (window.history.length > 1) router.back(); else if (parent) router.push(parent); };
+  return <Breadcrumbs items={items} onBackAction={back} className="mb-3 shrink-0 text-sm" />;
 }

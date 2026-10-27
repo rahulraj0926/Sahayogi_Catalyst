@@ -16,6 +16,37 @@ function dayLabel(iso: string) {
   return same(d, t) ? 'Today' : same(d, y) ? 'Yesterday' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** What happened, grouped by day as a timeline. Used by the home feed (across products) and by a competitor's overview (one competitor, so no product chip). */
+export type ActivityRow = { id: string; at: string; actor: string | null; text: string; productSlug?: string; productName?: string };
+export function ActivityList({ rows }: { rows: ActivityRow[] }) {
+  const groups = useMemo(() => {
+    const out: { day: string; items: ActivityRow[] }[] = [];
+    for (const a of rows) { const d = dayLabel(a.at); const last = out[out.length - 1]; if (last && last.day === d) last.items.push(a); else out.push({ day: d, items: [a] }); }
+    return out;
+  }, [rows]);
+  return (
+    <>
+      {groups.map((g) => (
+        <section key={g.day} className="mb-3 last:mb-0">
+          <h3 className="sticky top-0 z-10 bg-[var(--surface)] pb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{g.day}</h3>
+          <ul className="relative ml-4 flex flex-col gap-3 border-l border-[var(--divider)] pl-5">
+            {g.items.map((a) => (
+              <li key={a.id} className="relative text-sm">
+                <span aria-hidden className="absolute -left-[1.6875rem] top-1 flex h-3 w-3 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--sd-accent)]" />
+                <p className="leading-snug text-[var(--text-secondary)]">{a.actor && !String(a.text).startsWith(a.actor) && <b className="font-semibold text-[var(--text-heading)]">{a.actor} </b>}{a.text}</p>
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--text-muted)]">
+                  {a.productName && <Link href={`/products/${a.productSlug}`} className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 font-medium hover:underline" style={{ color: 'inherit' }}>{a.productName}</Link>}
+                  <time dateTime={a.at} title={a.at}>{ago(a.at)}</time>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </>
+  );
+}
+
 /** Newest-first feed across all products; "Show older" follows the server cursor. */
 export function ActivityFeed() {
   const [rows, setRows] = useState<Activity[] | null>(null);
@@ -33,34 +64,12 @@ export function ActivityFeed() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  const groups = useMemo(() => {
-    const out: { day: string; items: Activity[] }[] = [];
-    for (const a of rows ?? []) { const d = dayLabel(a.at); const last = out[out.length - 1]; if (last && last.day === d) last.items.push(a); else out.push({ day: d, items: [a] }); }
-    return out;
-  }, [rows]);
-
   return (
     <Card title="Recent activity" action={<button type="button" aria-label="Refresh activity" title="Refresh" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--surface-muted)]" onClick={() => load()} disabled={busy}><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /></button>}>
       {error && <ErrorBox message={error} />}
       {rows && rows.length === 0 && <EmptyState title={C.activityEmpty} />}
       <div className="-mr-1 max-h-[26rem] overflow-y-auto pr-1">
-        {groups.map((g) => (
-          <section key={g.day} className="mb-3 last:mb-0">
-            <h3 className="sticky top-0 z-10 bg-[var(--surface)] pb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{g.day}</h3>
-            <ul className="relative ml-4 flex flex-col gap-3 border-l border-[var(--divider)] pl-5">
-              {g.items.map((a) => (
-                <li key={a.id} className="relative text-sm">
-                  <span aria-hidden className="absolute -left-[1.6875rem] top-1 flex h-3 w-3 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--sd-accent)]" />
-                  <p className="leading-snug text-[var(--text-secondary)]">{a.actor && !String(a.text).startsWith(a.actor) && <b className="font-semibold text-[var(--text-heading)]">{a.actor} </b>}{a.text}</p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--text-muted)]">
-                    <Link href={`/products/${a.productSlug}`} className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 font-medium hover:underline" style={{ color: 'inherit' }}>{a.productName}</Link>
-                    <time dateTime={a.at} title={a.at}>{ago(a.at)}</time>
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+        <ActivityList rows={rows ?? []} />
         {!rows && busy && <div className="h-32 animate-pulse rounded-md bg-[var(--surface-muted)]" />}
         {next && <button type="button" className="btn sm mt-2 self-start" disabled={busy} onClick={() => load(next)}>{busy ? 'Loading…' : 'Show older'}</button>}
       </div>

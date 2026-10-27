@@ -25,14 +25,14 @@ export function Breadcrumbs({ items, className, backHref, onBackAction, onLinkCl
   return (
     <nav
       aria-label="breadcrumb"
-      className={cn("flex items-center text-sm text-muted-foreground", className)}
+      className={cn("flex items-center text-sm text-[var(--text-muted)]", className)}
       {...props}
     >
       {onBackAction ? (
         <button
           onClick={onBackAction}
           type="button"
-          className="flex items-center gap-1.5 border rounded-md px-3 py-1.5 mr-6 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors shrink-0 shadow-sm"
+          className="mr-5 flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm font-medium text-[var(--text-heading)] no-underline shadow-sm transition-colors hover:bg-[var(--search-bg)] hover:no-underline"
           aria-label="Go back"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -41,7 +41,7 @@ export function Breadcrumbs({ items, className, backHref, onBackAction, onLinkCl
       ) : backHref ? (
         <Link
           href={backHref}
-          className="flex items-center gap-1.5 border rounded-md px-3 py-1.5 mr-6 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors shrink-0 shadow-sm"
+          className="mr-5 flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm font-medium text-[var(--text-heading)] no-underline shadow-sm transition-colors hover:bg-[var(--search-bg)] hover:no-underline"
           aria-label="Go back"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -62,7 +62,7 @@ export function Breadcrumbs({ items, className, backHref, onBackAction, onLinkCl
                   <span
                     className={cn(
                       "truncate",
-                      isLast ? "font-medium text-foreground" : "text-muted-foreground"
+                      isLast ? "font-semibold text-[var(--text-heading)]" : "text-[var(--text-muted)]"
                     )}
                     aria-current={isLast ? "page" : undefined}
                   >
@@ -71,14 +71,14 @@ export function Breadcrumbs({ items, className, backHref, onBackAction, onLinkCl
                 ) : (
                   <Link
                     href={href}
-                    className="truncate transition-colors hover:text-foreground"
+                    className="truncate text-[var(--text-muted)] no-underline transition-colors hover:text-[var(--text-heading)] hover:no-underline"
                     onClick={onLinkClick ? (event) => onLinkClick(event, href) : undefined}
                   >
                     {item.label}
                   </Link>
                 )}
                 {!isLast && (
-                  <ChevronRight className="mx-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <ChevronRight aria-hidden className="mx-1.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)] opacity-60" />
                 )}
               </li>
             )

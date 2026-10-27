@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Download, Plus, Upload } from 'lucide-react';
 import { Badge, Card, Empty, ErrorBox, Loading, Page } from '@/components/ui';
 import { Field, Modal, Tabs, useAction, useConfirm, fmtDate } from '@/components/kit';
 import { actor, api, useApi } from '@/lib/api';
@@ -14,52 +14,16 @@ import { ImportDialog } from './Import';
 import { ago, hueOf } from './Dashboard';
 import { filled, F } from './profileFields';
 import Overview from './Overview';
+import NotesCard from './NotesCard';
+import TodoCard from './TodoCard';
+import { uploadFiles } from './uploadFiles';
+import SourcesTab from './SourcesTab';
 
-const niceDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const sp = (s?: string) => String(s ?? '').replace(/_/g, ' ');
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (d: string, n: number) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
 const money = (a: any, c = 'INR') => (a === undefined || a === null ? '' : `${c === 'INR' ? 'Rs' : c} ${Number(a).toLocaleString('en-IN')}`);
 
-
-/** Which part of our product they compete with, changed right where it is shown. Pick the parts we already know, or type a new one. */
-function CompetesWith({ c, known, onSaved }: { c: any; known: string[]; onSaved: () => void }) {
-  const own: string[] = Array.isArray(c.scopes) ? c.scopes : [];
-  const [edit, setEdit] = useState(false);
-  const [pick, setPick] = useState<string[]>([]);
-  const [extra, setExtra] = useState<string[]>([]);
-  const [typed, setTyped] = useState('');
-  const act = useAction();
-  const key = (x: string) => x.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '');
-  const options = Array.from(new Map([...known, ...own, ...extra].map((x) => [key(x), x])).values()).filter((x) => key(x));
-  const start = () => { setPick(own); setExtra([]); setTyped(''); setEdit(true); };
-  const add = () => { const v = typed.trim(); if (!v) return; const hit = options.find((x) => key(x) === key(v)) || v; setExtra((e) => (e.some((x) => key(x) === key(hit)) ? e : [...e, hit])); setPick((p) => (p.some((x) => key(x) === key(hit)) ? p : [...p, hit])); setTyped(''); };
-  if (!edit) {
-    return (
-      <span className="inline-flex flex-wrap items-center gap-1.5">
-        {own.length ? own.map((x) => <span key={x} className="badge">{x}</span>) : 'Whole product'}
-        <button type="button" className="text-[13px] font-normal text-[var(--text-muted)] hover:text-[var(--text-heading)]" onClick={start}>Edit</button>
-      </span>
-    );
-  }
-  return (
-    <div className="flex min-w-[16rem] max-w-[24rem] flex-col gap-2 rounded-xl border border-[var(--divider)] p-3 font-normal">
-      <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={pick.length === 0} onChange={() => setPick([])} />Whole product</label>
-      {options.map((x) => (
-        <label key={x} className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={pick.some((y) => key(y) === key(x))} onChange={(e) => setPick((p) => (e.target.checked ? [...p, x] : p.filter((y) => key(y) !== key(x))))} />{x}</label>
-      ))}
-      <div className="flex gap-2">
-        <input type="text" value={typed} onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} placeholder="Add a part of our product" aria-label="Add a part of our product" className="min-w-0 flex-1" style={{ height: 32, minHeight: 0, fontSize: 13 }} />
-        <button type="button" className="btn sm" disabled={!typed.trim()} onClick={add}>Add</button>
-      </div>
-      {act.box}
-      <div className="flex gap-2">
-        <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => act.run(async () => { await api(`/items/${c.id}`, { method: 'PATCH', body: { fields: { scopes: pick.length ? pick : '' } } }); setEdit(false); onSaved(); })}>Save</button>
-        <button type="button" className="btn sm" onClick={() => setEdit(false)}>Cancel</button>
-      </div>
-    </div>
-  );
-}
 
 /** Change a competitor's name. */
 function RenameCompetitor({ c, onClose, onDone }: { c: any; onClose: () => void; onDone: () => void }) {
@@ -74,11 +38,12 @@ function RenameCompetitor({ c, onClose, onDone }: { c: any; onClose: () => void;
   );
 }
 
-const TIER_TAGS: [string, string][] = [['', 'Not tagged'], ['free', 'Free'], ['entry', 'Entry'], ['mid', 'Mid'], ['top', 'Top'], ['enterprise', 'Enterprise']];
 
 function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lines: any[]; onClose: () => void; onDone: () => void }) {
   const units = useApi<any>('/price-units', pid);
-  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst', tier_tag: '', line: '', seat_model: '', max_users: '' });
+  const mine = useApi<any>(`/competitors/plans?competitor=${encodeURIComponent(c.id)}`, pid);
+  const [v, setV] = useState<any>({ plan: '', amount: '', currency: 'INR', for: '', price_type: 'list', tax_basis: 'incl_gst', line: '', seat_model: '', max_users: '', copy: '', features: '' });
+  const others: any[] = (mine.data?.plans || []).filter((p: any) => (mine.data?.features || []).some((f: any) => f.in_plans.includes(p.key)));
   const act = useAction();
   const choices: any[] = (units.data?.choices || []).filter((x: any) => !x.usage || units.data?.sells_usage !== false);
   const set = (k: string, x: any) => setV({ ...v, [k]: x });
@@ -90,17 +55,22 @@ function AddPrice({ pid, c, lines, onClose, onDone }: { pid: string; c: any; lin
       {lines.length > 0 && <Field label="Which product is this plan of?" help="Product lines keep one company's different products apart."><select value={v.line} onChange={(e) => set('line', e.target.value)}><option value="">The company in general</option>{lines.map((l) => <option key={l.id} value={l.id}>{l.product_name}</option>)}</select></Field>}
       <Field label="Who does one licence cover?" help="Many vendors sell a single-user licence and a dearer multi-user one. This decides how the cost grows with the number of users."><select value={v.seat_model} onChange={(e) => set('seat_model', e.target.value)}><option value="">Not stated</option><option value="single_user">One user (or PC) per licence</option><option value="multi_user">Several users share one licence</option><option value="per_user">Priced for each user</option><option value="unlimited_users">No limit on users</option></select></Field>
       {v.seat_model === 'multi_user' && <Field label="Most users it covers (if stated)"><input type="number" min={1} value={v.max_users} onChange={(e) => set('max_users', e.target.value)} /></Field>}
-      <Field label="Plan level" help="Lets plans of different companies be compared: Free, Entry, Mid, Top or Enterprise."><select value={v.tier_tag} onChange={(e) => set('tier_tag', e.target.value)}>{TIER_TAGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="What kind of price is it?"><select value={v.price_type} onChange={(e) => set('price_type', e.target.value)}>{['list', 'mrp', 'street', 'dealer', 'distributor', 'oem', 'quote', 'tender_award', 'promo'].map((x) => <option key={x} value={x}>{sp(x)}</option>)}</select></Field>
       <Field label="Does that price include GST?"><select value={v.tax_basis} onChange={(e) => set('tax_basis', e.target.value)}><option value="incl_gst">Includes GST</option><option value="excl_gst">Excludes GST</option><option value="not_applicable">No GST applies</option></select></Field>
+      {others.length > 0 && <Field label="Start with the features of" help="Copies every feature of that plan into this one."><select value={v.copy} onChange={(e) => set('copy', e.target.value)}><option value="">None</option>{others.map((p: any) => <option key={p.key} value={p.key}>{p.plan}</option>)}</select></Field>}
+      <Field label="Features in this plan (optional)" help="One on each line. Add more later from the plan card."><textarea rows={3} value={v.features} onChange={(e) => set('features', e.target.value)} placeholder={'Audit log\nExport to Excel'} /></Field>
       {act.box}
       <button className="btn primary" disabled={act.busy} onClick={() => act.run(async () => {
         const f = choices.find((x) => x.v === v.for);
         const miss = [v.amount === '' && 'the amount', !f && 'what the price is for'].filter(Boolean);
         if (miss.length) throw new Error(`Please fill in ${miss.join(' and ')}.`);
-        const fields = { title: `${c.title} ${v.plan || f.label}`, plan: v.plan, amount: Number(v.amount), currency: v.currency, price_type: v.price_type, tax_basis: v.tax_basis, captured_on: today(), ...(v.tier_tag ? { tier_tag: v.tier_tag } : {}), ...(v.seat_model ? { seat_model: v.seat_model } : {}), ...(v.seat_model === 'multi_user' && v.max_users !== '' ? { max_users: Number(v.max_users) } : {}), ...f.f };
+        const fields = { title: `${c.title} ${v.plan || f.label}`, plan: v.plan, amount: Number(v.amount), currency: v.currency, price_type: v.price_type, tax_basis: v.tax_basis, captured_on: today(), ...(v.seat_model ? { seat_model: v.seat_model } : {}), ...(v.seat_model === 'multi_user' && v.max_users !== '' ? { max_users: Number(v.max_users) } : {}), ...f.f };
         const r = await api<any>('/items', { method: 'POST', body: { type: 'PricePoint', fields } });
         await api('/links', { method: 'POST', body: { type: 'contains', source: v.line || c.id, target: r.item.id } });
+        const copied = v.copy ? (mine.data?.features || []).filter((x: any) => x.in_plans.includes(v.copy)).map((x: any) => (x.capability_id ? { capability_id: x.capability_id } : { rating_id: x.rating_id })) : [];
+        if (copied.length) await api('/competitors/plans/features', { method: 'POST', body: { competitor: c.id, price_ids: [r.item.id], features: copied, included: true } });
+        const typed = v.features.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+        if (typed.length) await api('/competitors/catalog/common', { method: 'POST', body: { features: typed.map((name: string) => ({ name })), competitor: c.id, price_ids: [r.item.id] } });
         onDone();
       })}>Add price</button>
       <div className="small muted" style={{ marginTop: 6 }}>Today&apos;s date is saved as the date you captured it. Add source and date details in its row later.</div>
@@ -163,18 +133,11 @@ function Candidates({ att, c, onClose, onDone }: { att: any; c: any; onClose: ()
 const GOALS: [string, string][] = [['competitor_profile', 'Find company facts'], ['competitor_prices', 'Find prices'], ['capabilities', 'Find capabilities']];
 
 export default function Profile({ pid, id, query }: { pid: string; id: string; query: URLSearchParams }) {
-  const { data, error, loading, reload } = useApi<any>(`/items/${id}`, pid);
-  const prices = useApi<any>('/items?type=PricePoint&limit=2000', pid);
-  const caps = useApi<any>('/items?type=CompetitorCapability&limit=3000', pid);
-  const notes = useApi<any>('/items?type=CompetitorNote&limit=2000', pid);
-  const atts = useApi<any>('/attachments', pid);
-  const pls = useApi<any>('/competitors/product-lines', pid);
-  const comp = useApi<any>('/competitors/completeness', pid);
+  const { data, error, loading, reload } = useApi<any>(`/competitors/${id}/profile`, pid);
   const cat = useApi<any>('/competitors/catalog', pid);
   const [tab, setTab] = useState(['overview', 'prices', 'files', 'notes', 'sources'].includes(query.get('tab') || '') ? query.get('tab')! : 'overview');
   const [addPrice, setAddPrice] = useState(false);
   const [fromFile, setFromFile] = useState(false);
-  const modScopes = useApi<any>('/competitors/scopes', pid);
   const [addLine, setAddLine] = useState(false);
   const [verify, setVerify] = useState<any>(null);
   const [cand, setCand] = useState<any>(null);
@@ -188,23 +151,20 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   const [renaming, setRenaming] = useState(false);
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [showDone, setShowDone] = useState(false); const [newTodo, setNewTodo] = useState(''); const [editTodo, setEditTodo] = useState<{ i: number; text: string } | null>(null);
-  if (loading || prices.loading || caps.loading) return <Loading />;
+  if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorBox message={error || 'Not found'} />;
   const c = data.item;
-  const out = (type: string) => new Set((data.links as any[]).filter((l) => l.direction === 'out' && l.otherType === type).map((l) => l.other));
-  const myLines: any[] = ((pls.data as any[]) || []).find((x) => x.id === id)?.product_lines || [];
-  const lineOf = new Map<string, string>(); myLines.forEach((l) => (l.plans || []).forEach((p: any) => lineOf.set(p.id, l.product_name)));
-  const myPrices = ((prices.data?.items as any[]) || []).filter((p) => (out('PricePoint').has(p.id) || lineOf.has(p.id)) && p.status !== 'Retired');
-  const myCaps = ((caps.data?.items as any[]) || []).filter((p) => out('CompetitorCapability').has(p.id) && p.status !== 'Retired');
-  const noteIds = new Set((data.links as any[]).filter((l) => l.direction === 'in' && l.type === 'note_on').map((l) => l.other));
-  const myNotes = ((notes.data?.items as any[]) || []).filter((n) => noteIds.has(n.id) && n.status !== 'Retired');
-  const myFiles = ((atts.data?.attachments as any[]) || []).filter((a) => (a.targets || []).includes(id));
-  const allTags = Array.from(new Set(((caps.data?.items as any[]) || []).map((x) => x.capability_tag).filter(Boolean))) as string[];
+  // everything below belongs to this competitor: the server has already picked it out
+  const myLines: any[] = data.product_lines || [];
+  const myPrices: any[] = data.prices || [];
+  const myCaps: any[] = data.capabilities || [];
+  const myNotes: any[] = data.notes || [];
+  const myFiles: any[] = data.files || [];
+  const allTags: string[] = data.capability_tags || [];
   const mapOf: Record<string, { capability_id: string; link_id: string }> = cat.data?.mapping || {};
   const features: { id: string; name: string; aliases: string[] }[] = cat.data?.capabilities || [];
   const guess = (name: string) => { const n = name.trim().toLowerCase(); return n ? features.find((f) => f.name.toLowerCase() === n || (f.aliases || []).some((a) => a.toLowerCase() === n)) : undefined; };
-  const refreshAll = () => { reload(); prices.reload(); caps.reload(); notes.reload(); atts.reload(); pls.reload(); comp.reload(); cat.reload(); };
+  const refreshAll = () => { reload(); cat.reload(); };
   const unchecked = (p: any) => p.verification === 'unverified' || (p.origin === 'human' && !p.verified_by && p.verification !== 'verified' && p.verification !== 'rejected');
   const checks = [
     { done: filled(c.website), label: 'Add their website' }, { done: filled(c.positioning), label: 'Say in a line how they compete' },
@@ -215,37 +175,8 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
     { done: myFiles.length > 0, label: 'Upload a source file (deck, price list, PDF)' },
     { done: !!c.last_reviewed_on && !(c.review_by && c.review_by < today()), label: c.last_reviewed_on ? 'Review is overdue. Mark it reviewed' : 'Mark as reviewed once it looks right' },
   ];
-  const server = ((comp.data as any[]) || []).find((x) => x.id === id);
+  const server = data.completeness;
   const pct = server ? server.score : Math.round((checks.filter((x) => x.done).length / checks.length) * 100);
-  const toggleTodo = (key: string, on: boolean) => { const cur = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []); if (on) cur.add(key); else cur.delete(key); patch(id, { todo_done: cur.size ? [...cur] : '' }); };
-  const myTodos: string[] = Array.isArray(c.todo_items) ? c.todo_items : [];
-  const doneSet = new Set<string>(Array.isArray(c.todo_done) ? c.todo_done : []);
-  const saveTodos = (items: string[], done: Set<string>) => patch(id, { todo_items: items.length ? items : '', todo_done: done.size ? [...done] : '' });
-  const addTodo = () => { const t = newTodo.trim(); if (!t || myTodos.includes(t)) { setNewTodo(''); return; } setNewTodo(''); saveTodos([...myTodos, t], doneSet); };
-  const removeTodo = (i: number) => { const d = new Set(doneSet); d.delete(`my:${myTodos[i]}`); saveTodos(myTodos.filter((_, j) => j !== i), d); };
-  const renameTodo = (i: number, text: string) => { const t = text.trim(); if (!t) return; const d = new Set(doneSet); if (d.delete(`my:${myTodos[i]}`)) d.add(`my:${t}`); setEditTodo(null); saveTodos(myTodos.map((x, j) => (j === i ? t : x)), d); };
-  type Todo = { key: string; label: string; done: boolean; auto: boolean; mine?: number };
-  const todoAll: Todo[] = [
-    ...((server?.items || []) as any[]).map((x) => ({ key: x.key, label: x.label, done: !!x.done, auto: !!x.auto })),
-    ...myTodos.map((t, i) => ({ key: `my:${t}`, label: t, done: doneSet.has(`my:${t}`), auto: false, mine: i })),
-  ];
-  const todoOpen = todoAll.filter((x) => !x.done); const todoDone = todoAll.filter((x) => x.done);
-  const todoRow = (x: Todo) => (
-    <li key={x.key} className="flex items-center gap-2 py-0.5 text-[13px]">
-      {x.mine !== undefined && editTodo?.i === x.mine ? (
-        <span className="row" style={{ gap: 6, flex: 1 }}>
-          <input autoFocus value={editTodo.text} onChange={(e) => setEditTodo({ i: x.mine!, text: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') renameTodo(x.mine!, editTodo.text); if (e.key === 'Escape') setEditTodo(null); }} aria-label="Edit this to-do" style={{ flex: 1, minWidth: 0 }} />
-          <button type="button" className="btn xs primary" disabled={act.busy || !editTodo.text.trim()} onClick={() => renameTodo(x.mine!, editTodo.text)}>Save</button>
-          <button type="button" className="btn xs" onClick={() => setEditTodo(null)}>Cancel</button>
-        </span>
-      ) : (
-        <>
-          <input type="checkbox" checked={x.done} disabled={x.auto || act.busy} onChange={(e) => toggleTodo(x.key, e.target.checked)} aria-label={x.label} title={x.auto ? 'Done by itself once the details are filled in' : undefined} />
-          <span className="min-w-0 flex-1" style={{ textDecoration: x.done ? 'line-through' : 'none', opacity: x.done ? 0.6 : 1 }}>{x.label}</span>
-          {x.mine !== undefined && <><button type="button" className="btn xs ghost" onClick={() => setEditTodo({ i: x.mine!, text: x.label })}>Edit</button><button type="button" className="btn xs ghost" disabled={act.busy} onClick={() => removeTodo(x.mine!)}>Remove</button></>}
-        </>)}
-    </li>
-  );
   const patch = (iid: string, fields: any) => act.run(async () => { await api(`/items/${iid}`, { method: 'PATCH', body: { fields } }); refreshAll(); });
   const runAssist = (a: any, goal: string, label: string) => act.run(async () => {
     const r = await assist.run(a.id, { goal, target: c.id });
@@ -274,16 +205,7 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
           </p>
         )}
         {c.website && <a className="mt-1 inline-block text-[13px]" href={/^https?:/.test(c.website) ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer">{c.website}</a>}
-        <div className="mt-1 text-[12px] text-[var(--text-muted)]">Added {c.created_at ? niceDate(c.created_at) : 'on an unknown date'}{c.created_by ? ` by ${c.created_by}` : ''}. Changed {(() => { const t = ago(c.updated_at || c.created_at).replace('Updated ', ''); return t; })()}.</div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-stretch gap-3">
-          {([
-            ['Competes with', <CompetesWith key="scopes" c={c} known={((modScopes.data?.scopes as any[]) || []).map((x) => x.name)} onSaved={refreshAll} />],
-            ['Competitor type', <select key="kind" value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>],
-            ...(filled(c.founded_year) ? [['Founded', String(c.founded_year)]] : []),
-            ...(filled(c.hq_country) ? [['Headquarters', c.hq_country]] : []),
-            ...(filled(c.size_band) ? [['Employees', String(c.size_band)]] : []),
-          ] as [string, React.ReactNode][]).map(([l, v]) => <div key={l} className="min-w-[12rem] rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] px-3.5 py-2.5 [box-shadow:var(--card-shadow)]"><div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{l}</div><div className="mt-1 text-[15px] font-bold text-[var(--text-heading)]">{v}</div></div>)}
+        <div className="mt-1 text-[12px] text-[var(--text-muted)]">{ago(c.updated_at || c.created_at)}</div>
         </div>
       </div>
       <div role="tablist" className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-1.5 [box-shadow:var(--card-shadow)]">
@@ -293,42 +215,29 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
       </div>
       <div>
         {tab === 'overview' && (
-          <Overview c={c} onOpen={setTab} onAddProduct={() => setAddLine(true)} links={data.links} prices={myPrices} files={myFiles} notes={myNotes} lines={myLines} onSaved={refreshAll} todo={(<>
-            {/* Anyone who can edit this page can add, rename and remove to-dos. Who may do that is decided later with the access rules. */}
-            <section className="@container h-full rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--surface)] p-6 [box-shadow:var(--card-shadow)]"><div>
-              <div className="mb-4 flex items-baseline gap-2"><h3 className="m-0 flex-1 text-[18px] font-bold">To do</h3><span className="text-[13px] text-[var(--text-muted)]">{todoDone.length} / {todoAll.length} done</span></div>
-              {todoOpen.length === 0 && <div className="small muted" style={{ marginBottom: 6 }}>Nothing left to do.</div>}
-              <ul className="m-0 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoOpen.map(todoRow)}</ul>
-              {todoDone.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  <button type="button" className="btn xs ghost" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>{showDone ? 'Hide' : 'Show'} {todoDone.length} done</button>
-                  {showDone && <ul className="m-0 mt-1 list-none p-0" style={{ display: 'grid', gap: 2 }}>{todoDone.map(todoRow)}</ul>}
-                </div>)}
-              <form className="row" style={{ gap: 6, marginTop: 12 }} onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
-                <input value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Add a to-do" aria-label="Add a to-do" style={{ flex: 1, minWidth: 0 }} />
-                <button type="submit" className="btn sm primary" disabled={act.busy || !newTodo.trim()}>Add</button>
-              </form>
-            </div></section>
+          <Overview c={c} onAddProduct={() => setAddLine(true)} lines={myLines} recent={data.recent || []} onSaved={refreshAll}
+            kind={<select value={c.kind || ''} aria-label="Type" disabled={act.busy} onChange={(e) => patch(id, { kind: e.target.value })} style={{ height: 28, minHeight: 0, padding: '0 6px', fontSize: 13 }}>{!c.kind && <option value="">Not set</option>}{([['direct', 'Direct competitor'], ['indirect', 'Indirect competitor'], ['alternative', 'Alternative'], ['in_house', 'In-house'], ['adjacent_entrant', 'New entrant from nearby'], ['open_source', 'Open source'], ['aspirational', 'Aspirational']] as [string, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}
+            todo={(<>
+            {/* Anyone who can edit this page can add, reword and remove to-dos. Who may do that is decided later with the access rules. */}
+            <TodoCard id={id} builtIn={((server?.items || []) as any[]).map((x) => ({ key: x.key, label: x.label, auto: !!x.auto }))} done={c.todo_done} mine={c.todo_items} hidden={c.todo_hidden} renamed={c.todo_renamed} onSaved={refreshAll} />
           </>)} />
         )}
         {tab === 'prices' && (
           <div className="stack">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="spacer" />
-              <a className="btn" href={`/api/v1/competitors/export?id=${encodeURIComponent(id)}&product=${encodeURIComponent(pid)}`} title="Download this competitor's plans as an Excel / CSV file">Download plans</a>
-              <button className="btn" onClick={() => setFromFile(true)} title="Fill in plans from an Excel / CSV file">Import from a file</button>
-              <button className="btn primary" onClick={() => setAddPrice(true)}>Add a plan</button>
-            </div>
-            <Plans key={myPrices.map((p) => `${p.id}${p.tier_tag || ''}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
-            <Card title="No price published?">
-              <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="Price on request only" />
+            <Plans actions={<>
+              <a className="btn sm inline-flex items-center gap-1" href={`/api/v1/competitors/export?id=${encodeURIComponent(id)}&product=${encodeURIComponent(pid)}`} title="Download this competitor's plans as an Excel / CSV file"><Download size={14} />Download plans</a>
+              <button className="btn sm inline-flex items-center gap-1" onClick={() => setFromFile(true)} title="Fill in plans from an Excel / CSV file"><Upload size={14} />Import from a file</button>
+              <button className="btn sm primary inline-flex items-center gap-1" onClick={() => setAddPrice(true)}><Plus size={14} />Add a plan</button>
+            </>} key={myPrices.map((p) => `${p.id}${p.seat_model || ''}`).join()} pid={pid} fixedId={id} onChanged={refreshAll} records={myPrices} isUnchecked={unchecked} onCheck={(ids, label) => setVerify({ ids, label })} />
+            {myPrices.length === 0 && <Card title="Why are there no prices?">
+              <textarea rows={2} style={{ width: '100%' }} value={naWhy ?? c.pricing_na_reason ?? ''} onChange={(e) => setNaWhy(e.target.value)} placeholder="For example: price on request only" />
               <button className="btn sm" style={{ marginTop: 6 }} onClick={() => patch(id, { pricing_na_reason: (naWhy ?? c.pricing_na_reason ?? '').trim() })}>Save</button>
-            </Card>
+            </Card>}
           </div>
         )}
         {tab === 'files' && (
           <Card title="Source files" right={<>
-            <input ref={fileInput} type="file" multiple hidden onChange={(e) => { const fl = e.target.files; if (fl && fl.length) act.run(async () => { for (const file of Array.from(fl)) { const res = await fetch(`/api/v1/attachments?target=${encodeURIComponent(id)}&name=${encodeURIComponent(file.name)}&product=${encodeURIComponent(pid)}`, { method: 'POST', headers: { 'x-actor': actor(), 'content-type': file.type || 'application/octet-stream' }, body: file }); const j = await res.json().catch(() => ({})); if (!res.ok) throw new Error(j.error || `Could not upload ${file.name} (${res.status})`); } refreshAll(); }); e.target.value = ''; }} />
+            <input ref={fileInput} type="file" multiple hidden onChange={(e) => { const fl = e.target.files; if (fl && fl.length) act.run(async () => { await uploadFiles(Array.from(fl), id, pid); refreshAll(); }); e.target.value = ''; }} />
             <button type="button" className="btn sm primary" disabled={act.busy} onClick={() => fileInput.current?.click()}>{act.busy ? 'Uploading…' : 'Upload a file'}</button>
           </>}>
             {assistMsg && <div className="callout ok" style={{ marginBottom: 8 }}>{assistMsg} <Link href={`/products/${pid}/inbox`}>Open the review inbox</Link></div>}
@@ -344,16 +253,8 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
             ))}
           </Card>
         )}
-        {tab === 'notes' && (
-          <Card title="Notes">
-            <textarea rows={3} style={{ width: '100%' }} value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="What did you notice?" />
-            <button className="btn primary" style={{ margin: '6px 0 10px' }} disabled={!newNote.trim()} onClick={() => act.run(async () => { const r = await api<any>('/items', { method: 'POST', body: { type: 'CompetitorNote', fields: { title: `${c.title}: ${newNote.trim().slice(0, 60)}`, text: newNote.trim(), importance: 'medium' } } }); await api('/links', { method: 'POST', body: { type: 'note_on', source: r.item.id, target: id } }); setNewNote(''); refreshAll(); })}>Add note</button>
-            {myNotes.length === 0 ? <Empty>No notes yet.</Empty> : myNotes.map((n) => (
-              <div key={n.id} className="row" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}><div style={{ flex: 1 }}>{n.text}<div className="xs muted">{n.created_by} · {fmtDate(n.created_at)}</div></div><button className="btn xs danger" onClick={async () => { if (await ask('Remove this note? It stays in history but is no longer shown.', 'Remove')) act.run(async () => { await api(`/items/${n.id}/status`, { method: 'POST', body: { status: 'Retired' } }); refreshAll(); }); }}>Remove</button></div>
-            ))}
-          </Card>
-        )}
-        {tab === 'sources' && <SourcesTab links={data.links} pid={pid} />}
+        {tab === 'notes' && <NotesCard c={c} notes={myNotes} onSaved={refreshAll} />}
+        {tab === 'sources' && <SourcesTab c={c} links={data.links} pid={pid} onSaved={refreshAll} />}
       </div>
       {addLine && <AddProductLine c={c} onClose={() => setAddLine(false)} onDone={() => { setAddLine(false); refreshAll(); }} />}
       {fromFile && <ImportDialog pid={pid} fixedCompetitor={c.title} onClose={() => setFromFile(false)} onDone={() => { setFromFile(false); refreshAll(); }} />}
@@ -365,17 +266,4 @@ export default function Profile({ pid, id, query }: { pid: string; id: string; q
   );
 }
 
-function SourcesTab({ links, pid }: { links: any[]; pid: string }) {
-  const ev = useApi<any>('/items?type=Evidence&limit=5000', pid);
-  const ids = new Set(links.map((l) => l.other));
-  const list = ((ev.data?.items as any[]) || []).filter((e) => ids.has(e.id));
-  return (
-    <Card title="Sources" flush>
-      {list.length === 0 ? <Empty>No evidence is linked to this competitor yet. Evidence is added when a file or web page is used for a price or capability.</Empty> : (
-        <table className="tbl compact"><thead><tr><th>ID</th><th>Evidence</th><th>Grade</th><th>Retrieved</th></tr></thead><tbody>
-          {list.map((e) => <tr key={e.id}><td><Link href={`/products/${pid}/item/${e.id}`}>{e.id}</Link></td><td>{e.url ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.title}</a> : e.title}</td><td><Badge kind="info">{e.grade || '?'}</Badge></td><td>{fmtDate(e.retrieved_on)}</td></tr>)}
-        </tbody></table>
-      )}
-    </Card>
-  );
-}
+/** When the competitor was last checked and when to check it next, then the evidence behind what we know. */

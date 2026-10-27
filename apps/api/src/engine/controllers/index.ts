@@ -17,7 +17,8 @@ import { PeopleController } from './people.controller';
 import { SearchController, SheetController } from './sheet.controller';
 import { StagesController } from './stages.controller';
 import { ProductBasicsController, ItemsController, ReviewController, LinksController, QuestionsController } from './lifecycle.controller';
-import { CriteriaController, GatesController, WaiversController, ConditionsController, RequestsController, AgentController, TraceController, FlowsController, CompetitorViewsController, HandoffPackageController, DemoController } from './checks.controller';
+import { CriteriaController, GatesController, WaiversController, ConditionsController, RequestsController, AgentController, TraceController, FlowsController, HandoffPackageController, DemoController } from './checks.controller';
+import { CompetitorsController } from './competitors.controller';
 import { HandoffController, StoriesController } from './stories.controller';
 import { CompetitorCompareController, NextActionsController, ProductSummaryController, ReportsController, SessionsController } from './work.controller';
 
@@ -27,6 +28,6 @@ export const ENGINE_CONTROLLERS = [
   DocumentsController, DossierController, StoriesController, HandoffController,
   NextActionsController, SessionsController, ProductSummaryController, ReportsController, CompetitorCompareController,
   ProductBasicsController, ItemsController, ReviewController, LinksController, QuestionsController,
-  CriteriaController, GatesController, WaiversController, ConditionsController, RequestsController, AgentController, TraceController, FlowsController, CompetitorViewsController, HandoffPackageController, DemoController,
+  CriteriaController, GatesController, WaiversController, ConditionsController, RequestsController, AgentController, TraceController, FlowsController, CompetitorsController, HandoffPackageController, DemoController,
   PortfolioController, AttachmentsController, AssistantChatController, AssistantUsageController, InboxController, PointersController, ApproveByLinkController, ApprovalsController, SharingController,
 ];

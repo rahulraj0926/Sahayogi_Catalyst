@@ -264,6 +264,8 @@ const TYPES = {
       D('last_reviewed_on'), D('review_by'),
       L('todo_done', { help: 'To-do items a person ticked off by hand on the competitor page.' }),
       L('todo_items', { help: 'To-do items people added by hand on the competitor page. A ticked one is listed in todo_done as "my:<text>".' }),
+      L('todo_hidden', { help: 'Built-in to-do items a person removed from the competitor page (their keys).' }),
+      L('todo_renamed', { help: 'Built-in to-do items a person reworded, each as "<key>=<new text>".' }),
       L('scopes', { help: 'Which part of our product this competitor competes with (a module, or any area name). Empty means the whole product.' }),
     ],
     suspectFields: ['positioning', 'kind', 'tier'], countedStatuses: ['Reviewed'],
@@ -289,7 +291,7 @@ const TYPES = {
   },
   CompetitorNote: {
     prefix: 'CNT', phase: 1, v2Ref: ['PORTFOLIO/CompetitorNote', 'COMP-6/CompetitorEvent'], statuses: ['Active', 'Retired'],
-    fields: [req(D('date')), req(LT('text')), T('source'), T('author'), E('importance', ['low', 'medium', 'high'])],
+    fields: [req(D('date')), req(LT('text')), LT('html', { help: 'The note with bold, italic and tick boxes, as the sticky note was written. text is the same note as plain words.' }), B('pinned', { help: 'Pinned notes are shown first.' }), T('source'), T('author'), E('importance', ['low', 'medium', 'high'])],
     suspectFields: [],
   },
   CompetitorProductLine: {
@@ -320,7 +322,6 @@ const TYPES = {
       N('dealer_margin_pct', '%', { min: 0, max: 100, help: 'Dealer margin on selling price (not markup).' }), D('valid_from'), D('valid_to'),
       E('seat_model', ['single_user', 'multi_user', 'per_user', 'unlimited_users'], { help: 'Who the licence covers. single_user: one user or PC per licence. multi_user: one licence shared by several users. per_user: priced for each user. unlimited_users: no user limit.' }),
       N('max_users', 'users', { integer: true, min: 1, help: 'Most users one licence covers (multi_user), if the vendor says.' }),
-      E('tier_tag', ['free', 'entry', 'mid', 'top', 'enterprise'], { help: 'Plan tier for cross-competitor comparison. free: no cost; entry: cheapest paid; mid: typical plan; top: most featured; enterprise: custom/quote.' }),
     ],
     suspectFields: ['amount', 'unit', 'currency', 'price_type', 'status'], countedStatuses: ['Reviewed'],
   },
@@ -391,7 +392,6 @@ const TYPES = {
       N('amount', 'price', { min: 0, help: 'The price of this plan. Leave empty if the price is on request.' }), T('currency'),
       E('billing_period', ['one_time', 'monthly', 'quarterly', 'yearly', 'per_unit', 'custom']), T('unit'),
       LT('includes'), LT('limits'), T('audience'), B('is_free'),
-      E('tier_tag', ['free', 'entry', 'mid', 'top', 'enterprise'], { help: 'Which competitor plan level this plan is meant to sit at. Used to compare our features with what competitors give at that level.' }),
       N('price_monthly', 'price', { min: 0, help: 'What the customer pays each month. Leave empty if the plan is not sold monthly.' }),
       N('price_yearly', 'price', { min: 0, help: 'What the customer pays for a whole year. Leave empty if the plan is not sold yearly.' }),
       E('seat_model', ['single_user', 'multi_user', 'per_user', 'unlimited_users'], { help: 'Who one licence covers. single_user: one user. multi_user: a fixed number of users share it. per_user: the price is for each user. unlimited_users: no limit.' }),

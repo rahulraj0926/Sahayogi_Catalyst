@@ -5,15 +5,15 @@ import { useEffect, useMemo, useState } from 'react';
 
 export type StickyNote = { key: string; id: string; text: string; categories: string[]; by?: string; at?: string; done: boolean; productId?: string; productName?: string; route?: string };
 
-const COLORS = [
+export const STICKY_COLORS = [
   'bg-yellow-100 text-yellow-950 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-50 dark:border-yellow-700/60',
   'bg-pink-100 text-pink-950 border-pink-300 dark:bg-pink-900/40 dark:text-pink-50 dark:border-pink-700/60',
   'bg-sky-100 text-sky-950 border-sky-300 dark:bg-sky-900/40 dark:text-sky-50 dark:border-sky-700/60',
   'bg-green-100 text-green-950 border-green-300 dark:bg-green-900/40 dark:text-green-50 dark:border-green-700/60',
   'bg-violet-100 text-violet-950 border-violet-300 dark:bg-violet-900/40 dark:text-violet-50 dark:border-violet-700/60',
 ];
-const TILT = ['-rotate-1', 'rotate-1', 'rotate-0', '-rotate-[0.5deg]', 'rotate-[0.5deg]'];
-const hash = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+export const STICKY_TILT = ['-rotate-1', 'rotate-1', 'rotate-0', '-rotate-[0.5deg]', 'rotate-[0.5deg]'];
+export const stickyHash = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 const KEY = 'sahayogi.notes.order';
 
 function loadOrder(): string[] { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } }
@@ -53,11 +53,11 @@ export function StickyBoard({ notes, onDone, busy }: { notes: StickyNote[]; onDo
       {list.length === 0 ? <p className="m-auto text-sm text-[var(--text-muted)]">{id === 'open' ? 'No open notes.' : 'Drop a note here when it is dealt with.'}</p> : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {list.map((n) => {
-            const h = hash(n.productId || n.key);
+            const h = stickyHash(n.productId || n.key);
             return (
               <li key={n.key} draggable onDragStart={(e) => { setDrag(n.key); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', n.key); }} onDragEnd={() => { setDrag(null); setOver(null); }}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (drag && drag !== n.key) place(drag, n.key, id); setDrag(null); setOver(null); }}
-                className={`group relative flex cursor-grab flex-col gap-2 rounded-md border p-3 shadow-sm transition-transform hover:z-10 hover:rotate-0 hover:shadow-md active:cursor-grabbing ${COLORS[h % COLORS.length]} ${TILT[h % TILT.length]} ${n.done ? 'opacity-70' : ''} ${drag === n.key ? 'opacity-40' : ''}`}>
+                className={`group relative flex cursor-grab flex-col gap-2 rounded-md border p-3 shadow-sm transition-transform hover:z-10 hover:rotate-0 hover:shadow-md active:cursor-grabbing ${STICKY_COLORS[h % STICKY_COLORS.length]} ${STICKY_TILT[h % STICKY_TILT.length]} ${n.done ? 'opacity-70' : ''} ${drag === n.key ? 'opacity-40' : ''}`}>
                 <div className="flex items-start gap-1.5">
                   <GripVertical size={14} aria-hidden className="mt-0.5 shrink-0 opacity-40" />
                   <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-snug">{n.text}</p>
