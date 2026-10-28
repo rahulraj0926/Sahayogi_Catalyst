@@ -56,7 +56,7 @@ function portfolioReport(portfolio, opts: any = {}) {
   portfolio.syncAll();
   const products = rows.map((r) => summary.portfolioRow(r.entry, r.store, { today }));
 
-  const funnel = STAGE_ORDER.map((s) => ({ stage: s, label: plain.stageLabel(s), count: s === 'idea' ? portfolio.ideas().filter((i) => i.status !== 'promoted' && i.status !== 'rejected').length : products.filter((p) => p.stage === s).length }));
+  const funnel = STAGE_ORDER.map((s) => ({ stage: s, label: plain.stageLabel(s), count: s === 'idea' ? portfolio.ideas().filter((i) => i.status === 'new' || i.status === 'shortlisted').length : products.filter((p) => p.stage === s).length }));
   const byStage = Object.fromEntries(STAGE_ORDER.filter((s) => s !== 'idea').map((s) => [s, products.filter((p) => p.stage === s).map((p) => ({ id: p.id, name: p.name, days_in_stage: p.days_in_stage }))]));
   const active = products.filter((p) => !['done', 'parked'].includes(p.stage));
   const dis = active.map((p) => p.days_in_stage).filter((x) => x !== null);

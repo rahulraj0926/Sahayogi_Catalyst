@@ -826,7 +826,7 @@ model AuditDetail {
   @@map("audit_details")
 }
 
-/// The ideas inbox, before an idea becomes a product.
+/// The ideas inbox, before an idea becomes a product. An idea first sits in innovation (status "innovation") while its pitcher fills in the case, then goes to the CEO.
 model Idea {
   id String @id(map: "ideas_pkey")
   position Int
@@ -838,9 +838,36 @@ model Idea {
   status String
   product_id String?
   origin String?
+  problem String?
+  who_for String?
+  demo_url String?
+  decided_by String?
+  decided_at String?
+  reject_reason String?
+  ideaCompetitorsViaIdeaCompetitorsIdeaIdFkey IdeaCompetitor[] @relation("idea_competitors_idea_id_fkey")
 
   @@index([status], map: "ideas_status_idx")
   @@map("ideas")
+}
+
+/// The real competitors the pitcher listed in the innovation case of an idea. Each is stored only after its website answered a check; the result of that check is kept with it.
+model IdeaCompetitor {
+  idea_id String
+  id String
+  position Int
+  name String
+  website String
+  note String?
+  demo_url String?
+  check_status String
+  http_status Int
+  title String?
+  final_url String
+  checked_at String
+  ideaCompetitorsIdeaIdFkey Idea @relation("idea_competitors_idea_id_fkey", fields: [idea_id], references: [id], onDelete: Cascade, map: "idea_competitors_idea_id_fkey")
+
+  @@id([idea_id, id], map: "idea_competitors_pkey")
+  @@map("idea_competitors")
 }
 
 /// The "Something wrong here?" notes people leave on screens (one list per install, not per product).

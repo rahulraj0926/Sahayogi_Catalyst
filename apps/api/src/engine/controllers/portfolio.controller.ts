@@ -18,7 +18,7 @@ export class PortfolioController {
     const products = pf.list({ includeArchived: ['1', 'true'].includes(String(query.archived)) }).map((e: any) => summary.portfolioRow(e, pf.store(e.id), { today }));
     const byStage: Record<string, number> = Object.fromEntries(STAGES.map((s: string) => [s, 0]));
     for (const p of products) byStage[p.stage] = (byStage[p.stage] || 0) + 1;
-    byStage.idea = pf.ideas().filter((i: any) => !['promoted', 'rejected'].includes(i.status)).length;
+    byStage.idea = pf.ideas().filter((i: any) => ['new', 'shortlisted'].includes(i.status)).length; // a draft still in innovation is not waiting for the CEO
     pf.saveRegistry();
     return { as_of: today, default_product: pf.defaultProduct() ? pf.defaultProduct().id : null, counts: { products: products.length, by_stage: byStage, ideas: pf.ideas().length }, products };
   }
@@ -36,7 +36,7 @@ export class PortfolioController {
   // ---- ideas inbox
   @Get('ideas') @EngineRoute({ noProduct: true })
   ideas(@Ctx() c: EngineCtx, @Query() query: Record<string, string>) {
-    const ideas = c.portfolio.ideas().filter((i: any) => !query.status || i.status === query.status);
+    const ideas = c.portfolio.ideas().filter((i: any) => (query.status ? i.status === query.status : i.status !== 'innovation')); // drafts only when asked for
     return { total: ideas.length, ideas };
   }
 

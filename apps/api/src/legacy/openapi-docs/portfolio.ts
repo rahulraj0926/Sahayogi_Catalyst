@@ -13,7 +13,7 @@ export const portfolioDocs: DocSet = {
       stage: str('P0-P4, handoff, done or parked.'), stage_since: str(undefined, { format: 'date' }), depth_level: str(undefined, { enum: DEPTH }), mode: str(), archived: bool(),
     }, ['id', 'name'], { additionalProperties: true }),
     PortfolioIdea: obj({
-      id: str('IDEA-001 style id.'), one_liner: str(), text: str(), requester: str(), created_on: str(), status: str(undefined, { enum: ['new', 'shortlisted', 'rejected', 'promoted'] }), kind: str(), product_id: str(undefined, { nullable: true }),
+      id: str('IDEA-001 style id.'), one_liner: str(), text: str(), requester: str(), created_on: str(), status: str(undefined, { enum: ['innovation', 'new', 'shortlisted', 'rejected', 'promoted'] }), kind: str(), product_id: str(undefined, { nullable: true }),
     }, ['id', 'one_liner', 'status'], { additionalProperties: true }),
   },
   routes: {
@@ -46,7 +46,7 @@ export const portfolioDocs: DocSet = {
       summary: 'Rename, archive or change the depth of a product',
       body: obj({ name: str(), archived: bool(), depth_level: str(undefined, { enum: DEPTH }), status: str() }), response: obj({ product: ref('PortfolioProduct') }, ['product']),
     },
-    'GET /api/portfolio/ideas': { summary: 'Ideas inbox', query: { status: { description: 'Only ideas with this status.', schema: { type: 'string', enum: ['new', 'shortlisted', 'rejected', 'promoted'] } } }, response: obj({ total: int(), ideas: arr(ref('PortfolioIdea')) }, ['total', 'ideas']) },
+    'GET /api/portfolio/ideas': { summary: 'Ideas inbox', query: { status: { description: 'Only ideas with this status. Without it, drafts still in innovation are left out.', schema: { type: 'string', enum: ['innovation', 'new', 'shortlisted', 'rejected', 'promoted'] } } }, response: obj({ total: int(), ideas: arr(ref('PortfolioIdea')) }, ['total', 'ideas']) },
     'POST /api/portfolio/ideas': { summary: 'Add an idea', body: obj({ one_liner: str('The idea in one line (title also works).'), text: str(), requester: str(), kind: str(), created_on: str() }, ['one_liner']), response: obj({ idea: ref('PortfolioIdea') }, ['idea']), errors: { '422': 'one_liner is required.' } },
     'PATCH /api/portfolio/ideas/{id}': { summary: 'Change an idea', description: 'Administrator only.', body: { type: 'object', additionalProperties: true, description: 'Fields of the idea to change (one_liner, text, kind, status...).' }, response: obj({ idea: ref('PortfolioIdea') }, ['idea']) },
     'DELETE /api/portfolio/ideas/{id}': { summary: 'Delete an idea', description: 'Administrator only.', response: obj({ deleted: { description: 'The idea that was deleted.' } }, ['deleted']) },

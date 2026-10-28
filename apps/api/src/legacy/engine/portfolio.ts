@@ -267,7 +267,7 @@ class Portfolio {
     const one = String(f.one_liner || f.title || '').trim();
     if (!one) throw httpErr(422, 'one_liner is required');
     this.reg.counters.idea = (this.reg.counters.idea || 0) + 1;
-    const idea = { id: `IDEA-${String(this.reg.counters.idea).padStart(3, '0')}`, one_liner: one, text: String(f.text || ''), requester: String(f.requester || actor || ''), created_on: f.created_on || this.today(), status: 'new', kind: KINDS.includes(f.kind) ? f.kind : 'software', product_id: null, origin: f.origin || 'human' };
+    const idea = { id: `IDEA-${String(this.reg.counters.idea).padStart(3, '0')}`, one_liner: one, text: String(f.text || ''), requester: String(f.requester || actor || ''), created_on: f.created_on || this.today(), status: f.draft ? 'innovation' : 'new', kind: KINDS.includes(f.kind) ? f.kind : 'software', product_id: null, origin: f.origin || 'human' };
     this.reg.ideas.push(idea);
     this.systemEvent('idea.created', idea.id, actor, `${actor || 'someone'} added idea ${idea.id}: ${one.slice(0, 120)}`);
     this.saveRegistry();
@@ -296,13 +296,19 @@ class Portfolio {
     const i = this.idea(id);
     if (i.status === 'promoted') throw httpErr(409, `${id} was already promoted to ${i.product_id}`);
     const name = String(f.name || i.one_liner.replace(/[.\s]+$/, '').slice(0, 60)).trim();
+    // what the pitcher found in innovation comes across as it is, so nothing is typed again: the problem, who it is for, and the rivals that were checked
+    const rivals: any[] = i.competitors || [];
+    const rivalLines = rivals.map((c) => `- ${c.name}, ${c.website}, checked on ${String(c.check?.checked_at || '').slice(0, 10)} (${c.check?.status === 'verified' ? 'verified' : 'site responded'})${c.demo_url ? `, demo: ${c.demo_url}` : ''}`);
+    const found = [rivalLines.length ? `Rivals checked before the CEO decision:\n${rivalLines.join('\n')}` : '', i.demo_url ? `Demo or sketch from the pitcher: ${i.demo_url}` : ''].filter(Boolean).join('\n\n');
     const entry = this.create({ name, one_liner: i.one_liner, kind: f.kind || i.kind || 'software', audience: f.audience, owner: f.owner || i.requester, mode: f.mode || 'greenfield', depth_level: f.depth_level || 'L2' }, {
       actor: actor || i.requester,
       intake: {
-        title: `${name} intake brief`, idea: [i.one_liner, i.text].filter(Boolean).join('\n\n'), requester: i.requester || undefined,
-        problem_statement: i.text || i.one_liner, note: `Pre-filled from ${i.id} (${i.created_on}). Rewrite the problem statement as pain, not solution (data request DR-0-02).`, status: 'Draft',
+        title: `${name} intake brief`, idea: [i.one_liner, i.text, found].filter(Boolean).join('\n\n'), requester: i.requester || undefined,
+        problem_statement: i.problem || i.text || i.one_liner, note: `Pre-filled from ${i.id} (${i.created_on}). Rewrite the problem statement as pain, not solution (data request DR-0-02).`, status: 'Draft',
+        ...(rivals.length ? { reference_products: rivals.map((c) => `${c.name} (${c.website})`) } : {}),
       },
     });
+    if (i.who_for) this.update(entry.id, { idea: { who_for: i.who_for, asked_by: i.requester } }, actor || i.requester);
     i.status = 'promoted';
     i.product_id = entry.id;
     this.systemEvent('idea.promoted', id, actor, `${actor || 'someone'} turned idea ${id} into product ${entry.id}`);

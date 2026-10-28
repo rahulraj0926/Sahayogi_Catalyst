@@ -150,9 +150,14 @@ export const CORE_TABLES: TableSpec[] = [
   table('audit_details', 'AuditDetail', 'Extra facts recorded with an audit entry (who, which links, which fields).', [c('seq', 'BIGINT', true), ...kvCols()], ['seq', 'key'],
     { fks: [cascadeFk('audit_details', ['seq'], 'audit_log', ['seq'])] }),
 
-  table('ideas', 'Idea', 'The ideas inbox, before an idea becomes a product.', [
+  table('ideas', 'Idea', 'The ideas inbox, before an idea becomes a product. An idea first sits in innovation (status "innovation") while its pitcher fills in the case, then goes to the CEO.', [
     text('id', true), int('position', true), text('one_liner', true), text('text'), text('requester'), text('created_on'), text('kind'), text('status', true), text('product_id'), text('origin'),
+    text('problem'), text('who_for'), text('demo_url'), text('decided_by'), text('decided_at'), text('reject_reason'),
   ], ['id'], { indexes: [ix('ideas_status_idx', ['status'])] }),
+  table('idea_competitors', 'IdeaCompetitor', 'The real competitors the pitcher listed in the innovation case of an idea. Each is stored only after its website answered a check; the result of that check is kept with it.', [
+    text('idea_id', true), text('id', true), int('position', true), text('name', true), text('website', true), text('note'), text('demo_url'),
+    text('check_status', true), int('http_status', true), text('title'), text('final_url', true), text('checked_at', true),
+  ], ['idea_id', 'id'], { fks: [cascadeFk('idea_competitors', ['idea_id'], 'ideas', ['id'])] }),
   table('feedback_notes', 'FeedbackNote', 'The "Something wrong here?" notes people leave on screens (one list per install, not per product).', [
     text('id', true), int('position', true), text('text', true), arr('categories'), text('route'), text('product'), text('product_name'), text('actor'), text('at'),
     int('width'), int('words'), bool('done', true), text('done_at'), text('done_by'),

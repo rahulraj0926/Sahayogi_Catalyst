@@ -19,7 +19,18 @@ export interface ProductEntry {
   archived: boolean;
 }
 
-export type IdeaStatus = 'new' | 'shortlisted' | 'rejected' | 'promoted';
+/** innovation = a draft the pitcher is still filling in (the CEO does not see it); new and shortlisted wait for the CEO. */
+export type IdeaStatus = 'innovation' | 'new' | 'shortlisted' | 'rejected' | 'promoted';
+
+/** A competitor the pitcher listed, with the result of the check that proved its website exists. */
+export interface IdeaCompetitorRecord {
+  id: string;
+  name: string;
+  website: string;
+  note: string | null;
+  demo_url: string | null;
+  check: { status: 'verified' | 'responded'; http_status: number; title: string | null; final_url: string; checked_at: string };
+}
 
 export interface IdeaRecord {
   id: string;
@@ -34,6 +45,10 @@ export interface IdeaRecord {
   decided_by?: string;
   decided_at?: string;
   reject_reason?: string;
+  problem?: string;
+  who_for?: string;
+  demo_url?: string;
+  competitors?: IdeaCompetitorRecord[];
 }
 
 /** Subset of summary.portfolioRow() the Home screens read. */
@@ -89,6 +104,7 @@ export interface PortfolioLike {
   addIdea(f: Record<string, unknown>, actor: string): IdeaRecord;
   updateIdea(id: string, patch: Record<string, unknown>, actor?: string): IdeaRecord;
   promote(id: string, f: Record<string, unknown>, actor: string): { idea: IdeaRecord; product: ProductEntry };
+  systemEvent(action: string, subject: string | null, actor: string | null | undefined, summary: string): void;
   saveRegistry(): boolean;
   syncAll(): void;
 }

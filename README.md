@@ -14,12 +14,13 @@ npm install
 docker compose up -d db                       # PostgreSQL 16 on localhost:5432 (user, password and database: sahayogi)
 cp apps/api/.env.example apps/api/.env        # Windows PowerShell: Copy-Item apps/api/.env.example apps/api/.env
 npm run db:migrate -w apps/api                # creates the tables
-npm run seed                                  # 6 demo products + 4 ideas, each with records in all phases 0-12
+npm run seed                                  # 6 demo products + 4 ideas, each with records in all phases 0-12 (what the tests and CI use)
+npm run seed:catalog -w apps/api              # the demo instead: the 21 Sahayogi products + 4 ideas (add -- --force to replace a database that already has products)
 npm run dev:api                               # http://localhost:4000   (/health)   <- keep this window open
 npm run dev:web                               # http://localhost:3000               <- in a second window
 ```
 
-Open http://localhost:3000. If the page loads with demo products, everything works.
+Open http://localhost:3000. A browser that has not signed in sees the landing page. Click **Sign in** and type the name of a product owner (for example `Kanishk`) to reach that product and the dashboard; any other name is offered "Pitch your idea" first. If the dashboard loads with demo products, everything works. (This only routes: there is no real login yet.)
 
 **Database without Docker (pgAdmin / your own PostgreSQL).** Skip the `docker compose` line and do this instead:
 1. Install PostgreSQL 16 and, if you want a window onto the data, pgAdmin.

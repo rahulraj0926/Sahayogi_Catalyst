@@ -80,6 +80,23 @@ export function IdeasPanel() {
                   <span className="inline-flex items-center gap-1"><Kind size={12} />{i.kind}</span><span>{i.requester}</span><span>{i.created_on}</span>
                   {short && <span className="inline-flex items-center gap-1 font-medium text-[var(--status-warning-fg)]"><Star size={12} fill="currentColor" />Shortlisted</span>}
                 </p>
+                {(i.problem || i.who_for || (i.competitors?.length ?? 0) > 0) && (
+                  <details className="mt-2 text-xs text-[var(--text-secondary)]">
+                    <summary className="cursor-pointer font-medium text-[var(--sd-accent)]">Innovation case · {(i.competitors ?? []).length} real rivals</summary>
+                    <div className="mt-1.5 grid gap-1.5">
+                      {i.problem && <p><span className="font-medium text-[var(--text-heading)]">Problem:</span> {i.problem}</p>}
+                      {i.who_for && <p><span className="font-medium text-[var(--text-heading)]">For:</span> {i.who_for}</p>}
+                      {(i.competitors ?? []).map((c) => (
+                        <p key={c.id}>
+                          <span className="font-medium text-[var(--text-heading)]">{c.name}</span>{' '}
+                          {/^https?:\/\//i.test(c.website) && <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-[var(--sd-accent)]">{c.website.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '')}</a>}
+                          {' · '}{c.check.status === 'verified' ? 'website verified' : 'website answered'} {c.check.checked_at.slice(0, 10)}
+                        </p>
+                      ))}
+                      {i.demo_url && /^https?:\/\//i.test(i.demo_url) && <p>Their demo: <a href={i.demo_url} target="_blank" rel="noopener noreferrer" className="text-[var(--sd-accent)]">open</a></p>}
+                    </div>
+                  </details>
+                )}
               </div>
               {canDecide && (
                 <span className="flex shrink-0 items-center gap-1">

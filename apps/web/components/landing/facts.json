@@ -1,0 +1,17 @@
+{
+  "_comment": "The numbers the landing page shows. apps/api/src/tests/landing-facts.test.ts checks each one against the engine data it comes from (gates.json, coverage_rules.json, lifecycle.json), so a change there fails the test until this file is updated.",
+  "gateChecks": 97,
+  "qualityGates": 10,
+  "linkRules": 36,
+  "stepChecks": {
+    "Idea": 21,
+    "MVP": 8,
+    "Requirements": 18,
+    "Design": 12,
+    "Build": 9,
+    "Test": 6,
+    "Quality check": 5,
+    "Launch": 6,
+    "Learn": 8
+  }
+}

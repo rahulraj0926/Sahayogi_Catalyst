@@ -42,14 +42,21 @@ export function missingColumns(specs: TableSpec[], existing: Map<string, Set<str
 
 export interface ProductState { snapshot: Snapshot; auditCount: number }
 
-const REGISTRY_TABLES = ['portfolio', 'portfolio_counters', 'portfolio_settings', 'portfolio_extra_fields', 'ideas', 'feedback_notes', 'members', 'ai_usage_log'];
+const REGISTRY_TABLES = ['portfolio', 'portfolio_counters', 'portfolio_settings', 'portfolio_extra_fields', 'ideas', 'idea_competitors', 'feedback_notes', 'members', 'ai_usage_log'];
 const MEMBERS_SQL = `CREATE TABLE IF NOT EXISTS "members" (
     "id" TEXT NOT NULL, "position" INTEGER NOT NULL, "name" TEXT NOT NULL, "email" TEXT, "role" TEXT NOT NULL, "scope" TEXT NOT NULL,
     "product_id" TEXT, "product_name" TEXT, "phase" INTEGER, "added_by" TEXT, "added_at" TEXT,
     CONSTRAINT "members_pkey" PRIMARY KEY ("id")
 );
 CREATE INDEX IF NOT EXISTS "members_product_idx" ON "members"("product_id");`;
-export { MEMBERS_SQL };
+/** The competitors listed in an idea's innovation case (added after the first install, so a start-up creates it when missing, like members). */
+const IDEA_COMPETITORS_SQL = `CREATE TABLE IF NOT EXISTS "idea_competitors" (
+    "idea_id" TEXT NOT NULL REFERENCES "ideas"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    "id" TEXT NOT NULL, "position" INTEGER NOT NULL, "name" TEXT NOT NULL, "website" TEXT NOT NULL, "note" TEXT, "demo_url" TEXT,
+    "check_status" TEXT NOT NULL, "http_status" INTEGER NOT NULL, "title" TEXT, "final_url" TEXT NOT NULL, "checked_at" TEXT NOT NULL,
+    CONSTRAINT "idea_competitors_pkey" PRIMARY KEY ("idea_id", "id")
+);`;
+export { MEMBERS_SQL, IDEA_COMPETITORS_SQL };
 const PRODUCT_TABLES = ALL_TABLES.filter((t) => !REGISTRY_TABLES.includes(t.table) && t.table !== 'audit_log' && t.table !== 'audit_details' && t.table !== 'system_audit_log');
 
 /** Scripts (seed, import, tests) run outside Nest, so read apps/api/.env themselves when DATABASE_URL is not set. */
@@ -113,6 +120,7 @@ export class Repository {
   /** Tables added after the first install are created here when missing (never changes or drops anything), so an update does not need a manual step before the API can start. */
   async ensureTables() {
     await this.pool.query(MEMBERS_SQL);
+    await this.pool.query(IDEA_COMPETITORS_SQL);
   }
   /**
    * The code and the database must agree on every column. A column the code writes but the table lacks made every save of that
@@ -220,7 +228,8 @@ export class Repository {
 
 // ---------------------------------------------------------------- registry (portfolio-wide) rows
 const REG_KNOWN = new Set(['version', 'asOf', 'counters', 'settings', 'usage', 'products', 'ideas', 'feedback', 'members']);
-const IDEA_KNOWN = new Set(['id', 'one_liner', 'text', 'requester', 'created_on', 'kind', 'status', 'product_id', 'origin']);
+const IDEA_KNOWN = new Set(['id', 'one_liner', 'text', 'requester', 'created_on', 'kind', 'status', 'product_id', 'origin', 'problem', 'who_for', 'demo_url', 'decided_by', 'decided_at', 'reject_reason', 'competitors']);
+const IDEA_COMPETITOR_KNOWN = new Set(['id', 'name', 'website', 'note', 'demo_url', 'check']);
 const NOTE_KNOWN = new Set(['id', 'text', 'categories', 'route', 'product', 'product_name', 'actor', 'at', 'width', 'words', 'done', 'done_at', 'done_by']);
 const MEMBER_KNOWN = new Set(['id', 'name', 'email', 'role', 'scope', 'product_id', 'product_name', 'phase', 'added_by', 'added_at']);
 const USAGE_KNOWN = new Set(['date', 'at', 'file', 'attachment', 'product', 'goal', 'by', 'status', 'estimated_tokens_in', 'estimated_tokens_out', 'estimated_cost_inr', 'actual_tokens_in', 'actual_tokens_out', 'actual_cost_inr', 'note']);
@@ -235,7 +244,16 @@ export function registryToRows(reg: Row): TableSet {
   (reg.ideas || []).forEach((i: Row, position: number) => {
     const bad = Object.keys(i).filter((k) => !IDEA_KNOWN.has(k));
     if (bad.length) throw new Error(`idea ${i.id}: no column for field(s) ${bad.join(', ')} - add them to src/db/tables.ts`);
-    put(set, 'ideas', { id: i.id, position, one_liner: i.one_liner ?? '', text: nn(i.text), requester: nn(i.requester), created_on: nn(i.created_on), kind: nn(i.kind), status: i.status ?? 'new', product_id: nn(i.product_id), origin: nn(i.origin) });
+    put(set, 'ideas', {
+      id: i.id, position, one_liner: i.one_liner ?? '', text: nn(i.text), requester: nn(i.requester), created_on: nn(i.created_on), kind: nn(i.kind), status: i.status ?? 'new', product_id: nn(i.product_id), origin: nn(i.origin),
+      problem: nn(i.problem), who_for: nn(i.who_for), demo_url: nn(i.demo_url), decided_by: nn(i.decided_by), decided_at: nn(i.decided_at), reject_reason: nn(i.reject_reason),
+    });
+    (i.competitors || []).forEach((cmp: Row, at: number) => {
+      const badCmp = Object.keys(cmp).filter((k) => !IDEA_COMPETITOR_KNOWN.has(k));
+      if (badCmp.length) throw new Error(`idea ${i.id} competitor ${cmp.id}: no column for field(s) ${badCmp.join(', ')} - add them to src/db/tables.ts`);
+      const check = cmp.check || {};
+      put(set, 'idea_competitors', { idea_id: i.id, id: cmp.id, position: at, name: cmp.name ?? '', website: cmp.website ?? '', note: nn(cmp.note), demo_url: nn(cmp.demo_url), check_status: check.status ?? 'verified', http_status: check.http_status ?? 0, title: nn(check.title), final_url: check.final_url ?? cmp.website ?? '', checked_at: check.checked_at ?? '' });
+    });
   });
   (reg.feedback || []).forEach((n: Row, position: number) => {
     const bad = Object.keys(n).filter((k) => !NOTE_KNOWN.has(k));
@@ -266,9 +284,15 @@ export function rowsToRegistry(set: TableSet): Row {
     return Object.fromEntries(Object.entries(rest).filter(([k, v]) => v !== null || k === 'product' || k === 'by' || k.startsWith('actual_')));
   });
   if (log.length || (p && p.usage_cap_inr !== null)) reg.usage = { log, cap_inr: p ? p.usage_cap_inr : null };
+  const competitors = rowsOf(set, 'idea_competitors').sort((a, b) => a.position - b.position);
   reg.ideas = rowsOf(set, 'ideas').sort((a, b) => a.position - b.position).map((r) => {
-    const { position, ...rest } = r;
-    return rest;
+    const { position: _position, problem, who_for, demo_url, decided_by, decided_at, reject_reason, ...rest } = r;
+    // the newer columns only appear on an idea that has a value, so an older idea reads back exactly as it was written
+    const idea: Row = { ...rest };
+    for (const [k, v] of Object.entries({ problem, who_for, demo_url, decided_by, decided_at, reject_reason })) if (v !== null && v !== undefined) idea[k] = v;
+    const listed = competitors.filter((c) => c.idea_id === r.id).map((c) => ({ id: c.id, name: c.name, website: c.website, note: c.note ?? null, demo_url: c.demo_url ?? null, check: { status: c.check_status, http_status: c.http_status, title: c.title ?? null, final_url: c.final_url, checked_at: c.checked_at } }));
+    if (listed.length) idea.competitors = listed;
+    return idea;
   });
   reg.feedback = rowsOf(set, 'feedback_notes').sort((a, b) => a.position - b.position).map((r) => {
     const { position, ...rest } = r;

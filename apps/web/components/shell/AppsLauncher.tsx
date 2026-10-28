@@ -18,20 +18,16 @@ function sortApps(apps: LauncherApp[], mode: SortMode, lastUsed: Record<string, 
   return copy;
 }
 
+/** The app's logo exactly as it is (same picture, same proportions, nothing drawn over it, shown like on sahayogi.in). An app without a logo gets a blank tile. */
 function AppIcon({ app, size }: { app: LauncherApp; size: number }) {
   const [errored, setErrored] = useState(false);
-  const tint = app.fg ?? 'var(--sd-accent)';
   if (app.logoUrl && !errored) {
-    return (
-      <span className="pointer-events-none block shrink-0 overflow-hidden rounded-xl" style={{ width: size, height: size }}>
-        <img src={app.logoUrl} alt="" width={size} height={size} style={{ width: size, height: size }} className="block object-cover" draggable={false} onError={() => setErrored(true)} />
-      </span>
-    );
+    return <img src={app.logoUrl} alt="" width={size} height={size} style={{ width: size, height: size }} className="pointer-events-none block shrink-0 rounded-lg object-contain" draggable={false} onError={() => setErrored(true)} />;
   }
   const Icon = app.icon;
   return (
-    <span className="pointer-events-none flex shrink-0 items-center justify-center rounded-xl text-sm font-semibold" style={{ width: size, height: size, background: `color-mix(in srgb, ${tint} 14%, transparent)`, color: tint }}>
-      {Icon ? <Icon size={Math.round(size * 0.5)} /> : (app.mark ?? app.name.charAt(0).toUpperCase())}
+    <span className="pointer-events-none flex shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[var(--text-muted)]" style={{ width: size, height: size }}>
+      {Icon && <Icon size={Math.round(size * 0.5)} />}
     </span>
   );
 }
@@ -162,12 +158,12 @@ export default function AppsLauncher({ onClose }: { onClose: () => void }) {
               {favoriteApps.map((app, index) => (
                 <button key={app.id} ref={(el) => registerTile(app.id, el)} type="button" onClick={() => handleTileClick(app)} onPointerDown={(e) => handlePointerDown(e, app)}
                   style={{ touchAction: dragEnabled ? 'none' : undefined, minHeight: 0, ...jiggleStyle(index) }}
-                  className={`tap-pop flex flex-col items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-3 text-center transition-colors hover:bg-[var(--surface)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : !isLinked(app) ? 'opacity-60' : ''}`} title={isLinked(app) ? undefined : 'Not linked yet'}>
+                  className={`tap-pop flex flex-col items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-3 text-center transition-colors hover:bg-[var(--surface)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : ''}`} title={isLinked(app) ? undefined : 'Not linked yet'}>
                   <span className="relative">
                     <AppIcon app={app} size={52} />
                     {editMode && <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--kpi-bad)] text-[0.5rem] text-white">&minus;</span>}
                   </span>
-                  <span className="text-[0.6875rem] font-medium leading-tight text-[var(--text-secondary)]">{app.name}</span>
+                  <span className={`text-[0.6875rem] font-medium leading-tight text-[var(--text-secondary)] ${isLinked(app) ? '' : 'opacity-60'}`}>{app.name}</span>
                 </button>
               ))}
             </div>
@@ -188,13 +184,13 @@ export default function AppsLauncher({ onClose }: { onClose: () => void }) {
             <div key={app.id} ref={(el) => registerTile(app.id, el)} role="button" tabIndex={0} onClick={() => handleTileClick(app)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTileClick(app); } }} onPointerDown={(e) => handlePointerDown(e, app)}
               style={{ touchAction: dragEnabled ? 'none' : undefined, ...jiggleStyle(index) }}
-              className={`group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg px-2 py-3 text-center transition-colors hover:bg-[var(--search-bg)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : !isLinked(app) ? 'opacity-60' : ''}`} title={isLinked(app) ? undefined : 'Not linked yet'}>
+              className={`group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg px-2 py-3 text-center transition-colors hover:bg-[var(--search-bg)] ${dragEnabled && dragId !== app.id ? 'launcher-jiggle' : ''} ${dragId === app.id ? 'opacity-30' : ''}`} title={isLinked(app) ? undefined : 'Not linked yet'}>
               <button type="button" title="Add to favorites" aria-label={`Add ${app.name} to favorites`} onClick={(e) => { e.stopPropagation(); toggleFavorite(app.id); }}
                 className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-0 bg-transparent text-[var(--text-muted)] opacity-0 transition-opacity hover:text-[var(--sd-accent)] focus-visible:opacity-100 group-hover:opacity-100" style={{ minHeight: 0, padding: 0 }}>
                 <Star size={12} />
               </button>
               <AppIcon app={app} size={46} />
-              <span className="text-[0.6875rem] font-medium leading-tight text-[var(--text-secondary)]">{app.name}</span>
+              <span className={`text-[0.6875rem] font-medium leading-tight text-[var(--text-secondary)] ${isLinked(app) ? '' : 'opacity-60'}`}>{app.name}</span>
             </div>
           ))}
           {otherApps.length === 0 && <p className="col-span-3 px-2 py-4 text-center text-xs text-[var(--text-muted)]">Every app is a favorite.</p>}

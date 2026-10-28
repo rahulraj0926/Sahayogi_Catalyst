@@ -33,7 +33,7 @@ export function ColumnHead({ label, children, active, sort, align = 'left', clas
         )}
       </span>
       {open && children && (
-        <div role="dialog" aria-label={`${label} filter`} style={{ position: 'fixed', top: pos?.top, left: pos?.left }} className={`z-50 w-56 rounded-lg border border-[var(--divider)] bg-[var(--surface)] p-1.5 text-left text-sm font-normal normal-case tracking-normal text-[var(--text-secondary)] shadow-xl`}>
+        <div role="dialog" aria-label={`${label} filter`} style={{ position: 'fixed', top: pos?.top, left: pos?.left }} className={`z-50 max-h-[min(32rem,calc(100dvh-8rem))] w-56 overflow-y-auto rounded-lg border border-[var(--divider)] bg-[var(--surface)] p-1.5 text-left text-sm font-normal normal-case tracking-normal text-[var(--text-secondary)] shadow-xl`}>
           {children}
         </div>
       )}

@@ -56,6 +56,25 @@ const IDEAS = [
   { one_liner: 'Partner training academy with certificates', text: 'Certify installers and dealer staff on our products; certificates unlock better dealer margin tiers.', requester: 'Anjali Rao', created_on: '2026-10-07', kind: 'service' },
 ];
 
+/** Build one seeded product from its pack and register it as `id`. */
+function addSeeded(pf, def, id, opts: any = {}) {
+  let store;
+  if (def.seed === 'cdn' && opts.reuseLegacyStore && fs.existsSync(opts.reuseLegacyStore)) { try { store = Store.load(opts.reuseLegacyStore); } catch (e) { store = null; } }
+  if (!store) store = SEEDS[def.seed]();
+  const prod = store.product();
+  const entry = { id, name: def.name, one_liner: def.one_liner, kind: def.kind, owner: def.owner, stage: 'P0', stage_since: AS_OF, depth_level: prod.depth_level, mode: prod.mode === 'greenfield' ? 'greenfield' : 'existing_system', created_at: def.created_at, archived: false, stage_override: false, seed: def.seed };
+  pf.reg.products.push(entry);
+  if (store.product().name !== def.name) store.update(store.product().id, { name: def.name, title: def.name }, { silent: true });
+  pf.setStore(id, store);
+  // stage_since: the day the current stage began = decision date of the previous gate, else the product's creation date
+  const gates = store.data.gates || {};
+  const prev = Math.max(-1, ...Object.keys(gates).filter((g) => gates[g] && ['Passed', 'Passed-with-conditions'].includes(gates[g].state)).map(Number));
+  entry.stage = portfolioMod.computeStage(store);
+  entry.stage_since = prev >= 0 ? String(gates[prev].decided_at).slice(0, 10) : def.created_at.slice(0, 10);
+}
+
+const addIdeas = (pf) => IDEAS.forEach((idea) => { pf.reg.counters.idea = (pf.reg.counters.idea || 0) + 1; pf.reg.ideas.push({ id: `IDEA-${String(pf.reg.counters.idea).padStart(3, '0')}`, ...idea, status: 'new', product_id: null, origin: 'invented' }); });
+
 /**
  * Write the whole portfolio under `root`.
  * opts: { reuseLegacyStore: path } uses an existing data/store.json as the CDN product instead of rebuilding it.
@@ -65,23 +84,38 @@ function seedPortfolio(root, opts: any = {}) {
   const pf = new Portfolio(root);
   pf.reg.asOf = AS_OF;
   PRODUCTS.forEach((def, i) => {
-    let store;
-    if (def.seed === 'cdn' && opts.reuseLegacyStore && fs.existsSync(opts.reuseLegacyStore)) { try { store = Store.load(opts.reuseLegacyStore); } catch (e) { store = null; } }
-    if (!store) store = SEEDS[def.seed]();
+    pf.reg.counters.product = i + 1;
+    addSeeded(pf, def, `PRD-${String(i + 1).padStart(3, '0')}`, opts);
+  });
+  addIdeas(pf);
+  pf.saveRegistry();
+  return pf;
+}
+
+/**
+ * The Sahayogi products, in the order the company lists them. The Products page shows exactly these and no others.
+ * Sahayogi CDN and Sahayogi Developer keep their demo records (they come from PRODUCTS above); every other product starts
+ * empty at Phase 0 with only its name, so nothing about it is invented. Add a product here to put it in the catalogue.
+ */
+const CATALOG = [
+  'Sahayogi Setu', 'Sahayogi One', 'Boss By Office Sahayogi', 'Chat With Sahayogi', 'Tax Sahayogi', 'Sahayogi Mail', 'Sahayogi Drive',
+  'Sahayogi AI', 'My Sahayogi', 'Studio Sahayogi', 'Sahayogi Cloud', 'Office Sahayogi', 'Investor Sahayogi', 'Boss Bridge',
+  'Sahayogi Calender', 'Sahayogi Teams', 'Sahayogi CDN', 'Sahayogi DNS', 'Sahayogi Secrets', 'Sahayogi Developer', 'Sahayogi Catalyst',
+];
+
+/** Write the catalogue portfolio under `root`: the CATALOG products plus the four ideas. Run with `npm run seed:catalog`. */
+function seedCatalog(root) {
+  fs.mkdirSync(root, { recursive: true });
+  const pf = new Portfolio(root);
+  pf.reg.asOf = AS_OF;
+  CATALOG.forEach((name, i) => {
     const id = `PRD-${String(i + 1).padStart(3, '0')}`;
     pf.reg.counters.product = i + 1;
-    const prod = store.product();
-    const entry = { id, name: def.name, one_liner: def.one_liner, kind: def.kind, owner: def.owner, stage: 'P0', stage_since: AS_OF, depth_level: prod.depth_level, mode: prod.mode === 'greenfield' ? 'greenfield' : 'existing_system', created_at: def.created_at, archived: false, stage_override: false, seed: def.seed };
-    pf.reg.products.push(entry);
-    if (store.product().name !== def.name) store.update(store.product().id, { name: def.name, title: def.name }, { silent: true });
-    pf.setStore(id, store);
-    // stage_since: the day the current stage began = decision date of the previous gate, else the product's creation date
-    const gates = store.data.gates || {};
-    const prev = Math.max(-1, ...Object.keys(gates).filter((g) => gates[g] && ['Passed', 'Passed-with-conditions'].includes(gates[g].state)).map(Number));
-    entry.stage = portfolioMod.computeStage(store);
-    entry.stage_since = prev >= 0 ? String(gates[prev].decided_at).slice(0, 10) : def.created_at.slice(0, 10);
+    const def = PRODUCTS.find((p) => p.name === name);
+    if (def) addSeeded(pf, def, id);
+    else pf.create({ id, name, kind: 'software' }, { actor: 'Catalogue seed' });
   });
-  IDEAS.forEach((idea) => { pf.reg.counters.idea = (pf.reg.counters.idea || 0) + 1; pf.reg.ideas.push({ id: `IDEA-${String(pf.reg.counters.idea).padStart(3, '0')}`, ...idea, status: 'new', product_id: null, origin: 'invented' }); });
+  addIdeas(pf);
   pf.saveRegistry();
   return pf;
 }
@@ -96,4 +130,4 @@ if (require.main === module) {
   console.log(`${pf.ideas().length} ideas written to ${path.join(root, 'portfolio.json')}`);
 }
 
-export { seedPortfolio, SEEDS, PRODUCTS, IDEAS, AS_OF };
+export { seedPortfolio, seedCatalog, SEEDS, PRODUCTS, CATALOG, IDEAS, AS_OF };

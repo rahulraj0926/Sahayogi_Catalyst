@@ -1,5 +1,5 @@
 'use client';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { actor, useApi } from '@/lib/api';
 import { Rail } from './shell/Rail';
@@ -10,10 +10,35 @@ import { useAssistant } from './shell/AssistantHost';
 import { competitorGroups, isCompetitorsPath, productGroups } from './shell/groups';
 import { Tour } from './tour/Tour';
 import { Crumbs } from './shell/Crumbs';
+import { isPublicPath } from './landing/public';
+import { hasSignedIn } from './landing/signed-in';
 
 export { PHASE_SHORT } from './shell/groups';
 
+/** The landing page and the idea page open on their own, without the side menu and top bar. Everything else gets the workspace around it. */
 export default function Shell({ children }: { children: ReactNode }) {
+  const path = usePathname();
+  if (isPublicPath(path)) return <>{children}</>;
+  return <BaseAddressGate path={path}><WorkspaceShell>{children}</WorkspaceShell></BaseAddressGate>;
+}
+
+/**
+ * The base address (/) shows the landing page to anyone who has not signed in on this browser, and the dashboard to anyone who has.
+ * Every other address opens as before. It stays one component at every address, so moving around the app never rebuilds the side menu.
+ */
+function BaseAddressGate({ path, children }: { path: string; children: ReactNode }) {
+  const router = useRouter();
+  const guarded = path === '/';
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    if (!guarded) return;
+    if (hasSignedIn()) setOk(true);
+    else router.replace('/welcome');
+  }, [guarded, router]);
+  return guarded && !ok ? null : <>{children}</>;
+}
+
+function WorkspaceShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const pid = /^\/products\/([^/]+)/.exec(path)?.[1];
   const { data: pf } = useApi<any>('/portfolio');

@@ -147,7 +147,7 @@ export class HomeService implements OnApplicationBootstrap {
       for (const a of store.data.approvals || []) if (a.status === 'waiting') add({ ...base, id: `${e.id}:${a.id}`, date: day(a.expires_at), kind: 'approval_expires', title: `${a.approver} has until today to answer: ${a.title}`, href: `/products/${slug}/approvals` });
       for (const [g, rec] of Object.entries(store.data.gates || {})) if (rec && rec.decided_at) add({ ...base, id: `${e.id}:gate:${g}`, date: day(rec.decided_at), kind: 'gate_decision', title: `${e.name}: Stage ${g} ${String(rec.decision || rec.state || 'decided').toLowerCase()}`, href: `/products/${slug}/gates` });
     }
-    for (const i of pf.ideas()) add({ id: i.id, date: day(i.created_on), kind: 'idea_submitted', title: `Idea: ${i.one_liner}` });
+    for (const i of pf.ideas().filter((x) => x.status !== 'innovation')) add({ id: i.id, date: day(i.created_on), kind: 'idea_submitted', title: `Idea: ${i.one_liner}` });
 
     events.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
     return { from, to, events: events.slice(0, MAX_EVENTS), truncated: events.length > MAX_EVENTS };

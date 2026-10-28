@@ -544,7 +544,30 @@ CREATE TABLE "ideas" (
     "status" TEXT NOT NULL,
     "product_id" TEXT,
     "origin" TEXT,
+    "problem" TEXT,
+    "who_for" TEXT,
+    "demo_url" TEXT,
+    "decided_by" TEXT,
+    "decided_at" TEXT,
+    "reject_reason" TEXT,
     CONSTRAINT "ideas_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "idea_competitors" (
+    "idea_id" TEXT NOT NULL,
+    "id" TEXT NOT NULL,
+    "position" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
+    "website" TEXT NOT NULL,
+    "note" TEXT,
+    "demo_url" TEXT,
+    "check_status" TEXT NOT NULL,
+    "http_status" INTEGER NOT NULL,
+    "title" TEXT,
+    "final_url" TEXT NOT NULL,
+    "checked_at" TEXT NOT NULL,
+    CONSTRAINT "idea_competitors_pkey" PRIMARY KEY ("idea_id","id")
 );
 
 -- CreateTable
@@ -1806,6 +1829,9 @@ ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_product_id_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "audit_details" ADD CONSTRAINT "audit_details_seq_fkey" FOREIGN KEY ("seq") REFERENCES "audit_log"("seq") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "idea_competitors" ADD CONSTRAINT "idea_competitors_idea_id_fkey" FOREIGN KEY ("idea_id") REFERENCES "ideas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "item_product" ADD CONSTRAINT "item_product_product_id_id_fkey" FOREIGN KEY ("product_id","id") REFERENCES "items"("product_id","id") ON DELETE CASCADE ON UPDATE CASCADE;

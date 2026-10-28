@@ -2,6 +2,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { actor } from '@/lib/api';
+import { GreetingCard } from '@/components/dashboard/GreetingCard';
 import { ActivityFeed } from './ActivityFeed';
 import { useKpis } from './client';
 import { EventCalendar } from './EventCalendar';
@@ -43,8 +44,9 @@ export default function HomePage() {
 
   return (
     <div className="dashboard-root @container flex flex-col gap-[var(--space-lg)] pb-4">
+      <GreetingCard name={who} />
       <div className="grid grid-cols-1 gap-[var(--space-md)] @[64rem]:grid-cols-[minmax(0,1fr)_22rem]">
-        <div data-tour="kpis" className="min-w-0"><KpiRow kpis={kpis.data?.kpis} error={kpis.error} loading={kpis.loading} name={who} /></div>
+        <div data-tour="kpis" className="min-w-0"><KpiRow kpis={kpis.data?.kpis} error={kpis.error} loading={kpis.loading} /></div>
         {/* the calendar fills exactly the height of the numbers beside it; its list scrolls if it is longer */}
         <div data-tour="calendar" className="relative min-h-[17rem] @[64rem]:min-h-0"><div className="h-full @[64rem]:absolute @[64rem]:inset-0"><EventCalendar /></div></div>
       </div>

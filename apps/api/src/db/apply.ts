@@ -29,6 +29,7 @@ async function main() {
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'todo_items'")).rowCount) await run('0012_competitor_todo_items');
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_pricing_plan' AND column_name = 'price_yearly'")).rowCount) await run('0013_our_plan_prices_users');
     if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'item_competitor' AND column_name = 'target_market'")).rowCount) await run('0014_competitor_customer_size_market');
+    if (!(await c.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'ideas' AND column_name = 'problem'")).rowCount || !(await exists('public.idea_competitors'))) await run('0015_idea_innovation');
     await c.query('COMMIT');
   } catch (e) { await c.query('ROLLBACK'); throw e; } finally { await c.end(); }
 }

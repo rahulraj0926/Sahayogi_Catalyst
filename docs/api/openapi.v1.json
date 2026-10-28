@@ -64,9 +64,9 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "Comma-separated: new, shortlisted, rejected, promoted. Default: the ones still waiting for a decision.",
+            "description": "Comma-separated: innovation, new, shortlisted, rejected, promoted. Default: the ones still waiting for a decision (new and shortlisted).",
             "schema": {
-              "pattern": "^(new|shortlisted|rejected|promoted)(,(new|shortlisted|rejected|promoted))*$",
+              "pattern": "^(innovation|new|shortlisted|rejected|promoted)(,(innovation|new|shortlisted|rejected|promoted))*$",
               "type": "string"
             }
           },
@@ -95,7 +95,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Ideas waiting for a decision (or the statuses asked for), newest first.",
+            "description": "Ideas waiting for the CEO (or the statuses asked for), newest first. Drafts still in innovation only show with ?status=innovation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -134,7 +134,230 @@
         },
         "responses": {
           "200": {
-            "description": "The idea was added to the inbox.",
+            "description": "The idea was added. With draft: true it starts in innovation; otherwise it is in the CEO's inbox.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Ideas"
+        ]
+      }
+    },
+    "/api/v1/ideas/{id}": {
+      "get": {
+        "operationId": "IdeasController_get",
+        "parameters": [
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change. Replaced by login in the auth step.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One idea with its innovation case: problem, who it is for, competitors and, in innovation, what is still missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Ideas"
+        ]
+      }
+    },
+    "/api/v1/ideas/{id}/innovation": {
+      "patch": {
+        "operationId": "IdeasController_updateInnovation",
+        "parameters": [
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change. Replaced by login in the auth step.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInnovationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft was updated. Only the person who pitched it can do this, and only while it is in innovation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Ideas"
+        ]
+      }
+    },
+    "/api/v1/ideas/{id}/competitors": {
+      "post": {
+        "operationId": "IdeasController_addCompetitor",
+        "parameters": [
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change. Replaced by login in the auth step.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCompetitorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The competitor was added after its website answered. Not kept when the site cannot be opened (422 competitor_unreachable), is not a public address (422 competitor_unsafe_address), is listed already (409) or the list is full (422 too_many_competitors).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaCompetitorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Ideas"
+        ]
+      }
+    },
+    "/api/v1/ideas/{id}/competitors/{competitorId}": {
+      "delete": {
+        "operationId": "IdeasController_removeCompetitor",
+        "parameters": [
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change. Replaced by login in the auth step.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "competitorId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The competitor was removed; the idea as it is now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Ideas"
+        ]
+      }
+    },
+    "/api/v1/ideas/{id}/send": {
+      "post": {
+        "operationId": "IdeasController_send",
+        "parameters": [
+          {
+            "name": "X-Actor",
+            "in": "header",
+            "description": "Who is acting. Required for every change. Replaced by login in the auth step.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The idea left innovation and now waits for the CEO. 422 innovation_not_ready (with details.door) while something is missing.",
             "content": {
               "application/json": {
                 "schema": {
@@ -261,7 +484,7 @@
         },
         "responses": {
           "200": {
-            "description": "The idea became a product at Phase 0.",
+            "description": "The idea became a product at Phase 0. Its problem, who it is for and the rivals checked come across into the intake brief.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14730,10 +14953,11 @@
             "name": "status",
             "in": "query",
             "required": false,
-            "description": "Only ideas with this status.",
+            "description": "Only ideas with this status. Without it, drafts still in innovation are left out.",
             "schema": {
               "type": "string",
               "enum": [
+                "innovation",
                 "new",
                 "shortlisted",
                 "rejected",
@@ -19817,6 +20041,110 @@
           "message"
         ]
       },
+      "IdeaCompetitorCheckDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "responded"
+            ]
+          },
+          "http_status": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "final_url": {
+            "type": "string"
+          },
+          "checked_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "http_status",
+          "title",
+          "final_url",
+          "checked_at"
+        ]
+      },
+      "IdeaCompetitorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "CMP-1, CMP-2 ...: unique within the idea."
+          },
+          "name": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "demo_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "check": {
+            "$ref": "#/components/schemas/IdeaCompetitorCheckDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "website",
+          "note",
+          "demo_url",
+          "check"
+        ]
+      },
+      "IdeaCompetitorsNeededDto": {
+        "type": "object",
+        "properties": {
+          "have": {
+            "type": "number"
+          },
+          "need": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "have",
+          "need"
+        ]
+      },
+      "IdeaDoorDto": {
+        "type": "object",
+        "properties": {
+          "problem": {
+            "type": "boolean"
+          },
+          "who_for": {
+            "type": "boolean"
+          },
+          "competitors": {
+            "$ref": "#/components/schemas/IdeaCompetitorsNeededDto"
+          },
+          "ready": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "problem",
+          "who_for",
+          "competitors",
+          "ready"
+        ]
+      },
       "IdeaDto": {
         "type": "object",
         "properties": {
@@ -19836,8 +20164,10 @@
             "type": "string"
           },
           "status": {
+            "description": "innovation: a draft the pitcher is filling in. new or shortlisted: waiting for the CEO.",
             "enum": [
               "new",
+              "innovation",
               "shortlisted",
               "rejected",
               "promoted"
@@ -19864,6 +20194,35 @@
           },
           "reject_reason": {
             "type": "string"
+          },
+          "problem": {
+            "type": "string",
+            "nullable": true
+          },
+          "who_for": {
+            "type": "string",
+            "nullable": true
+          },
+          "demo_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "competitors": {
+            "description": "Real competitors, each with the result of the check that proved its website exists. Always a list.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdeaCompetitorDto"
+            }
+          },
+          "door": {
+            "nullable": true,
+            "description": "Only while status is innovation: what is still missing. Otherwise null.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IdeaDoorDto"
+              }
+            ]
           }
         },
         "required": [
@@ -19874,7 +20233,12 @@
           "created_on",
           "status",
           "kind",
-          "product_id"
+          "product_id",
+          "problem",
+          "who_for",
+          "demo_url",
+          "competitors",
+          "door"
         ]
       },
       "IdeaListDto": {
@@ -19923,10 +20287,66 @@
               "hardware",
               "service"
             ]
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "true: the idea starts in innovation (status \"innovation\"), a draft the CEO does not see until it is sent. Default: it goes straight to the CEO's inbox."
           }
         },
         "required": [
           "one_liner"
+        ]
+      },
+      "UpdateInnovationDto": {
+        "type": "object",
+        "properties": {
+          "problem": {
+            "type": "string",
+            "description": "The pain today, in plain words (at least 10 characters before the idea can be sent).",
+            "maxLength": 600
+          },
+          "who_for": {
+            "type": "string",
+            "description": "Who has this problem (at least 3 characters before the idea can be sent).",
+            "maxLength": 200
+          },
+          "demo_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "The pitcher's own demo, prototype or sketch (an http or https address). null or empty clears it.",
+            "maxLength": 300
+          }
+        }
+      },
+      "AddCompetitorDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "website": {
+            "type": "string",
+            "description": "The competitor's website, with or without https://.",
+            "minLength": 3,
+            "maxLength": 300
+          },
+          "note": {
+            "type": "string",
+            "description": "What it does, in a line.",
+            "maxLength": 200
+          },
+          "demo_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "A demo, trial or product-tour page of the competitor (an http or https address, not opened by the server).",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "name",
+          "website"
         ]
       },
       "AcceptIdeaDto": {
@@ -21816,6 +22236,7 @@
           "status": {
             "type": "string",
             "enum": [
+              "innovation",
               "new",
               "shortlisted",
               "rejected",

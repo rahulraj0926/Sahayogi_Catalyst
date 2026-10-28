@@ -25,6 +25,18 @@ export interface Calendar { from: string; to: string; events: CalendarEvent[]; t
 export interface Activity { id: string; at: string; actor: string | null; action: string; text: string; productId: string; productSlug: string; productName: string }
 export interface ActivityPage { data: Activity[]; next: string | null }
 
-export interface Idea { id: string; one_liner: string; text: string; requester: string; created_on: string; status: 'new' | 'shortlisted' | 'rejected' | 'promoted'; kind: Kind; product_id: string | null; decided_by?: string; reject_reason?: string }
+/** A rival the pitcher added in the Innovation step. The server opened its website before it was saved. */
+export interface IdeaCompetitor {
+  id: string; name: string; website: string; note: string | null; demo_url: string | null;
+  check: { status: 'verified' | 'responded'; http_status: number; title: string | null; final_url: string; checked_at: string };
+}
+/** What an idea still needs before it can go to the CEO (only while it is in the Innovation step). */
+export interface IdeaDoor { problem: boolean; who_for: boolean; competitors: { have: number; need: number }; ready: boolean }
+export interface Idea {
+  id: string; one_liner: string; text: string; requester: string; created_on: string; kind: Kind; product_id: string | null; decided_by?: string; reject_reason?: string;
+  /** innovation = still being prepared by the person who pitched it; the CEO sees an idea only after it is sent (new). */
+  status: 'innovation' | 'new' | 'shortlisted' | 'rejected' | 'promoted';
+  problem?: string | null; who_for?: string | null; demo_url?: string | null; competitors?: IdeaCompetitor[]; door?: IdeaDoor | null;
+}
 export interface IdeaList { total: number; data: Idea[] }
 export interface Me { actor: string | null; roles: string[]; canDecideIdeas: boolean }

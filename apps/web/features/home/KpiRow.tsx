@@ -2,7 +2,6 @@
 import { AlarmClock, ClipboardCheck, Clock, Flag, Gauge, Lightbulb, Package, RefreshCw, Rocket } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { KPITile } from '@/components/dashboard/KPITile';
-import { GreetingCard } from '@/components/dashboard/GreetingCard';
 import { ErrorBox } from '@/components/ui';
 import type { Kpi } from './types';
 
@@ -18,18 +17,17 @@ function Tile({ k }: { k: Kpi }) {
 
 const SKELETON = Array.from({ length: 7 }, (_, i) => i);
 
-/** Greeting first, then every number from /home/kpis, in one grid. */
-const MAIN = 7; // greeting + 7 numbers = two rows of four
+/** Every number from /home/kpis, in one grid. The greeting is written above it (see HomePage), not inside it. */
+const MAIN = 7; // 7 numbers: four on the first row, three on the second
 const ordered = (kpis: Kpi[] | undefined) => [...(kpis?.filter((k) => k.group === 'primary') ?? []), ...(kpis?.filter((k) => k.group === 'secondary') ?? [])];
 
-export function KpiRow({ kpis, error, loading, name }: { kpis: Kpi[] | undefined; error: string | null; loading: boolean; name: string }) {
+export function KpiRow({ kpis, error, loading }: { kpis: Kpi[] | undefined; error: string | null; loading: boolean }) {
   const all = ordered(kpis).slice(0, MAIN);
   return (
     <div className="@container flex min-w-0 flex-col gap-[var(--space-md)]">
       <div className="grid auto-rows-fr grid-cols-2 gap-[var(--space-md)] @[40rem]:grid-cols-4">
-        <div className="col-span-2 min-w-0 @[40rem]:col-span-1"><GreetingCard name={name} /></div>
         {all.map((k, i) => {
-          const n = all.length; const r = (n + 1) % 4; const fromEnd = n - 1 - i;
+          const n = all.length; const r = n % 4; const fromEnd = n - 1 - i;
           const wide4 = r === 2 ? (fromEnd < 2 ? '@[40rem]:col-span-2' : '') : r === 1 ? (fromEnd === 0 ? '@[40rem]:col-span-4' : '') : '';
           const wide2 = n % 2 === 1 && fromEnd === 0 ? '@max-[40rem]:col-span-2' : '';
           return <div key={k.key} className={`min-w-0 ${wide2} ${wide4}`}><Tile k={k} /></div>;

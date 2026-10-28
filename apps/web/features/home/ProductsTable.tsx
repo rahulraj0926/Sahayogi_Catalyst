@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
 import { ChevronDown, ChevronUp, Plus, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Card } from '@/components/dashboard/Card';
-import { Badge, Bar, ErrorBox } from '@/components/ui';
+import { ErrorBox } from '@/components/ui';
 import { PHASE_SHORT } from '@/components/shell/groups';
 import { ColumnHead, OptionList } from './ColumnFilter';
 import { useProducts } from './client';
@@ -29,26 +29,42 @@ function SortButton({ id, label, f, set }: { id: SortKey; label: string; f: Prod
   );
 }
 
-function Row({ p }: { p: HomeProduct }) {
+// same look as the other headings, whose label is a sort button (buttons do not take the heading's upper-casing)
+const HEAD = 'whitespace-nowrap px-3 py-2 text-left text-xs font-semibold tracking-wide text-[var(--text-muted)]';
+const CELL = 'px-3 py-3 text-sm';
+
+/** One titled block inside a column's filter menu (the columns that used to have their own are now filtered from here). */
+function FilterGroup({ title, sort, children }: { title: string; sort?: ReactNode; children: ReactNode }) {
   return (
-    <tr className="border-t border-[var(--divider)] align-top hover:bg-[var(--surface-muted)]/60">
-      <td className="px-3 py-2.5">
-        <Link href={`/products/${p.slug}`} className="font-semibold text-[var(--text-heading)] hover:underline">{p.name}</Link>
-        <div className="max-w-[16rem] truncate text-xs text-[var(--text-muted)]" title={p.oneLiner}>{p.oneLiner}</div>
-      </td>
-      <td className="px-3 py-2.5"><Badge kind="outline">{p.kind}</Badge></td>
-      <td className="px-3 py-2.5 text-sm">
-        <span className="font-medium">Phase {p.phase.id}</span>
-        <div className="text-xs text-[var(--text-muted)]">{p.phase.short}</div>
-      </td>
-      <td className="px-3 py-2.5 text-sm">{p.stageLabel}{p.daysInStage !== null && <div className="text-xs text-[var(--text-muted)]">{p.daysInStage} days</div>}</td>
-      <td className="px-3 py-2.5 text-sm">{p.owner || <span className="text-[var(--text-muted)]">No owner</span>}</td>
-      <td className="min-w-[8rem] px-3 py-2.5"><Bar pct={p.readinessPercent} /><span className="text-xs text-[var(--text-muted)]">{p.readinessPercent}% ready</span></td>
-      <td className="px-3 py-2.5">
-        <StatusBadge status={C.healthStatus[p.health]} label={C.healthLabel[p.health]} />
-        {p.approvalsWaiting > 0 && <div className="mt-1 text-xs text-[var(--text-muted)]">{p.approvalsWaiting} approval{p.approvalsWaiting > 1 ? 's' : ''} waiting</div>}
-      </td>
-      <td className="hidden max-w-[18rem] px-3 py-2.5 text-xs @[76rem]:table-cell text-[var(--text-secondary)]"><span className="line-clamp-2 text-[var(--sd-accent)]" title={p.nextStep}>{(() => { const n = nextOf(p); return `${n.text}${n.min ? ` · ${n.min} min` : ''}`; })()}</span></td>
+    <div className="mt-1.5 border-t border-[var(--divider)] pt-1.5">
+      <div className="flex items-center justify-between px-2 pb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]"><span>{title}</span>{sort}</div>
+      {children}
+    </div>
+  );
+}
+
+/** The percentage with a thin bar, the same length on every row so the bars line up. */
+function Readiness({ pct }: { pct: number }) {
+  const w = Math.max(0, Math.min(100, pct));
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="w-10 shrink-0 font-semibold tabular-nums text-[var(--text-heading)]">{pct}%</span>
+      <div role="progressbar" aria-label="Readiness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={w} className="h-1.5 min-w-[3rem] flex-1 overflow-hidden rounded-full bg-[var(--surface-muted)]">
+        <div className="h-full rounded-full bg-[var(--ok)]" style={{ width: `${w}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function Row({ p }: { p: HomeProduct }) {
+  const n = nextOf(p);
+  return (
+    <tr className="border-t border-[var(--divider)] hover:bg-[var(--surface-muted)]/60">
+      <td className={CELL}><Link href={`/products/${p.slug}`} className="block truncate font-semibold text-[var(--text-heading)]" title={p.name}>{p.name}</Link></td>
+      <td className={`${CELL} text-[var(--text-heading)]`}><span className="block truncate">Phase {p.phase.id} · {p.phase.short}</span></td>
+      <td className={CELL}><Readiness pct={p.readinessPercent} /></td>
+      <td className={CELL}><span className="inline-flex whitespace-nowrap"><StatusBadge status={C.healthStatus[p.health]} label={C.healthLabel[p.health]} /></span></td>
+      <td className={`${CELL} text-[var(--text-secondary)]`}><span className="block truncate" title={`${n.text}${n.min ? ` · about ${n.min} min` : ''}`}>{n.text}</span></td>
     </tr>
   );
 }
@@ -79,22 +95,26 @@ export function ProductsTable({ filters, onFilters }: { filters: ProductFilters;
       {error && <ErrorBox message={error} />}
       {data && (
         <div className={`-mx-1 overflow-x-auto pb-24 -mb-24 transition-opacity ${loading ? 'opacity-60' : ''}`}>
-          <table className="w-full min-w-[42rem] border-collapse text-left">
+          {/* The five columns share the whole width in fixed proportions, so the table fills its card on any screen and nothing bunches up on the left. */}
+          <table className="w-full min-w-[56rem] table-fixed border-collapse text-left">
+            <colgroup><col className="w-[22%]" /><col className="w-[19%]" /><col className="w-[19%]" /><col className="w-[14%]" /><col className="w-[26%]" /></colgroup>
             <thead>
               <tr>
-                <ColumnHead label="Product" active={!!filters.q} sort={<SortButton id="name" label="Product" f={filters} set={set} />}>
+                {/* Product also holds the filters of the columns that were taken out: search (name or owner), kind and owner. */}
+                <ColumnHead label="Product" active={!!(filters.q || filters.kind || filters.owner)} sort={<SortButton id="name" label="Product" f={filters} set={set} />}>
                   <label className="relative block"><Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                     <input autoFocus className="h-9 w-full rounded-md border border-[var(--card-border)] bg-[var(--surface)] pr-2 text-sm" style={{ paddingLeft: 32 }} placeholder="Name or owner" aria-label="Search products" value={text} onChange={(e) => setText(e.target.value)} /></label>
+                  <FilterGroup title="Kind"><OptionList options={opts(C.kinds)} value={filters.kind} onChange={(kind) => set({ kind, page: 1 })} anyLabel="Any kind" /></FilterGroup>
+                  <FilterGroup title="Owner" sort={<SortButton id="owner" label="Sort" f={filters} set={set} />}><OptionList multi={false} options={(data.owners ?? []).map((o) => ({ value: o, label: o }))} value={filters.owner} onChange={(owner) => set({ owner, page: 1 })} anyLabel="Any owner" /></FilterGroup>
                 </ColumnHead>
-                <ColumnHead label="Lifecycle" active={!!filters.kind}><OptionList options={opts(C.kinds)} value={filters.kind} onChange={(kind) => set({ kind, page: 1 })} anyLabel="Any kind" /></ColumnHead>
-                <ColumnHead label="Phase" active={!!filters.phase} sort={<SortButton id="phase" label="Phase" f={filters} set={set} />}>
+                {/* Current Stage holds the phase filter and the stage filter. */}
+                <ColumnHead label="Current Stage" active={!!(filters.phase || filters.stage)} sort={<SortButton id="phase" label="Current Stage" f={filters} set={set} />}>
                   <OptionList options={PHASE_SHORT.map((n, i) => ({ value: String(i), label: `Phase ${i} · ${n}` }))} value={filters.phase} onChange={(phase) => set({ phase, page: 1 })} anyLabel="Any phase" />
+                  <FilterGroup title="Stage" sort={<SortButton id="stage" label="Sort" f={filters} set={set} />}><OptionList options={opts(C.stages)} value={filters.stage} onChange={(stage) => set({ stage, page: 1 })} anyLabel="Any stage" /></FilterGroup>
                 </ColumnHead>
-                <ColumnHead label="Stage" active={!!filters.stage} sort={<SortButton id="stage" label="Stage" f={filters} set={set} />}><OptionList options={opts(C.stages)} value={filters.stage} onChange={(stage) => set({ stage, page: 1 })} anyLabel="Any stage" /></ColumnHead>
-                <ColumnHead align="right" label="Owner" active={!!filters.owner} sort={<SortButton id="owner" label="Owner" f={filters} set={set} />}><OptionList multi={false} options={(data.owners ?? []).map((o) => ({ value: o, label: o }))} value={filters.owner} onChange={(owner) => set({ owner, page: 1 })} anyLabel="Any owner" /></ColumnHead>
-                <ColumnHead align="right" label="Readiness" active={!!filters.ready} sort={<SortButton id="readiness" label="Readiness" f={filters} set={set} />}><OptionList multi={false} options={BANDS.map(([value, label]) => ({ value, label }))} value={filters.ready} onChange={(ready) => set({ ready, page: 1 })} anyLabel="Any readiness" /></ColumnHead>
-                <ColumnHead align="right" label="Health" active={!!filters.health} sort={<SortButton id="activity" label="Health" f={filters} set={set} />}><OptionList options={opts(C.healths)} value={filters.health} onChange={(health) => set({ health, page: 1 })} anyLabel="Any health" /></ColumnHead>
-                <th className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] @[76rem]:table-cell">Next</th>
+                <ColumnHead label="Readiness" active={!!filters.ready} sort={<SortButton id="readiness" label="Readiness" f={filters} set={set} />}><OptionList multi={false} options={BANDS.map(([value, label]) => ({ value, label }))} value={filters.ready} onChange={(ready) => set({ ready, page: 1 })} anyLabel="Any readiness" /></ColumnHead>
+                <ColumnHead label="Health" active={!!filters.health} sort={<SortButton id="activity" label="Health" f={filters} set={set} />}><OptionList options={opts(C.healths)} value={filters.health} onChange={(health) => set({ health, page: 1 })} anyLabel="Any health" /></ColumnHead>
+                <th className={HEAD}>Next Action</th>
               </tr>
             </thead>
             <tbody>{shown.map((p) => <Row key={p.id} p={p} />)}</tbody>
